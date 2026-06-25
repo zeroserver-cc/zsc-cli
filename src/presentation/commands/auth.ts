@@ -8,25 +8,32 @@ import { getConfigValue } from '../../infrastructure/config/store';
 
 function promptPassword(prompt: string): Promise<string> {
   return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     process.stdout.write(prompt);
+    // Raw mode so each keystroke arrives as a separate event without terminal echo
     process.stdin.setRawMode?.(true);
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+
     let password = '';
-    process.stdin.on('data', (char: Buffer) => {
-      const c = char.toString();
-      if (c === '\r' || c === '\n') {
+
+    const onData = (char: string) => {
+      if (char === '\r' || char === '\n') {
         process.stdin.setRawMode?.(false);
+        process.stdin.pause();
+        process.stdin.removeListener('data', onData);
         process.stdout.write('\n');
-        rl.close();
         resolve(password);
-      } else if (c === '') {
+      } else if (char === '') { // Ctrl+C
+        process.stdout.write('\n');
         process.exit(0);
-      } else if (c === '') {
+      } else if (char === '' || char === '\b') { // Backspace / Delete
         password = password.slice(0, -1);
       } else {
-        password += c;
+        password += char;
       }
-    });
+    };
+
+    process.stdin.on('data', onData);
   });
 }
 
