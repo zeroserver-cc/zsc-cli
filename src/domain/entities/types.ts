@@ -47,3 +47,21 @@ export interface DeployInput {
   port?: number;
   env?: string[];
 }
+
+export type MachineStatus = 'OFFLINE' | 'REGISTERING' | 'IDLE' | 'BUSY' | 'OVERLOADED' | 'ONLINE';
+
+export interface MachineSpecs {
+  cpu: { cores: number; model: string; frequency?: string };
+  memory: { total: number; available: number };
+  storage: { total: number; available: number };
+  os: { name: string; version: string; architecture: string };
+}
+
+export interface Machine {
+  id: string;
+  name: string;
+  status: MachineStatus;
+  specs?: MachineSpecs;
+  lastHeartbeat?: string;
+  createdAt: string;
+}

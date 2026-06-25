@@ -5,11 +5,12 @@ import { join } from 'path';
 interface ConfigData {
   backendUrl: string;
   token?: string;
+  role?: string;
 }
 
 const CONFIG_DIR = join(homedir(), '.config', 'zsc');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
-const DEFAULTS: ConfigData = { backendUrl: 'http://localhost:4000' };
+const DEFAULTS: ConfigData = { backendUrl: 'http://localhost:3001' };
 
 function read(): ConfigData {
   try {

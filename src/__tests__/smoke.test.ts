@@ -7,10 +7,14 @@ describe('CLI smoke test', () => {
     expect(names).toContain('logout');
     expect(names).toContain('whoami');
     expect(names).toContain('config');
+    // developer commands
     expect(names).toContain('deploy');
     expect(names).toContain('list');
     expect(names).toContain('logs');
     expect(names).toContain('stop');
+    // provider commands
+    expect(names).toContain('node');
+    expect(names).toContain('nodes');
   });
 
   it('has correct version', () => {

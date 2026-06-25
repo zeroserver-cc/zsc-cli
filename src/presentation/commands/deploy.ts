@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { deployApplicationUseCase } from '../../application/usecases/DeployApplicationUseCase';
+import { requireRole } from '../../application/usecases/requireRole';
 import { handleError } from '../formatting/errors';
 
 export function registerDeployCommand(program: Command): void {
@@ -12,6 +13,7 @@ export function registerDeployCommand(program: Command): void {
     .option('-p, --port <port>', 'Container port to expose', parseInt)
     .option('-e, --env <KEY=VALUE>', 'Environment variable (repeatable)', collect, [])
     .action(async (image: string, opts: { name?: string; port?: number; env: string[] }) => {
+      requireRole(['developer', 'admin']);
       const spinner = ora(`Creating application for ${chalk.cyan(image)}…`).start();
 
       try {

@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import { stopApplicationUseCase } from '../../application/usecases/StopApplicationUseCase';
+import { requireRole } from '../../application/usecases/requireRole';
 import { handleError } from '../formatting/errors';
 
 export function registerStopCommand(program: Command): void {
@@ -9,6 +10,7 @@ export function registerStopCommand(program: Command): void {
     .command('stop <instance-id>')
     .description('Stop a running application instance')
     .action(async (instanceId: string) => {
+      requireRole(['developer', 'admin']);
       const spinner = ora(`Stopping ${chalk.cyan(instanceId)}…`).start();
       try {
         const result = await stopApplicationUseCase(instanceId);

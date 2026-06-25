@@ -61,3 +61,48 @@ export const STOP_APPLICATION_MUTATION = `
     }
   }
 `;
+
+export const MY_MACHINES_QUERY = `
+  query MyMachines {
+    myMachines {
+      id name status lastHeartbeat createdAt
+      specs {
+        cpu { cores model }
+        memory { total available }
+        storage { total available }
+        os { name version architecture }
+      }
+    }
+  }
+`;
+
+export const MACHINE_QUERY = `
+  query Machine($id: ID!) {
+    machine(id: $id) {
+      id name status lastHeartbeat createdAt
+      specs {
+        cpu { cores model frequency }
+        memory { total available }
+        storage { total available }
+        os { name version architecture }
+      }
+    }
+  }
+`;
+
+export const INSTANCES_BY_MACHINE_QUERY = `
+  query ApplicationInstancesByMachine($machineId: ID!) {
+    applicationInstancesByMachine(machineId: $machineId) {
+      id status externalPort address createdAt
+      application { name dockerImage }
+    }
+  }
+`;
+
+export const CLAIM_MACHINE_MUTATION = `
+  mutation ClaimMachine($token: String!) {
+    claimMachine(token: $token) {
+      id name status createdAt
+    }
+  }
+`;
