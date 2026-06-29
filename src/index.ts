@@ -5,6 +5,7 @@ import { registerDeployCommand } from './presentation/commands/deploy';
 import { registerListCommand } from './presentation/commands/list';
 import { registerLogsCommand } from './presentation/commands/logs';
 import { registerStopCommand } from './presentation/commands/stop';
+import { registerRemoveCommand } from './presentation/commands/remove';
 import { registerNodeCommands } from './presentation/commands/nodes';
 
 export const program = new Command();
@@ -20,6 +21,7 @@ registerDeployCommand(program);
 registerListCommand(program);
 registerLogsCommand(program);
 registerStopCommand(program);
+registerRemoveCommand(program);
 registerNodeCommands(program);
 
 // Only parse args when run directly (not in tests)

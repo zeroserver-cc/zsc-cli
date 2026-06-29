@@ -12,6 +12,7 @@ describe('CLI smoke test', () => {
     expect(names).toContain('list');
     expect(names).toContain('logs');
     expect(names).toContain('stop');
+    expect(names).toContain('remove');
     // provider commands
     expect(names).toContain('node');
     expect(names).toContain('nodes');
