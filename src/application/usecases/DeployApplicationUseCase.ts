@@ -3,18 +3,11 @@ import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
-  APPLICATION_INSTANCE_QUERY,
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
+import { waitForInstance, WaitResult } from './waitForInstance';
 
-const TERMINAL_STATUSES = new Set(['RUNNING', 'ERROR', 'FAILED', 'STOPPED']);
-const POLL_INTERVAL_MS = 3_000;
-const MAX_POLLS = 60; // 3 minutes
-
-export interface DeployResult {
-  instance: ApplicationInstance;
-  timedOut: boolean;
-}
+export type DeployResult = WaitResult;
 
 export async function deployApplicationUseCase(
   input: DeployInput,
@@ -32,9 +25,9 @@ export async function deployApplicationUseCase(
   );
   const applicationId = appData.createApplication.id;
 
-  const ports = input.port
-    ? [{ internal: input.port, protocol: 'TCP' }]
-    : undefined;
+  // The backend expects ports as a { hostPort: containerPort } object (JSON
+  // scalar). Expose the container port on the same host port.
+  const ports = input.port ? { [input.port]: input.port } : undefined;
 
   const deployData = await gqlRequest<{ deployApplication: ApplicationInstance }>(
     DEPLOY_APPLICATION_MUTATION,
@@ -44,34 +37,15 @@ export async function deployApplicationUseCase(
         image: input.image,
         containerName: `${appName}-${Date.now()}`,
         env: input.env ?? [],
-        ports: ports ? JSON.stringify(ports) : undefined,
+        ...(ports && { ports }),
       },
     },
     token,
   );
 
-  let instance = deployData.deployApplication;
-  let polls = 0;
-
-  while (!TERMINAL_STATUSES.has(instance.status) && polls < MAX_POLLS) {
-    onProgress?.(instance.status);
-    await sleep(POLL_INTERVAL_MS);
-    const pollData = await gqlRequest<{ applicationInstance: ApplicationInstance }>(
-      APPLICATION_INSTANCE_QUERY,
-      { id: instance.id },
-      token,
-    );
-    instance = pollData.applicationInstance ?? instance;
-    polls++;
-  }
-
-  return { instance, timedOut: polls >= MAX_POLLS };
+  return waitForInstance(deployData.deployApplication, token, onProgress);
 }
 
 function deriveAppName(image: string): string {
   return image.split('/').pop()?.split(':')[0] ?? image;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
