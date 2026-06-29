@@ -62,6 +62,14 @@ export const STOP_APPLICATION_MUTATION = `
   }
 `;
 
+export const REMOVE_APPLICATION_MUTATION = `
+  mutation RemoveApplication($instanceId: ID!) {
+    removeApplication(instanceId: $instanceId) {
+      id status
+    }
+  }
+`;
+
 export const MY_MACHINES_QUERY = `
   query MyMachines {
     myMachines {
