@@ -2,9 +2,14 @@
   "name": "zsc-cli",
   "version": "0.1.0",
   "description": "ZeroServer Community Cloud CLI — deploy and manage apps from the terminal",
-  "bin": { "zs": "./bin/zs.js" },
+  "bin": {
+    "zs": "./bin/zs.js"
+  },
   "scripts": {
     "build": "tsc",
+    "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=cjs --outfile=build/zs.cjs",
+    "build:binary": "pnpm build:bundle && pkg build/zs.cjs --no-bytecode --public -t node22-linux-x64 --output dist-bin/zs-linux-x64 && pkg build/zs.cjs --no-bytecode --public -t node22-linux-arm64 --output dist-bin/zs-linux-arm64 && pkg build/zs.cjs --no-bytecode --public -t node22-macos-arm64 --output dist-bin/zs-macos-arm64",
+    "build:binary:host": "pnpm build:bundle && pkg build/zs.cjs --no-bytecode --public --targets host --output dist-bin/zs",
     "dev": "ts-node src/index.ts",
     "test": "jest",
     "test:coverage": "jest --coverage",
@@ -16,12 +21,15 @@
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.3",
     "commander": "^12.1.0",
-    "ora": "^5.4.1"
+    "ora": "^5.4.1",
+    "yaml": "^2.9.0"
   },
   "packageManager": "pnpm@10.12.4",
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^22.0.0",
+    "@yao-pkg/pkg": "^6.20.0",
+    "esbuild": "^0.28.1",
     "jest": "^29.7.0",
     "prettier": "^3.3.3",
     "ts-jest": "^29.2.4",
