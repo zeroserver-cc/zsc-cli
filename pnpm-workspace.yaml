@@ -1,5 +1,7 @@
-# Allow-list for dependency build scripts (pnpm 10). esbuild also resolves its
-# native binary through its platform optionalDependency, so the bundle works even
-# when this postinstall is skipped; this is a best-effort belt-and-suspenders.
+# Single-package workspace. Allow-list for dependency build scripts (pnpm 10).
+# esbuild also resolves its native binary through its platform optionalDependency,
+# so the bundle works even when this postinstall is skipped; belt-and-suspenders.
+packages:
+  - "."
 onlyBuiltDependencies:
   - esbuild
