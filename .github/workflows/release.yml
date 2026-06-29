@@ -1,0 +1,54 @@
+name: release
+
+# ZSC-117: on a version tag, build the standalone per-arch binaries and publish
+# them (with checksums) to the GitHub Release. No npm publish.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build and attach binaries to"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build standalone binaries
+        # pkg cross-packages all targets from this runner (no native build step).
+        run: pnpm build:binary
+
+      - name: Generate checksums
+        working-directory: dist-bin
+        run: |
+          for f in zs-*; do
+            sha256sum "$f" > "$f.sha256"
+          done
+          ls -la
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: |
+            dist-bin/zs-*
+          fail_on_unmatched_files: true
