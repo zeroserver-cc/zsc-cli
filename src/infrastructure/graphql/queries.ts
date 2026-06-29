@@ -114,3 +114,25 @@ export const CLAIM_MACHINE_MUTATION = `
     }
   }
 `;
+
+export const MY_REGISTRY_CREDENTIALS_QUERY = `
+  query MyRegistryCredentials {
+    myRegistryCredentials {
+      registryHost username createdAt updatedAt
+    }
+  }
+`;
+
+export const UPSERT_REGISTRY_CREDENTIAL_MUTATION = `
+  mutation UpsertRegistryCredential($input: RegistryCredentialInput!) {
+    upsertRegistryCredential(input: $input) {
+      registryHost username updatedAt
+    }
+  }
+`;
+
+export const DELETE_REGISTRY_CREDENTIAL_MUTATION = `
+  mutation DeleteRegistryCredential($registryHost: String!) {
+    deleteRegistryCredential(registryHost: $registryHost)
+  }
+`;

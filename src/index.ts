@@ -7,6 +7,7 @@ import { registerLogsCommand } from './presentation/commands/logs';
 import { registerStopCommand } from './presentation/commands/stop';
 import { registerRemoveCommand } from './presentation/commands/remove';
 import { registerNodeCommands } from './presentation/commands/nodes';
+import { registerRegistryCommands } from './presentation/commands/registry';
 
 export const program = new Command();
 
@@ -23,6 +24,7 @@ registerLogsCommand(program);
 registerStopCommand(program);
 registerRemoveCommand(program);
 registerNodeCommands(program);
+registerRegistryCommands(program);
 
 // Only parse args when run directly (not in tests)
 if (require.main === module) {
