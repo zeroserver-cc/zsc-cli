@@ -48,15 +48,14 @@ async function runManifest(): Promise<void> {
       process.cwd(),
       (status) => { spinner.text = `Status: ${chalk.yellow(status)}…`; },
     );
-    spinner.text = `Deploying ${chalk.cyan(result.manifest.app)} (${result.manifest.services.length} services)…`;
-    reportResult(spinner, result);
+    reportResult(spinner, result, result.manifest.app);
   } catch (err) {
     spinner.fail('Deploy failed.');
     handleError(err);
   }
 }
 
-function reportResult(spinner: Ora, { instance, timedOut }: DeployResult): void {
+function reportResult(spinner: Ora, { instance, timedOut }: DeployResult, appName?: string): void {
   if (timedOut) {
     spinner.warn(chalk.yellow('Deploy timed out waiting for RUNNING status.'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
@@ -66,7 +65,7 @@ function reportResult(spinner: Ora, { instance, timedOut }: DeployResult): void 
   }
 
   if (instance.status === 'RUNNING') {
-    spinner.succeed(chalk.green('Deploy successful!'));
+    spinner.succeed(chalk.green(appName ? `Deploy successful: ${appName}` : 'Deploy successful!'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
     if (instance.address) {
       console.log(`Address:     ${chalk.underline.cyan(instance.address)}`);
