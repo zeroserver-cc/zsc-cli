@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "build:bundle": "esbuild src/cli.ts --bundle --platform=node --target=node22 --format=cjs --outfile=build/zs.cjs",
-    "build:binary": "pnpm build:bundle && pkg build/zs.cjs --no-bytecode --public --targets node22-linux-x64,node22-linux-arm64,node22-macos-arm64 --out-path dist-bin",
+    "build:binary": "pnpm build:bundle && pkg build/zs.cjs --no-bytecode --public -t node22-linux-x64 --output dist-bin/zs-linux-x64 && pkg build/zs.cjs --no-bytecode --public -t node22-linux-arm64 --output dist-bin/zs-linux-arm64 && pkg build/zs.cjs --no-bytecode --public -t node22-macos-arm64 --output dist-bin/zs-macos-arm64",
     "build:binary:host": "pnpm build:bundle && pkg build/zs.cjs --no-bytecode --public --targets host --output dist-bin/zs",
     "dev": "ts-node src/index.ts",
     "test": "jest",
