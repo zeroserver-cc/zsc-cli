@@ -48,6 +48,24 @@ export interface DeployInput {
   env?: string[];
 }
 
+// A single service (container) in a zs.yaml manifest. Maps 1:1 to the backend's
+// ServiceDefinitionInput consumed by createApplication.
+export interface ManifestService {
+  name: string;
+  image: string;
+  env?: string[];
+  ports?: string[];
+  volumes?: string[];
+  dependsOn?: string[];
+  exposed?: boolean;
+}
+
+// Parsed and validated zs.yaml manifest (multi-service application).
+export interface AppManifest {
+  app: string;
+  services: ManifestService[];
+}
+
 export type MachineStatus = 'OFFLINE' | 'REGISTERING' | 'IDLE' | 'BUSY' | 'OVERLOADED' | 'ONLINE';
 
 export interface MachineSpecs {
