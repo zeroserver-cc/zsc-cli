@@ -1,0 +1,5 @@
+# pnpm 10 reads build-script allow-list and other settings from here.
+# esbuild ships a native binary via a postinstall script; allow it so
+# `pnpm build:bundle` works after a clean install (locally and in CI).
+onlyBuiltDependencies:
+  - esbuild
