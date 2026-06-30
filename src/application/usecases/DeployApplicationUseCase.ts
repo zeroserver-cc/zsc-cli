@@ -3,6 +3,7 @@ import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
+  MY_APPLICATIONS_QUERY,
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { waitForInstance, WaitResult } from './waitForInstance';
@@ -18,12 +19,29 @@ export async function deployApplicationUseCase(
 
   const appName = input.name ?? deriveAppName(input.image);
 
-  const appData = await gqlRequest<{ createApplication: Application }>(
-    CREATE_APPLICATION_MUTATION,
-    { input: { name: appName, dockerImage: input.image, config: {} } },
-    token,
-  );
-  const applicationId = appData.createApplication.id;
+  // Resolve the target application deterministically:
+  //  1. --app-id pins an exact application (no lookup, no create) — the robust path
+  //     once the first deploy has created the app and the id is wired into CI.
+  //  2. otherwise reuse the app with this name if it exists (idempotent), so a
+  //     redeploy lands on the same app and the backend updates it in place.
+  //  3. only create a brand-new app the first time.
+  let applicationId: string;
+  if (input.appId) {
+    applicationId = input.appId;
+  } else {
+    const mine = await gqlRequest<{ myApplications: Application[] }>(MY_APPLICATIONS_QUERY, {}, token);
+    const existing = mine.myApplications.find((a) => a.name === appName)?.id;
+    if (existing) {
+      applicationId = existing;
+    } else {
+      const appData = await gqlRequest<{ createApplication: Application }>(
+        CREATE_APPLICATION_MUTATION,
+        { input: { name: appName, dockerImage: input.image, config: {} } },
+        token,
+      );
+      applicationId = appData.createApplication.id;
+    }
+  }
 
   // The backend expects ports as a { hostPort: containerPort } object (JSON
   // scalar). Expose the container port on the same host port.
@@ -35,7 +53,8 @@ export async function deployApplicationUseCase(
       input: {
         applicationId,
         image: input.image,
-        containerName: `${appName}-${Date.now()}`,
+        // Stable name (not timestamped) so redeploys target the same container.
+        containerName: appName,
         env: input.env ?? [],
         ...(ports && { ports }),
       },
