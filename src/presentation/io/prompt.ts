@@ -12,31 +12,49 @@ export function prompt(question: string): Promise<string> {
 // Reads a secret with echo suppressed (raw mode), so tokens/passwords never
 // appear on screen or in shell history.
 export function promptPassword(question: string): Promise<string> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const stdin = process.stdin;
+    const setRawMode = stdin.setRawMode?.bind(stdin);
+    // Without raw mode (non-TTY, piped/redirected input) echo cannot be
+    // suppressed. Fail fast rather than risk printing the secret to the screen.
+    if (!setRawMode || !stdin.isTTY) {
+      reject(new Error('A secret prompt requires an interactive terminal (TTY).'));
+      return;
+    }
+
     process.stdout.write(question);
-    process.stdin.setRawMode?.(true);
-    process.stdin.resume();
-    process.stdin.setEncoding('utf8');
+    setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
 
     let secret = '';
 
-    const onData = (char: string) => {
-      if (char === '\r' || char === '\n') {
-        process.stdin.setRawMode?.(false);
-        process.stdin.pause();
-        process.stdin.removeListener('data', onData);
-        process.stdout.write('\n');
-        resolve(secret);
-      } else if (char === '') { // Ctrl+C
-        process.stdout.write('\n');
-        process.exit(0);
-      } else if (char === '' || char === '\b') { // Backspace / Delete
-        secret = secret.slice(0, -1);
-      } else {
-        secret += char;
+    const cleanup = () => {
+      setRawMode(false);
+      stdin.pause();
+      stdin.removeListener('data', onData);
+    };
+
+    const onData = (chunk: string) => {
+      // A single chunk can carry several characters (e.g. a paste); handle each.
+      for (const char of chunk) {
+        if (char === '\r' || char === '\n') {
+          cleanup();
+          process.stdout.write('\n');
+          resolve(secret);
+          return;
+        } else if (char === '\u0003') { // Ctrl+C
+          cleanup();
+          process.stdout.write('\n');
+          process.exit(130);
+        } else if (char === '\u007f' || char === '\b') { // Backspace / Delete
+          secret = secret.slice(0, -1);
+        } else {
+          secret += char;
+        }
       }
     };
 
-    process.stdin.on('data', onData);
+    stdin.on('data', onData);
   });
 }

@@ -21,6 +21,7 @@ export function registerRegistryCommands(program: Command): void {
     .option('-u, --username <username>', 'Registry username')
     .action(async (registryHost: string | undefined, opts: { username?: string }) => {
       requireRole(['developer', 'admin']);
+      let spinner: ReturnType<typeof ora> | undefined;
       try {
         const host = registryHost ?? (await prompt('Registry host (e.g. ghcr.io): '));
         const username = opts.username ?? (await prompt('Username: '));
@@ -32,11 +33,14 @@ export function registerRegistryCommands(program: Command): void {
           process.exit(1);
         }
 
-        const spinner = ora('Saving registry credential…').start();
+        spinner = ora('Saving registry credential…').start();
         const cred = await registryLoginUseCase({ registryHost: host, username, token });
         spinner.succeed(chalk.green(`Credential saved for ${chalk.bold(cred.registryHost)} (user ${cred.username}).`));
-        console.log(chalk.gray('The token is stored encrypted and is never shown again.'));
+        // Assert only what the CLI can know: the token left over HTTPS and is
+        // not kept on this machine. The backend stores it encrypted at rest.
+        console.log(chalk.gray('The token was sent over HTTPS and is not stored on this machine.'));
       } catch (err) {
+        spinner?.stop();
         handleError(err);
       }
     });

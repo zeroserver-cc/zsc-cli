@@ -23,31 +23,31 @@ export interface RegistryLoginInput {
 // token travels only in the mutation variables over HTTPS; it is never echoed
 // back and never persisted on the client.
 export async function registryLoginUseCase(input: RegistryLoginInput): Promise<RegistryCredential> {
-  const token = requireToken();
+  const authToken = requireToken();
   const data = await gqlRequest<{ upsertRegistryCredential: RegistryCredential }>(
     UPSERT_REGISTRY_CREDENTIAL_MUTATION,
     { input },
-    token,
+    authToken,
   );
   return data.upsertRegistryCredential;
 }
 
 export async function registryListUseCase(): Promise<RegistryCredential[]> {
-  const token = requireToken();
+  const authToken = requireToken();
   const data = await gqlRequest<{ myRegistryCredentials: RegistryCredential[] }>(
     MY_REGISTRY_CREDENTIALS_QUERY,
     undefined,
-    token,
+    authToken,
   );
   return data.myRegistryCredentials;
 }
 
 export async function registryLogoutUseCase(registryHost: string): Promise<boolean> {
-  const token = requireToken();
+  const authToken = requireToken();
   const data = await gqlRequest<{ deleteRegistryCredential: boolean }>(
     DELETE_REGISTRY_CREDENTIAL_MUTATION,
     { registryHost },
-    token,
+    authToken,
   );
   return data.deleteRegistryCredential;
 }

@@ -16,6 +16,8 @@ describe('CLI smoke test', () => {
     // provider commands
     expect(names).toContain('node');
     expect(names).toContain('nodes');
+    // registry credentials (private images)
+    expect(names).toContain('registry');
   });
 
   it('has correct version', () => {
