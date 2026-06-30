@@ -44,6 +44,7 @@ export interface ApplicationInstance {
 export interface DeployInput {
   image: string;
   name?: string;
+  appId?: string;
   port?: number;
   env?: string[];
 }
