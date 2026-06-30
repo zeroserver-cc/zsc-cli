@@ -83,3 +83,10 @@ export interface Machine {
   lastHeartbeat?: string;
   createdAt: string;
 }
+
+export interface RegistryCredential {
+  registryHost: string;
+  username: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
