@@ -3,3 +3,6 @@ dist/
 build/
 dist-bin/
 *.js.map
+
+# local agent/session metadata
+.claude/
