@@ -100,8 +100,11 @@ async function fetchChecksum(url: string): Promise<string | null> {
   try {
     const res = await axios.get(url, { responseType: 'text', timeout: 15000 });
     return String(res.data).trim().split(/\s+/)[0] || null;
-  } catch {
-    return null;
+  } catch (err) {
+    // 404 = no checksum published (skip, matches install.sh). Any other failure
+    // is transient — fail closed rather than install an unverified binary.
+    if (axios.isAxiosError(err) && err.response?.status === 404) return null;
+    throw err;
   }
 }
 
