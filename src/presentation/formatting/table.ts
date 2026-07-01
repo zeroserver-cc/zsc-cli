@@ -65,7 +65,7 @@ export function printMachineTable(rows: MachineRow[]): void {
   }
 
   const table = new Table({
-    head: ['Node ID', 'Name', 'Status', 'CPU', 'Memory', 'OS', 'Last Seen'].map((h) => chalk.bold(h)),
+    head: ['Node ID', 'Name', 'Status', 'CPU', 'Memory', 'OS', 'Agent', 'Last Seen'].map((h) => chalk.bold(h)),
     style: { head: [], border: [] },
   });
 
@@ -77,6 +77,7 @@ export function printMachineTable(rows: MachineRow[]): void {
       chalk.dim(row.cpu),
       chalk.dim(row.memoryGb),
       chalk.dim(row.os),
+      chalk.dim(row.agentVersion),
       row.lastSeen,
     ]);
   }
@@ -96,6 +97,8 @@ export function printMachineDetail({ machine, instances }: MachineDetail): void 
     console.log(`${chalk.bold('Disk:')}   ${Math.round(storage.available / 1024)}/${Math.round(storage.total / 1024)} GB available`);
     console.log(`${chalk.bold('OS:')}     ${os.name} ${os.version} (${os.architecture})`);
   }
+
+  console.log(`${chalk.bold('Agent:')}  ${machine.agentVersion || '-'}`);
 
   if (machine.lastHeartbeat) {
     const hbDate = parseDate(machine.lastHeartbeat);

@@ -82,6 +82,7 @@ export interface Machine {
   status: MachineStatus;
   specs?: MachineSpecs;
   lastHeartbeat?: string;
+  agentVersion?: string;
   createdAt: string;
 }
 
