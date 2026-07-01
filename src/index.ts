@@ -25,8 +25,10 @@ registerStopCommand(program);
 registerRemoveCommand(program);
 registerNodeCommands(program);
 registerRegistryCommands(program);
-
-// Only parse args when run directly (not in tests)
-if (require.main === module) {
-  program.parse(process.argv);
-}
+// This module only builds and exports the command tree. Parsing is driven by the
+// entry points — `src/cli.ts` for the standalone binary and `bin/zs.js` for the
+// npm install. Do NOT parse here: when esbuild bundles cli.ts (which imports this
+// file) and pkg packages it, `require.main === module` also evaluates true for the
+// inlined module, so a guarded parse here ran a SECOND time — every command executed
+// twice (e.g. `zs deploy --port` fired once with the port and once without it,
+// leaving the exposed container with no host port and breaking ingress).
