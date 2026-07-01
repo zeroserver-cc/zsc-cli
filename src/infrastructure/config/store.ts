@@ -12,8 +12,10 @@ const CONFIG_DIR = join(homedir(), '.config', 'zsc');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
 // Points at the ZeroServer production API out of the box, so a fresh install can
 // `zs login` and `zs deploy` with no configuration. Override for local/self-hosted
-// backends with `zs config set backend-url <url>`.
-const DEFAULTS: ConfigData = { backendUrl: 'https://api.zeroserver.cc' };
+// backends with `zs config set backend-url <url>`. Single source of truth — do not
+// duplicate this literal elsewhere; consume `getBackendUrl()` instead.
+export const DEFAULT_BACKEND_URL = 'https://api.zeroserver.cc';
+const DEFAULTS: ConfigData = { backendUrl: DEFAULT_BACKEND_URL };
 
 function read(): ConfigData {
   try {
@@ -31,6 +33,11 @@ function write(data: ConfigData): void {
 
 export function getConfigValue(key: keyof ConfigData): string | undefined {
   return read()[key];
+}
+
+// Always defined: `read()` merges DEFAULTS, so callers never need their own fallback.
+export function getBackendUrl(): string {
+  return read().backendUrl;
 }
 
 export function setConfigValue(key: keyof ConfigData, value: string): void {

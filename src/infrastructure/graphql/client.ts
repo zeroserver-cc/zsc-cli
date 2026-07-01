@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import { getConfigValue } from '../config/store';
+import { getBackendUrl } from '../config/store';
 
 interface GraphQLResponse<T> {
   data?: T;
@@ -18,7 +18,7 @@ export async function gqlRequest<T>(
   variables?: Record<string, unknown>,
   token?: string,
 ): Promise<T> {
-  const backendUrl = getConfigValue('backendUrl') ?? 'https://api.zeroserver.cc';
+  const backendUrl = getBackendUrl();
   const url = `${backendUrl}/graphql`;
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
