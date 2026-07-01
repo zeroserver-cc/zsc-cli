@@ -48,7 +48,7 @@ asset="${BIN_NAME}-${plat}-${a}"
 # --- resolve version ---------------------------------------------------------
 version="${ZS_VERSION:-}"
 if [ -z "$version" ]; then
-  info "Resolving latest release of $REPO…"
+  info "Resolving latest release of ${REPO}..."
   version="$(dl_stdout "https://api.github.com/repos/${REPO}/releases/latest" \
     | grep '"tag_name"' | head -n1 | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')"
   [ -n "$version" ] || err "could not resolve latest release tag (set ZS_VERSION)"
@@ -62,7 +62,7 @@ trap 'rm -rf "$tmp"' EXIT
 # --- download binary + checksum ---------------------------------------------
 dl "${base}/${asset}" "${tmp}/${BIN_NAME}" || err "failed to download ${asset} (is it published for ${plat}-${a}?)"
 if dl "${base}/${asset}.sha256" "${tmp}/${asset}.sha256" 2>/dev/null; then
-  info "Verifying checksum…"
+  info "Verifying checksum..."
   expected="$(awk '{print $1}' "${tmp}/${asset}.sha256")"
   if command -v sha256sum >/dev/null 2>&1; then
     actual="$(sha256sum "${tmp}/${BIN_NAME}" | awk '{print $1}')"
@@ -84,7 +84,7 @@ else
   mkdir -p "$INSTALL_DIR" 2>/dev/null || need_sudo="sudo"
 fi
 if [ -n "$need_sudo" ]; then
-  info "Elevating with sudo to write $target…"
+  info "Elevating with sudo to write ${target}..."
   $need_sudo mkdir -p "$INSTALL_DIR"
   $need_sudo mv "${tmp}/${BIN_NAME}" "$target"
   $need_sudo chmod +x "$target"
