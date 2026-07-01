@@ -29,19 +29,25 @@ function shouldAutoCheck(): boolean {
  * the update takes effect on the next invocation.
  */
 export async function maybeAutoUpdate(): Promise<void> {
-  if (!shouldAutoCheck()) return;
-  // Stamp before the network call so a failure still throttles the next run.
-  setConfigValue('lastUpdateCheck', new Date().toISOString());
+  // The whole thing is best-effort: nothing here (a throwing setConfigValue on a
+  // read-only config dir, a network error) may crash or delay the real command.
+  try {
+    if (!shouldAutoCheck()) return;
+    // Stamp before the network call so a failure still throttles the next run.
+    setConfigValue('lastUpdateCheck', new Date().toISOString());
 
-  const tag = await latestNewerTag(VERSION);
-  if (!tag) return;
+    const tag = await latestNewerTag(VERSION);
+    if (!tag) return;
 
-  process.stderr.write(`A new zs version (${tag}) is available — updating…\n`);
-  const result = await selfUpdate(VERSION, process.execPath);
-  if (result.updated) {
-    process.stderr.write(`Updated zs ${result.fromVersion} → ${result.toVersion}. Takes effect on your next command.\n`);
-  } else if (result.reason === 'permission') {
-    process.stderr.write(`Update available but ${process.execPath} isn't writable. Run: sudo zs upgrade\n`);
+    process.stderr.write(`A new zs version (${tag}) is available — updating…\n`);
+    const result = await selfUpdate(VERSION, process.execPath);
+    if (result.updated) {
+      process.stderr.write(`Updated zs ${result.fromVersion} → ${result.toVersion}. Takes effect on your next command.\n`);
+    } else if (result.reason === 'permission') {
+      process.stderr.write(`Update available but ${process.execPath} isn't writable. Run: sudo zs upgrade\n`);
+    }
+    // Any other failure stays silent — the current command must not be disrupted.
+  } catch {
+    // Auto-update is never allowed to break the command the user actually ran.
   }
-  // Any other failure stays silent — the current command must not be disrupted.
 }
