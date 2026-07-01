@@ -1,6 +1,6 @@
 {
   "name": "zsc-cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "ZeroServer Community Cloud CLI — deploy and manage apps from the terminal",
   "bin": {
     "zs": "./bin/zs.js"

@@ -73,7 +73,7 @@ export const REMOVE_APPLICATION_MUTATION = `
 export const MY_MACHINES_QUERY = `
   query MyMachines {
     myMachines {
-      id name status lastHeartbeat createdAt
+      id name status lastHeartbeat createdAt agentVersion
       specs {
         cpu { cores model }
         memory { total available }
@@ -87,7 +87,7 @@ export const MY_MACHINES_QUERY = `
 export const MACHINE_QUERY = `
   query Machine($id: ID!) {
     machine(id: $id) {
-      id name status lastHeartbeat createdAt
+      id name status lastHeartbeat createdAt agentVersion
       specs {
         cpu { cores model frequency }
         memory { total available }

@@ -11,6 +11,7 @@ export interface MachineRow {
   cpu: string;
   memoryGb: string;
   os: string;
+  agentVersion: string;
   lastSeen: string;
 }
 
@@ -29,6 +30,7 @@ export async function listMachinesUseCase(): Promise<MachineRow[]> {
       ? `${Math.round(m.specs.memory.available / 1024)}/${Math.round(m.specs.memory.total / 1024)} GB`
       : '-',
     os: m.specs ? `${m.specs.os.name} ${m.specs.os.version}` : '-',
+    agentVersion: m.agentVersion || '-',
     lastSeen: m.lastHeartbeat ? formatDate(m.lastHeartbeat) : 'never',
   }));
 }
