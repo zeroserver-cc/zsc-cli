@@ -21,7 +21,7 @@ describe('CLI smoke test', () => {
   });
 
   it('has correct version', () => {
-    expect(program.version()).toBe('0.1.0');
+    expect(program.version()).toBe('0.1.2');
   });
 
   it('has correct binary name', () => {

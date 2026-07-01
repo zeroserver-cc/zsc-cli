@@ -14,7 +14,7 @@ export const program = new Command();
 program
   .name('zs')
   .description('ZeroServer Community Cloud CLI')
-  .version('0.1.0');
+  .version('0.1.2');
 
 registerAuthCommands(program);
 registerConfigCommands(program);
