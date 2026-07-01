@@ -84,7 +84,7 @@ if [ "$plat" = "macos" ] && command -v codesign >/dev/null 2>&1; then
   info "Ad-hoc signing the binary for macOS..."
   xattr -c "${tmp}/${BIN_NAME}" 2>/dev/null || true
   codesign -s - -f "${tmp}/${BIN_NAME}" >/dev/null 2>&1 \
-    || info "codesign failed; if 'zs' is killed on launch, run: codesign -s - -f \"$target\""
+    || info "codesign failed; if 'zs' is killed on launch, run: codesign -s - -f \"${INSTALL_DIR}/${BIN_NAME}\""
 fi
 
 # --- install (sudo only if needed) ------------------------------------------
