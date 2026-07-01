@@ -83,8 +83,13 @@ chmod +x "${tmp}/${BIN_NAME}"
 if [ "$plat" = "macos" ] && command -v codesign >/dev/null 2>&1; then
   info "Ad-hoc signing the binary for macOS..."
   xattr -c "${tmp}/${BIN_NAME}" 2>/dev/null || true
-  codesign -s - -f "${tmp}/${BIN_NAME}" >/dev/null 2>&1 \
-    || info "codesign failed; if 'zs' is killed on launch, run: codesign -s - -f \"${INSTALL_DIR}/${BIN_NAME}\""
+  if ! codesign -s - -f "${tmp}/${BIN_NAME}" >/dev/null 2>&1; then
+    # Sign a temp copy and move it back: in-place codesign in the (possibly
+    # root-owned) install dir fails, and the binary carries a com.apple.provenance
+    # xattr that must be cleared first.
+    info "codesign failed. If 'zs' is killed on launch, run:"
+    info "  c=\$(mktemp) && cp \"${INSTALL_DIR}/${BIN_NAME}\" \"\$c\" && xattr -c \"\$c\" && codesign -s - -f \"\$c\" && sudo cp \"\$c\" \"${INSTALL_DIR}/${BIN_NAME}\""
+  fi
 fi
 
 # --- install (sudo only if needed) ------------------------------------------
