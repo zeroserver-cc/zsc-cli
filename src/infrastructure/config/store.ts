@@ -6,6 +6,8 @@ interface ConfigData {
   backendUrl: string;
   token?: string;
   role?: string;
+  /** ISO timestamp of the last auto-update check, used to throttle it to once a day. */
+  lastUpdateCheck?: string;
 }
 
 const CONFIG_DIR = join(homedir(), '.config', 'zsc');
