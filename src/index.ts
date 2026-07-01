@@ -8,6 +8,7 @@ import { registerStopCommand } from './presentation/commands/stop';
 import { registerRemoveCommand } from './presentation/commands/remove';
 import { registerNodeCommands } from './presentation/commands/nodes';
 import { registerRegistryCommands } from './presentation/commands/registry';
+import { registerUpgradeCommand } from './presentation/commands/upgrade';
 import { VERSION } from './version';
 
 export const program = new Command();
@@ -26,6 +27,7 @@ registerStopCommand(program);
 registerRemoveCommand(program);
 registerNodeCommands(program);
 registerRegistryCommands(program);
+registerUpgradeCommand(program);
 // This module only builds and exports the command tree. Parsing is driven by the
 // entry points — `src/cli.ts` for the standalone binary and `bin/zs.js` for the
 // npm install. Do NOT parse here: when esbuild bundles cli.ts (which imports this
