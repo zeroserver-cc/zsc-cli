@@ -35,9 +35,13 @@ export function getConfigValue(key: keyof ConfigData): string | undefined {
   return read()[key];
 }
 
-// Always defined: `read()` merges DEFAULTS, so callers never need their own fallback.
+// Always returns a usable base URL. `read()` merges DEFAULTS, but config.json is
+// parsed untyped, so a corrupted/hand-edited file could still yield null, a number
+// or an empty string — coerce those back to the default instead of building
+// invalid URLs like `null/graphql`.
 export function getBackendUrl(): string {
-  return read().backendUrl;
+  const value = read().backendUrl;
+  return typeof value === 'string' && value.trim() !== '' ? value : DEFAULT_BACKEND_URL;
 }
 
 export function setConfigValue(key: keyof ConfigData, value: string): void {
