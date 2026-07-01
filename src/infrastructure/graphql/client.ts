@@ -18,7 +18,7 @@ export async function gqlRequest<T>(
   variables?: Record<string, unknown>,
   token?: string,
 ): Promise<T> {
-  const backendUrl = getConfigValue('backendUrl') ?? 'http://localhost:4000';
+  const backendUrl = getConfigValue('backendUrl') ?? 'https://api.zeroserver.cc';
   const url = `${backendUrl}/graphql`;
 
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

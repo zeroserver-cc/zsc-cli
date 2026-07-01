@@ -10,7 +10,10 @@ interface ConfigData {
 
 const CONFIG_DIR = join(homedir(), '.config', 'zsc');
 const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
-const DEFAULTS: ConfigData = { backendUrl: 'http://localhost:3001' };
+// Points at the ZeroServer production API out of the box, so a fresh install can
+// `zs login` and `zs deploy` with no configuration. Override for local/self-hosted
+// backends with `zs config set backend-url <url>`.
+const DEFAULTS: ConfigData = { backendUrl: 'https://api.zeroserver.cc' };
 
 function read(): ConfigData {
   try {
