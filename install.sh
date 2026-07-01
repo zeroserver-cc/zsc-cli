@@ -75,6 +75,18 @@ else
 fi
 chmod +x "${tmp}/${BIN_NAME}"
 
+# --- ad-hoc codesign on macOS -----------------------------------------------
+# Apple Silicon refuses to run unsigned arm64 Mach-O binaries: the kernel sends
+# SIGKILL at exec ("zsh: killed"). The pkg-built binary ships unsigned, so
+# ad-hoc sign it here, while it still lives in the writable temp dir (in-place
+# codesign in a root-owned install dir would fail). Best-effort: warn, not fail.
+if [ "$plat" = "macos" ] && command -v codesign >/dev/null 2>&1; then
+  info "Ad-hoc signing the binary for macOS..."
+  xattr -c "${tmp}/${BIN_NAME}" 2>/dev/null || true
+  codesign -s - -f "${tmp}/${BIN_NAME}" >/dev/null 2>&1 \
+    || info "codesign failed; if 'zs' is killed on launch, run: codesign -s - -f \"$target\""
+fi
+
 # --- install (sudo only if needed) ------------------------------------------
 target="${INSTALL_DIR}/${BIN_NAME}"
 need_sudo=""
