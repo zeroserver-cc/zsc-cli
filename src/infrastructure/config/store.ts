@@ -41,7 +41,8 @@ export function getConfigValue(key: keyof ConfigData): string | undefined {
 // invalid URLs like `null/graphql`.
 export function getBackendUrl(): string {
   const value = read().backendUrl;
-  return typeof value === 'string' && value.trim() !== '' ? value : DEFAULT_BACKEND_URL;
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return trimmed !== '' ? trimmed : DEFAULT_BACKEND_URL;
 }
 
 export function setConfigValue(key: keyof ConfigData, value: string): void {
