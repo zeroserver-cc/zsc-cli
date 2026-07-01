@@ -2,6 +2,11 @@ name: release
 
 # ZSC-117: on a version tag, build the standalone per-arch binaries and publish
 # them (with checksums) to the GitHub Release. No npm publish.
+#
+# The macOS arm64 asset is ad-hoc codesigned on an Apple Silicon runner before
+# publishing: unsigned arm64 Mach-O binaries are SIGKILLed at launch on Apple
+# Silicon. Signing here means a fresh `curl | sh` install runs out of the box,
+# with the installer's own signing kept only as a belt-and-suspenders fallback.
 on:
   push:
     tags:
@@ -16,7 +21,7 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,10 +46,57 @@ jobs:
         # pkg cross-packages all targets from this runner (no native build step).
         run: pnpm build:binary
 
+      - name: Upload unsigned binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: dist-bin/zs-*
+          if-no-files-found: error
+
+  sign-macos:
+    needs: build
+    # Apple Silicon runner: has codesign and can produce a valid ad-hoc signature.
+    runs-on: macos-14
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: dist-bin
+
+      - name: Ad-hoc sign the Apple Silicon binary
+        run: |
+          bin="dist-bin/zs-macos-arm64"
+          [ -f "$bin" ] || { echo "::error::$bin not found"; exit 1; }
+          xattr -c "$bin" 2>/dev/null || true
+          codesign -s - -f "$bin"
+          codesign -dv "$bin"
+          codesign --verify --verbose=2 "$bin"
+
+      - name: Re-upload signed binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries
+          path: dist-bin/zs-*
+          overwrite: true
+          if-no-files-found: error
+
+  publish:
+    needs: sign-macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download signed binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries
+          path: dist-bin
+
       - name: Generate checksums
         working-directory: dist-bin
+        # Checksums are computed after signing so they match the published bytes.
         run: |
           for f in zs-*; do
+            case "$f" in *.sha256) continue ;; esac
             sha256sum "$f" > "$f.sha256"
           done
           ls -la

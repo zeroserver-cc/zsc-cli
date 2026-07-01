@@ -1,5 +1,8 @@
 import { program } from '../index';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pkg = require('../../package.json') as { version: string };
+
 describe('CLI smoke test', () => {
   it('registers all required commands', () => {
     const names = program.commands.map((c) => c.name());
@@ -20,8 +23,10 @@ describe('CLI smoke test', () => {
     expect(names).toContain('registry');
   });
 
-  it('has correct version', () => {
-    expect(program.version()).toBe('0.1.0');
+  // Asserts the CLI version (from the generated src/version.ts) matches
+  // package.json, so a stale version.ts or a forgotten `gen:version` fails CI.
+  it('reports the package.json version', () => {
+    expect(program.version()).toBe(pkg.version);
   });
 
   it('has correct binary name', () => {

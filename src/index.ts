@@ -8,13 +8,14 @@ import { registerStopCommand } from './presentation/commands/stop';
 import { registerRemoveCommand } from './presentation/commands/remove';
 import { registerNodeCommands } from './presentation/commands/nodes';
 import { registerRegistryCommands } from './presentation/commands/registry';
+import { VERSION } from './version';
 
 export const program = new Command();
 
 program
   .name('zs')
   .description('ZeroServer Community Cloud CLI')
-  .version('0.1.0');
+  .version(VERSION);
 
 registerAuthCommands(program);
 registerConfigCommands(program);
