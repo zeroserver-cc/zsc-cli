@@ -30,8 +30,8 @@ zs registry logout ghcr.io  # removes a stored credential
 ### Non-interactive (CI)
 
 Use `--token-stdin` to read the token from stdin, so it never lands in the
-process arguments or shell history. The host and `--username` must be passed as
-flags:
+process arguments or shell history. The registry host (positional argument) and
+`--username` must be provided:
 
 ```sh
 printf %s "$REGISTRY_TOKEN" | zs registry login ghcr.io --username "$USER" --token-stdin

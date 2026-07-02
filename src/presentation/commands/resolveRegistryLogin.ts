@@ -24,10 +24,11 @@ export interface RegistryLoginInputs {
  * stdin.
  *
  * With `--token-stdin` the command is fully non-interactive: the token is read
- * from stdin and the host and username must come from flags, so nothing ever
- * blocks on a prompt or leaks into argv / shell history. This is the path CI
- * uses to (re)store the credential on every deploy. Without it the behaviour is
- * unchanged: missing values are prompted for, the token with echo off.
+ * from stdin and the host (positional argument) and `--username` must be
+ * provided, so nothing ever blocks on a prompt or leaks into argv / shell
+ * history. This is the path CI uses to (re)store the credential on every deploy.
+ * Without it the behaviour is unchanged: missing values are prompted for, the
+ * token with echo off.
  */
 export async function resolveRegistryLogin(
   opts: RegistryLoginOptions,

@@ -5,14 +5,38 @@ import * as readline from 'readline';
 // in a pipeline without the token ever landing in argv or shell history.
 export function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
+    const stdin = process.stdin;
+    // With nothing piped, stdin is a TTY and reading would block forever waiting
+    // for EOF. Fail fast so a non-interactive caller never hangs.
+    if (stdin.isTTY) {
+      reject(new Error('Expected a token on stdin, but stdin is a TTY. Pipe it: `printf %s "$TOKEN" | zs …`.'));
+      return;
+    }
+
     let data = '';
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (chunk) => {
+    const cleanup = () => {
+      stdin.removeListener('data', onData);
+      stdin.removeListener('end', onEnd);
+      stdin.removeListener('error', onError);
+      stdin.pause();
+    };
+    const onData = (chunk: string) => {
       data += chunk;
-    });
-    process.stdin.on('end', () => resolve(data));
-    process.stdin.on('error', reject);
-    process.stdin.resume();
+    };
+    const onEnd = () => {
+      cleanup();
+      resolve(data);
+    };
+    const onError = (err: Error) => {
+      cleanup();
+      reject(err);
+    };
+
+    stdin.setEncoding('utf8');
+    stdin.on('data', onData);
+    stdin.on('end', onEnd);
+    stdin.on('error', onError);
+    stdin.resume();
   });
 }
 
