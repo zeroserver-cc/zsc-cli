@@ -1,5 +1,21 @@
 import * as readline from 'readline';
 
+// Reads all of stdin to EOF, for piped secrets in non-interactive contexts (CI).
+// Unlike promptPassword this needs no TTY, so `printf %s "$TOKEN" | zs …` works
+// in a pipeline without the token ever landing in argv or shell history.
+export function readStdin(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (chunk) => {
+      data += chunk;
+    });
+    process.stdin.on('end', () => resolve(data));
+    process.stdin.on('error', reject);
+    process.stdin.resume();
+  });
+}
+
 // Reads a single line with terminal echo (for non-secret input like email/host).
 export function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });

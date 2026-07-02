@@ -8,7 +8,8 @@ import {
   registryLogoutUseCase,
 } from '../../application/usecases/RegistryUseCase';
 import { handleError } from '../formatting/errors';
-import { prompt, promptPassword } from '../io/prompt';
+import { prompt, promptPassword, readStdin } from '../io/prompt';
+import { resolveRegistryLogin } from './resolveRegistryLogin';
 
 export function registerRegistryCommands(program: Command): void {
   const registry = program
@@ -19,22 +20,27 @@ export function registerRegistryCommands(program: Command): void {
     .command('login [registryHost]')
     .description('Store a registry credential (e.g. ghcr.io) to pull private images')
     .option('-u, --username <username>', 'Registry username')
-    .action(async (registryHost: string | undefined, opts: { username?: string }) => {
+    .option(
+      '--token-stdin',
+      'Read the token from stdin instead of prompting (non-interactive, for CI). Requires registryHost and --username.',
+    )
+    .action(async (registryHost: string | undefined, opts: { username?: string; tokenStdin?: boolean }) => {
       requireRole(['developer', 'admin']);
       let spinner: ReturnType<typeof ora> | undefined;
       try {
-        const host = registryHost ?? (await prompt('Registry host (e.g. ghcr.io): '));
-        const username = opts.username ?? (await prompt('Username: '));
-        // Read the token with echo off so it never lands on screen or in history.
-        const token = await promptPassword('Token (read-only / read:packages): ');
-
-        if (!host || !username || !token) {
-          console.error(chalk.red('Registry host, username and token are all required.'));
-          process.exit(1);
-        }
+        const inputs = await resolveRegistryLogin(
+          { registryHost, username: opts.username, tokenStdin: opts.tokenStdin },
+          {
+            promptHost: () => prompt('Registry host (e.g. ghcr.io): '),
+            promptUsername: () => prompt('Username: '),
+            // Read the token with echo off so it never lands on screen or in history.
+            promptToken: () => promptPassword('Token (read-only / read:packages): '),
+            readStdin,
+          },
+        );
 
         spinner = ora('Saving registry credential…').start();
-        const cred = await registryLoginUseCase({ registryHost: host, username, token });
+        const cred = await registryLoginUseCase(inputs);
         spinner.succeed(chalk.green(`Credential saved for ${chalk.bold(cred.registryHost)} (user ${cred.username}).`));
         // Assert only what the CLI can know: the token left over HTTPS and is
         // not kept on this machine. The backend stores it encrypted at rest.
