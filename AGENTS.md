@@ -1,6 +1,6 @@
 # AGENTS.md: zsc-cli
 
-> Veja o `AGENTS.md` da raiz para visao geral, glossario e time de agentes. Repositorio **a construir**; este arquivo define o alvo.
+> Veja o `AGENTS.md` da raiz para visao geral, glossario e time de agentes.
 
 ## Papel
 
@@ -12,19 +12,24 @@ TypeScript/Node, conforme `documentation/Applications/zsc-tool/Architecture.md` 
 
 ## Stack alvo
 
-Node + TypeScript; `yargs` ou `commander` (parsing); `axios`/`node-fetch` (GraphQL/REST); `conf` ou `keytar` (sessao/token seguro); `inquirer` (prompts); JWT consumido do backend. Gerenciador: `yarn`.
+Node + TypeScript; `commander` (parsing); `axios` (GraphQL/REST); JWT consumido do backend. Gerenciador: `pnpm`.
 
 ## Arquitetura
 
 Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain` (tipos e validacoes puras) -> `application` (casos de uso: `loginUser`, `deployApplication`, `listApplications`, `streamLogs`, `stopApplication`) -> `infrastructure` (cliente HTTP/GraphQL, store de sessao) -> `presentation` (definicao de comandos e formatacao de saida).
 
-## Comandos da CLI (MVP)
+## Comandos implementados
 
-- `zs login`: autenticacao (usuario/senha ou token), suporte a multiplas sessoes/profiles.
+- `zs login` / `zs logout`: autenticacao (usuario/senha ou token).
 - `zs deploy`: sobe uma aplicacao (imagem de container) na malha.
 - `zs list`: lista aplicacoes e instancias.
 - `zs logs`: logs de uma instancia.
 - `zs stop`: para uma aplicacao.
+- `zs remove`: remove uma aplicacao.
+- `zs nodes`: inspeciona nos da malha.
+- `zs registry login/list/logout`: gerencia credenciais de registries privados.
+- `zs config`: gerencia configuracao local (endpoint, profile).
+- `zs upgrade`: auto-atualizacao do binario.
 
 ## Regras locais
 
@@ -33,11 +38,11 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 - Consome o mesmo schema GraphQL do website; mantenha tipos sincronizados.
 - Termo Developer no produto e na ajuda.
 
-## Proximos passos para iniciar
+## Proximos passos
 
-1. `yarn init` e configurar TypeScript + ESLint + Jest seguindo o padrao dos outros repos.
-2. Esqueleto de pastas Clean Architecture.
-3. Implementar `zs login` ponta a ponta primeiro (desbloqueia os demais).
+1. Expandir cobertura de testes (jest).
+2. Implementar `zs deploy` com suporte a variaveis de ambiente e volumes.
+3. Suporte a multiplos profiles/sessoes no `zs login`.
 
 ## Agentes responsaveis
 
