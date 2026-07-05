@@ -89,6 +89,9 @@ export interface Machine {
 export interface RegistryCredential {
   registryHost: string;
   username: string;
+  // Last 4 chars of the token, for display only. Null for credentials saved
+  // before this field existed, or for tokens shorter than 8 chars.
+  tokenHint?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
