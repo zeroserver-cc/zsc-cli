@@ -120,6 +120,7 @@ export function registerDomainCommands(program: Command): void {
     .option('-y, --yes', 'Skip the confirmation prompt')
     .action(async (domainName: string, opts: { yes?: boolean }) => {
       requireRole(['developer', 'admin']);
+      let spinner: ReturnType<typeof ora> | undefined;
       try {
         if (!opts.yes) {
           const answer = await prompt(`Remove ${domainName}? Traffic to it will stop being routed. [y/N] `);
@@ -128,7 +129,7 @@ export function registerDomainCommands(program: Command): void {
             return;
           }
         }
-        const spinner = ora('Removing domain…').start();
+        spinner = ora('Removing domain…').start();
         const removed = await domainRemoveUseCase(domainName);
         if (removed) {
           spinner.succeed(`Domain ${chalk.bold(domainName)} removed.`);
@@ -136,6 +137,9 @@ export function registerDomainCommands(program: Command): void {
           spinner.warn(`Domain ${domainName} was not removed.`);
         }
       } catch (err) {
+        // handleError exits the process; stop the spinner first or it keeps
+        // animating over the error output.
+        spinner?.stop();
         handleError(err);
       }
     });

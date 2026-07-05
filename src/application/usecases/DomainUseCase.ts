@@ -15,6 +15,13 @@ function requireToken(): string {
   return token;
 }
 
+// The backend stores domains normalized (lowercase, trimmed); normalize both
+// user input and API values before comparing or sending, so casing/whitespace
+// never causes a claim/lookup mismatch.
+function normalizeDomainInput(domain: string): string {
+  return domain.trim().toLowerCase();
+}
+
 // Domains attach to an application, but developers think in app names —
 // resolve the name to the id the API wants.
 async function resolveApplicationByName(name: string, token: string): Promise<Application> {
@@ -32,7 +39,7 @@ export async function domainAddUseCase(domain: string, appName: string): Promise
   const app = await resolveApplicationByName(appName, token);
   const data = await gqlRequest<{ addCustomDomain: CustomDomain }>(
     ADD_CUSTOM_DOMAIN_MUTATION,
-    { applicationId: app.id, domain },
+    { applicationId: app.id, domain: normalizeDomainInput(domain) },
     token,
   );
   return data.addCustomDomain;
@@ -50,10 +57,11 @@ export async function domainListUseCase(appName?: string): Promise<CustomDomain[
 }
 
 async function findByDomainName(domain: string, token: string): Promise<CustomDomain> {
+  const wanted = normalizeDomainInput(domain);
   const data = await gqlRequest<{ myCustomDomains: CustomDomain[] }>(MY_CUSTOM_DOMAINS_QUERY, {}, token);
-  const record = data.myCustomDomains.find((d) => d.domain === domain.trim().toLowerCase());
+  const record = data.myCustomDomains.find((d) => normalizeDomainInput(d.domain) === wanted);
   if (!record) {
-    throw new Error(`Domain "${domain}" not found. Add it with "zs domain add ${domain} --app <name>".`);
+    throw new Error(`Domain "${wanted}" not found. Add it with "zs domain add ${wanted} --app <name>".`);
   }
   return record;
 }
