@@ -23,7 +23,7 @@ registry credential stored for your account:
 # Interactive: prompts for the token with echo off.
 zs registry login ghcr.io --username <user>
 
-zs registry list            # shows stored hosts (tokens are never printed)
+zs registry list            # shows stored hosts (only a masked hint of the token, e.g. ****ab12)
 zs registry logout ghcr.io  # removes a stored credential
 ```
 

@@ -118,7 +118,7 @@ export const CLAIM_MACHINE_MUTATION = `
 export const MY_REGISTRY_CREDENTIALS_QUERY = `
   query MyRegistryCredentials {
     myRegistryCredentials {
-      registryHost username createdAt updatedAt
+      registryHost username tokenHint createdAt updatedAt
     }
   }
 `;

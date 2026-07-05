@@ -54,7 +54,7 @@ export function registerRegistryCommands(program: Command): void {
   registry
     .command('list')
     .alias('ls')
-    .description('List your stored registry credentials (tokens are never shown)')
+    .description('List your stored registry credentials (only a masked token hint is shown, never the full token)')
     .action(async () => {
       requireRole(['developer', 'admin']);
       const spinner = ora('Fetching registry credentials…').start();
@@ -66,7 +66,10 @@ export function registerRegistryCommands(program: Command): void {
           return;
         }
         for (const c of creds) {
-          console.log(`${chalk.bold(c.registryHost)}  ${chalk.gray('user=')}${c.username}`);
+          const maskedToken = c.tokenHint ? `****${c.tokenHint}` : '-';
+          console.log(
+            `${chalk.bold(c.registryHost)}  ${chalk.gray('user=')}${c.username}  ${chalk.gray('token=')}${maskedToken}`,
+          );
         }
       } catch (err) {
         spinner.fail('Failed to fetch registry credentials.');
