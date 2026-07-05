@@ -136,3 +136,38 @@ export const DELETE_REGISTRY_CREDENTIAL_MUTATION = `
     deleteRegistryCredential(registryHost: $registryHost)
   }
 `;
+
+const CUSTOM_DOMAIN_FIELDS = `
+  id domain applicationId status verifiedAt createdAt updatedAt
+  dnsInstructions { recordType name value }
+`;
+
+export const MY_CUSTOM_DOMAINS_QUERY = `
+  query MyCustomDomains($applicationId: ID) {
+    myCustomDomains(applicationId: $applicationId) {
+      ${CUSTOM_DOMAIN_FIELDS}
+    }
+  }
+`;
+
+export const ADD_CUSTOM_DOMAIN_MUTATION = `
+  mutation AddCustomDomain($applicationId: ID!, $domain: String!) {
+    addCustomDomain(applicationId: $applicationId, domain: $domain) {
+      ${CUSTOM_DOMAIN_FIELDS}
+    }
+  }
+`;
+
+export const VERIFY_CUSTOM_DOMAIN_MUTATION = `
+  mutation VerifyCustomDomain($id: ID!) {
+    verifyCustomDomain(id: $id) {
+      ${CUSTOM_DOMAIN_FIELDS}
+    }
+  }
+`;
+
+export const REMOVE_CUSTOM_DOMAIN_MUTATION = `
+  mutation RemoveCustomDomain($id: ID!) {
+    removeCustomDomain(id: $id)
+  }
+`;

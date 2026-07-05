@@ -95,3 +95,22 @@ export interface RegistryCredential {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface DnsInstruction {
+  recordType: 'TXT' | 'CNAME' | 'A';
+  name: string;
+  value: string;
+}
+
+export type CustomDomainStatus = 'PENDING' | 'VERIFIED' | 'ACTIVE' | 'FAILED';
+
+export interface CustomDomain {
+  id: string;
+  domain: string;
+  applicationId: string;
+  status: CustomDomainStatus;
+  dnsInstructions: DnsInstruction[];
+  verifiedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
