@@ -16,7 +16,7 @@ export interface MachineRow {
 }
 
 export async function listMachinesUseCase(): Promise<MachineRow[]> {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const data = await gqlRequest<{ myMachines: Machine[] }>(MY_MACHINES_QUERY, undefined, token);

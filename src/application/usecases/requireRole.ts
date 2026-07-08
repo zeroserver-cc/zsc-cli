@@ -3,7 +3,7 @@ import { UserRole } from '../../domain/entities/types';
 import { getConfigValue } from '../../infrastructure/config/store';
 
 export function requireRole(allowed: UserRole[]): void {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) {
     console.error(chalk.red('Not logged in. Run "zs login" first.'));
     process.exit(1);

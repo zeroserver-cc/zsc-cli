@@ -4,7 +4,7 @@ import { STOP_APPLICATION_MUTATION } from '../../infrastructure/graphql/queries'
 import { getConfigValue } from '../../infrastructure/config/store';
 
 export async function stopApplicationUseCase(instanceId: string): Promise<ApplicationInstance> {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const data = await gqlRequest<{ stopApplication: ApplicationInstance }>(

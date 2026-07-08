@@ -8,12 +8,16 @@ export async function loginUseCase(email: string, password: string): Promise<Aut
     LOGIN_MUTATION,
     { input: { email, password } },
   );
-  setConfigValue('token', data.login.token);
+  setConfigValue('accessToken', data.login.accessToken);
+  setConfigValue('refreshToken', data.login.refreshToken);
+  setConfigValue('token', data.login.accessToken);
   setConfigValue('role', data.login.user.role);
   return data.login;
 }
 
 export function logoutUseCase(): void {
+  deleteConfigValue('accessToken');
+  deleteConfigValue('refreshToken');
   deleteConfigValue('token');
   deleteConfigValue('role');
 }

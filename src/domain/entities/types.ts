@@ -9,6 +9,8 @@ export interface User {
 
 export interface AuthPayload {
   token: string;
+  accessToken: string;
+  refreshToken: string;
   expiresAt: string;
   user: User;
 }

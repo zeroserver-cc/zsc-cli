@@ -4,7 +4,7 @@ import { CLAIM_MACHINE_MUTATION } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
 export async function claimMachineUseCase(token: string): Promise<Machine> {
-  const authToken = getConfigValue('token');
+  const authToken = getConfigValue('accessToken');
   if (!authToken) throw new Error('Not logged in. Run "zs login" first.');
 
   const data = await gqlRequest<{ claimMachine: Machine }>(

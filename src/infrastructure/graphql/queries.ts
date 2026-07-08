@@ -1,7 +1,16 @@
 export const LOGIN_MUTATION = `
   mutation Login($input: LoginInput!) {
     login(input: $input) {
-      token expiresAt
+      token accessToken refreshToken expiresAt
+      user { id username email role }
+    }
+  }
+`;
+
+export const REFRESH_TOKEN_MUTATION = `
+  mutation RefreshToken($refreshToken: String!) {
+    refreshToken(refreshToken: $refreshToken) {
+      token accessToken refreshToken expiresAt
       user { id username email role }
     }
   }

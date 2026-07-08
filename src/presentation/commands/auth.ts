@@ -38,7 +38,7 @@ export function registerAuthCommands(program: Command): void {
     .description('Show the currently authenticated user')
     .action(async () => {
       try {
-        const token = getConfigValue('token');
+        const token = getConfigValue('accessToken');
         if (!token) {
           console.log(chalk.yellow('Not logged in.'));
           process.exit(1);
