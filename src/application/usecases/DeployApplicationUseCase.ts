@@ -14,7 +14,7 @@ export async function deployApplicationUseCase(
   input: DeployInput,
   onProgress?: (status: string) => void,
 ): Promise<DeployResult> {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const appName = input.name ?? deriveAppName(input.image);

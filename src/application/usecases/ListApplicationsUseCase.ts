@@ -15,7 +15,7 @@ export interface AppRow {
 }
 
 export async function listApplicationsUseCase(): Promise<AppRow[]> {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const appsData = await gqlRequest<{ myApplications: Application[] }>(

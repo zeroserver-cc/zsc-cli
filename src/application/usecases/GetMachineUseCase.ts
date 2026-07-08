@@ -9,7 +9,7 @@ export interface MachineDetail {
 }
 
 export async function getMachineUseCase(id: string): Promise<MachineDetail> {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const [machineData, instancesData] = await Promise.all([

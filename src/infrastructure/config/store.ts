@@ -5,6 +5,8 @@ import { join } from 'path';
 interface ConfigData {
   backendUrl: string;
   token?: string;
+  accessToken?: string;
+  refreshToken?: string;
   role?: string;
   /** ISO timestamp of the last auto-update check, used to throttle it to once a day. */
   lastUpdateCheck?: string;

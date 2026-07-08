@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { loginUseCase, logoutUseCase } from '../../application/usecases/LoginUseCase';
+import { loginWithTokenUseCase } from '../../application/usecases/LoginWithTokenUseCase';
 import { whoamiUseCase } from '../../application/usecases/WhoamiUseCase';
 import { handleError } from '../formatting/errors';
 import { getConfigValue } from '../../infrastructure/config/store';
@@ -12,8 +13,21 @@ export function registerAuthCommands(program: Command): void {
     .description('Log in to ZeroServer Community Cloud')
     .option('-e, --email <email>', 'Account email')
     .option('-p, --password <password>', 'Account password')
+    .option('-t, --token <token>', 'Access token (skips email/password login)')
+    .option('--refresh-token <refreshToken>', 'Optional refresh token when using --token')
     .action(async (opts) => {
       try {
+        if (opts.token) {
+          const result = await loginWithTokenUseCase(opts.token, opts.refreshToken);
+          console.log(chalk.green('✓'), `Logged in as ${chalk.bold(result.user.username)} (${result.user.role})`);
+          if (opts.refreshToken) {
+            console.log(chalk.gray('Refresh token stored for automatic revalidation.'));
+          } else {
+            console.log(chalk.yellow('No refresh token provided; session will not be renewable once it expires.'));
+          }
+          return;
+        }
+
         const email: string = opts.email ?? (await prompt('Email: '));
         const password: string = opts.password ?? (await promptPassword('Password: '));
 
@@ -38,7 +52,7 @@ export function registerAuthCommands(program: Command): void {
     .description('Show the currently authenticated user')
     .action(async () => {
       try {
-        const token = getConfigValue('token');
+        const token = getConfigValue('accessToken');
         if (!token) {
           console.log(chalk.yellow('Not logged in.'));
           process.exit(1);

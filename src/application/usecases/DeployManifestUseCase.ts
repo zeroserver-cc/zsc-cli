@@ -22,7 +22,7 @@ export async function deployManifestUseCase(
   dir: string = process.cwd(),
   onProgress?: (status: string) => void,
 ): Promise<ManifestDeployResult> {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const manifest = loadManifestFile(dir);

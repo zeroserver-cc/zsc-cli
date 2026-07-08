@@ -8,7 +8,7 @@ import {
 import { getConfigValue } from '../../infrastructure/config/store';
 
 function requireToken(): string {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
   return token;
 }

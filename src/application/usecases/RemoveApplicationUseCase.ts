@@ -4,7 +4,7 @@ import { REMOVE_APPLICATION_MUTATION } from '../../infrastructure/graphql/querie
 import { getConfigValue } from '../../infrastructure/config/store';
 
 export async function removeApplicationUseCase(instanceId: string): Promise<ApplicationInstance> {
-  const token = getConfigValue('token');
+  const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const data = await gqlRequest<{ removeApplication: ApplicationInstance }>(
