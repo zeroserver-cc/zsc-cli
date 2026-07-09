@@ -61,6 +61,20 @@ interface RefreshResponse {
   };
 }
 
+function storeSession(accessToken: string, refreshToken: string, role: string): void {
+  setConfigValue('accessToken', accessToken);
+  setConfigValue('refreshToken', refreshToken);
+  setConfigValue('token', accessToken);
+  setConfigValue('role', role);
+}
+
+function clearSession(): void {
+  deleteConfigValue('accessToken');
+  deleteConfigValue('refreshToken');
+  deleteConfigValue('token');
+  deleteConfigValue('role');
+}
+
 async function performRefresh(url: string, refreshToken: string): Promise<string | null> {
   try {
     const data = await rawGqlRequest<RefreshResponse>(
@@ -69,18 +83,20 @@ async function performRefresh(url: string, refreshToken: string): Promise<string
       { refreshToken },
     );
     const result = data.refreshToken;
-    setConfigValue('accessToken', result.accessToken);
-    setConfigValue('refreshToken', result.refreshToken);
-    setConfigValue('token', result.accessToken);
-    setConfigValue('role', result.user.role);
+    storeSession(result.accessToken, result.refreshToken, result.user.role);
     return result.accessToken;
   } catch {
-    deleteConfigValue('accessToken');
-    deleteConfigValue('refreshToken');
-    deleteConfigValue('token');
-    deleteConfigValue('role');
+    clearSession();
     return null;
   }
+}
+
+export async function refreshCurrentSession(): Promise<string | null> {
+  const backendUrl = getBackendUrl();
+  const url = `${backendUrl}/graphql`;
+  const refreshToken = getConfigValue('refreshToken');
+  if (!refreshToken) return null;
+  return performRefresh(url, refreshToken);
 }
 
 function handleAxiosError(backendUrl: string, err: AxiosError): never {
@@ -105,11 +121,12 @@ export async function gqlRequest<T>(
 ): Promise<T> {
   const backendUrl = getBackendUrl();
   const url = `${backendUrl}/graphql`;
+  const accessToken = token ?? getConfigValue('accessToken');
 
   try {
-    return await rawGqlRequest<T>(url, query, variables, token);
+    return await rawGqlRequest<T>(url, query, variables, accessToken);
   } catch (error) {
-    if (!isAuthError(error) || !token) {
+    if (!isAuthError(error) || !accessToken) {
       if (axios.isAxiosError(error)) {
         handleAxiosError(backendUrl, error);
       }
@@ -118,9 +135,16 @@ export async function gqlRequest<T>(
 
     const refreshToken = getConfigValue('refreshToken');
     if (!refreshToken) {
-      deleteConfigValue('accessToken');
-      deleteConfigValue('token');
+      clearSession();
       throw new GraphQLError('Session expired or invalid. Run "zs login" again.');
+    }
+
+    // Another concurrent request may have already refreshed the token while this
+    // one was in flight. If the stored access token changed, retry with it
+    // instead of clearing the session.
+    const currentAccessToken = getConfigValue('accessToken');
+    if (currentAccessToken && currentAccessToken !== accessToken) {
+      return rawGqlRequest<T>(url, query, variables, currentAccessToken);
     }
 
     const newAccessToken = await performRefresh(url, refreshToken);
