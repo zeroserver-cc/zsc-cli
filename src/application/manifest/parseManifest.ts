@@ -41,6 +41,8 @@ export function parseManifest(content: string): AppManifest {
     throw new ManifestError('zs.yaml: only one service can be "exposed" in the MVP (one public URL per app).');
   }
 
+  validateNamedVolumes(services);
+
   return { app, services };
 }
 
@@ -63,7 +65,7 @@ function validateService(svc: unknown, index: number): ManifestService {
 
   if (svc.env !== undefined) service.env = toStringArray(svc.env, `${where}.env`);
   if (svc.ports !== undefined) service.ports = toStringArray(svc.ports, `${where}.ports`);
-  if (svc.volumes !== undefined) service.volumes = toStringArray(svc.volumes, `${where}.volumes`);
+  if (svc.volumes !== undefined) service.volumes = toVolumeStringArray(svc.volumes, `${where}.volumes`);
   if (svc.dependsOn !== undefined) service.dependsOn = toStringArray(svc.dependsOn, `${where}.dependsOn`);
   if (svc.exposed !== undefined) {
     if (typeof svc.exposed !== 'boolean') {
@@ -84,6 +86,50 @@ function toStringArray(value: unknown, where: string): string[] {
     if (typeof item === 'string') return item;
     if (typeof item === 'number') return String(item);
     throw new ManifestError(`zs.yaml: ${where}[${i}] must be a string or number.`);
+  });
+}
+
+function validateNamedVolumes(services: ManifestService[]): void {
+  const seenNames = new Set<string>();
+
+  for (const service of services) {
+    for (const volumeString of service.volumes ?? []) {
+      const parts = volumeString.split(':');
+      if (parts.length < 2) {
+        throw new ManifestError(
+          `zs.yaml: invalid volume "${volumeString}" in service "${service.name}". Expected "name:/container/path" or "/host/path:/container/path".`,
+        );
+      }
+
+      const [name, mountPath] = parts;
+      if (name.startsWith('/')) continue; // bind mount, not validated here
+
+      if (!mountPath.startsWith('/')) {
+        throw new ManifestError(
+          `zs.yaml: volume "${volumeString}" in service "${service.name}" must use an absolute container path.`,
+        );
+      }
+
+      if (seenNames.has(name)) {
+        throw new ManifestError(
+          `zs.yaml: duplicate named volume "${name}". Volume names must be unique within an app.`,
+        );
+      }
+      seenNames.add(name);
+    }
+  }
+}
+
+function toVolumeStringArray(value: unknown, where: string): string[] {
+  if (!Array.isArray(value)) {
+    throw new ManifestError(`zs.yaml: ${where} must be a list.`);
+  }
+  return value.map((item, i) => {
+    if (typeof item === 'string') return item;
+    throw new ManifestError(
+      `zs.yaml: ${where}[${i}] must be a string (e.g. "data:/var/lib/data" or "/host:/container:ro"). ` +
+        'Unquoted YAML values with a colon become objects; wrap the volume in quotes.',
+    );
   });
 }
 

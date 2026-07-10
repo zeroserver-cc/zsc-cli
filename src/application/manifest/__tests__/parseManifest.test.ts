@@ -102,4 +102,46 @@ services:
   it('throws on empty content', () => {
     expect(() => parseManifest('')).toThrow(ManifestError);
   });
+
+  it('throws when a named volume mount path is not absolute', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: db
+    image: postgres
+    volumes:
+      - "data:relative/path"
+`),
+    ).toThrow(/absolute container path/);
+  });
+
+  it('throws on duplicate named volume names across services', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: a
+    image: a
+    volumes:
+      - data:/data
+  - name: b
+    image: b
+    volumes:
+      - data:/data
+`),
+    ).toThrow(/duplicate named volume "data"/);
+  });
+
+  it('accepts bind mounts without treating them as named volumes', () => {
+    const m = parseManifest(`
+app: x
+services:
+  - name: web
+    image: nginx
+    volumes:
+      - /host/config:/etc/nginx/conf.d:ro
+`);
+    expect(m.services[0].volumes).toEqual(['/host/config:/etc/nginx/conf.d:ro']);
+  });
 });
