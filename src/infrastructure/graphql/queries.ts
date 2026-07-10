@@ -180,3 +180,19 @@ export const REMOVE_CUSTOM_DOMAIN_MUTATION = `
     removeCustomDomain(id: $id)
   }
 `;
+
+export const APPLICATION_VOLUMES_QUERY = `
+  query ApplicationVolumes($applicationId: ID!) {
+    applicationVolumes(applicationId: $applicationId) {
+      id name mountPath serviceName nodeId lastSnapshotAt lastSnapshotKey createdAt updatedAt
+    }
+  }
+`;
+
+export const RESTORE_APPLICATION_VOLUMES_MUTATION = `
+  mutation RestoreApplicationVolumes($applicationId: ID!) {
+    restoreApplicationVolumes(applicationId: $applicationId) {
+      commandIds targetMachineId
+    }
+  }
+`;

@@ -88,6 +88,19 @@ export interface Machine {
   createdAt: string;
 }
 
+export interface ApplicationVolume {
+  id: string;
+  applicationId: string;
+  name: string;
+  mountPath: string;
+  serviceName: string;
+  nodeId?: string;
+  lastSnapshotAt?: string;
+  lastSnapshotKey?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface RegistryCredential {
   registryHost: string;
   username: string;
