@@ -144,4 +144,40 @@ services:
 `);
     expect(m.services[0].volumes).toEqual(['/host/config:/etc/nginx/conf.d:ro']);
   });
+
+  it('parses AI requirements', () => {
+    const m = parseManifest(`
+app: ia-app
+ai:
+  gpu: true
+  llm: true
+  video: false
+  audio: false
+  image: true
+services:
+  - name: api
+    image: ghcr.io/me/ia-api:1.0
+    ports: ["8000"]
+    exposed: true
+`);
+    expect(m.ai).toEqual({ gpu: true, llm: true, video: false, audio: false, image: true });
+  });
+
+  it('omits AI requirements when not declared', () => {
+    const m = parseManifest(DEMO);
+    expect(m.ai).toBeUndefined();
+  });
+
+  it('throws when ai flags are not boolean', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+ai:
+  gpu: "yes"
+services:
+  - name: web
+    image: nginx
+`),
+    ).toThrow(/"ai.gpu" must be true or false/);
+  });
 });

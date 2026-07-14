@@ -35,9 +35,11 @@ export async function deployManifestUseCase(
   const applicationId = appData.createApplication.id;
 
   // No image/env/ports override: the backend deploys from the app's services[].
+  // Forward AI requirements declared in the manifest so the scheduler picks a
+  // node with the right GPU/ML capabilities.
   const deployData = await gqlRequest<{ deployApplication: ApplicationInstance }>(
     DEPLOY_APPLICATION_MUTATION,
-    { input: { applicationId } },
+    { input: { applicationId, ...manifest.ai } },
     token,
   );
 

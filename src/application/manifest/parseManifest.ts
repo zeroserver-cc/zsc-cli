@@ -1,5 +1,5 @@
 import { parse } from 'yaml';
-import { AppManifest, ManifestService } from '../../domain/entities/types';
+import { AppManifest, ManifestAIRequirements, ManifestService } from '../../domain/entities/types';
 
 export class ManifestError extends Error {
   constructor(message: string) {
@@ -43,7 +43,29 @@ export function parseManifest(content: string): AppManifest {
 
   validateNamedVolumes(services);
 
-  return { app, services };
+  const ai = raw.ai !== undefined ? validateAIRequirements(raw.ai) : undefined;
+
+  return { app, ai, services };
+}
+
+function validateAIRequirements(raw: unknown): ManifestAIRequirements {
+  if (!isRecord(raw)) {
+    throw new ManifestError('zs.yaml: "ai" must be a mapping with boolean flags (gpu, llm, video, audio, image).');
+  }
+
+  const allowed = ['gpu', 'llm', 'video', 'audio', 'image'];
+  const result: ManifestAIRequirements = {};
+
+  for (const key of allowed) {
+    const value = raw[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'boolean') {
+      throw new ManifestError(`zs.yaml: "ai.${key}" must be true or false.`);
+    }
+    result[key as keyof ManifestAIRequirements] = value;
+  }
+
+  return result;
 }
 
 function validateService(svc: unknown, index: number): ManifestService {
