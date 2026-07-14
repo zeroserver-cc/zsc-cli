@@ -44,6 +44,10 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 2. Implementar `zs deploy` com suporte a variaveis de ambiente e volumes.
 3. Suporte a multiplos profiles/sessoes no `zs login`.
 
+## Registro de mudanças
+
+Ao final de cada ciclo de implementacao, atualize o `CHANGELOG.md` deste repositorio. Use a secao `[Unreleased]` e as categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido`, `Depreciado` e `Seguranca`. Agrupe as entradas por tipo de mudanca, descreva o impacto em linguagem simples e faca o commit junto com as demais alteracoes. Nao registre mudancas puramente cosmeticas ou de formatacao, a menos que alterem comportamento observavel.
+
 ## Agentes responsaveis
 
 `backend-engineer` (execucao), `head-engenharia` (DX/arquitetura).

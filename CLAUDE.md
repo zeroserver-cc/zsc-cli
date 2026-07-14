@@ -39,6 +39,10 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 2. Esqueleto de pastas Clean Architecture.
 3. Implementar `zs login` ponta a ponta primeiro (desbloqueia os demais).
 
+## Registro de mudanças
+
+Ao final de cada ciclo de implementação, atualize o `CHANGELOG.md` deste repositório. Use a seção `[Unreleased]` e as categorias `Adicionado`, `Alterado`, `Corrigido`, `Removido`, `Depreciado` e `Segurança`. Agrupe as entradas por tipo de mudança, descreva o impacto em linguagem simples e faça o commit junto com as demais alterações. Não registre mudanças puramente cosméticas ou de formatação, a menos que alterem comportamento observável.
+
 ## Agentes responsáveis
 
 `backend-engineer` (execução), `head-engenharia` (DX/arquitetura).
