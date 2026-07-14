@@ -51,6 +51,15 @@ export interface DeployInput {
   env?: string[];
 }
 
+/** AI/ML resources declared by the application. */
+export interface ManifestAIRequirements {
+  gpu?: boolean;
+  llm?: boolean;
+  video?: boolean;
+  audio?: boolean;
+  image?: boolean;
+}
+
 // A single service (container) in a zs.yaml manifest. Maps 1:1 to the backend's
 // ServiceDefinitionInput consumed by createApplication.
 export interface ManifestService {
@@ -66,6 +75,7 @@ export interface ManifestService {
 // Parsed and validated zs.yaml manifest (multi-service application).
 export interface AppManifest {
   app: string;
+  ai?: ManifestAIRequirements;
   services: ManifestService[];
 }
 
