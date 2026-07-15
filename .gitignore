@@ -6,3 +6,4 @@ dist-bin/
 
 # local agent/session metadata
 .claude/
+release-*.tar.gz
