@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-07-15
+
 ### Corrigido
 - `zs deploy` agora mapeia corretamente os requisitos de IA do manifesto (`ai.gpu`, `ai.llm`, etc.) para os campos esperados pelo backend (`requiresGpu`, `requiresLlm`, etc.), permitindo deploys em nodes AI-enabled.
 
