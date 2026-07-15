@@ -7,6 +7,11 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-07-15
+
+### Alterado
+- Mensagens de erro de deploy propagadas pelo backend (incluindo incompatibilidade de arquitetura da imagem com nodes disponíveis) são exibidas integralmente no terminal.
+
 ## [0.3.3] - 2026-07-15
 
 ### Corrigido
