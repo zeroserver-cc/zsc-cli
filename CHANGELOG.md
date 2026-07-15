@@ -8,6 +8,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Adicionado
+- `zs deploy <image>` usa o nome do `app` definido no `zs.yaml` quando ele existe no diretório (a opção `--name` continua tendo prioridade).
+- `zs deploy` (modo manifesto) reutiliza a aplicação existente pelo nome do `zs.yaml`, evitando criar apps duplicados a cada deploy.
+- Testes unitários para `DeployManifestUseCase` cobrindo criação, reutilização por nome e encaminhamento de requisitos de IA.
 - Suporte à seção `ai` no `zs.yaml` (`gpu`, `llm`, `video`, `audio`, `image`), validada por `parseManifest` e encaminhada para o backend no input de `deployApplication`.
 - Testes unitários para parsing e validação dos requisitos de IA no manifesto.
 - Criação do arquivo `CHANGELOG.md` para rastreamento de mudanças.

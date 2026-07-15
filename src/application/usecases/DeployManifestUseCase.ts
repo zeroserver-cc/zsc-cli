@@ -3,6 +3,7 @@ import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
+  MY_APPLICATIONS_QUERY,
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { loadManifestFile } from '../manifest/loadManifestFile';
@@ -15,8 +16,9 @@ export interface ManifestDeployResult extends WaitResult {
 
 /**
  * Deploy a multi-service application described by a zs.yaml in `dir` (ZSC-110).
- * Creates the application with the full services[] (same payload as the portal
- * wizard), triggers the deploy, then polls until the instance is terminal.
+ * Reuses the application by name when it already exists, creates it with the
+ * full services[] the first time, triggers the deploy, then polls until the
+ * instance is terminal.
  */
 export async function deployManifestUseCase(
   dir: string = process.cwd(),
@@ -26,13 +28,21 @@ export async function deployManifestUseCase(
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
   const manifest = loadManifestFile(dir);
+  const appName = manifest.app;
 
-  const appData = await gqlRequest<{ createApplication: Application }>(
-    CREATE_APPLICATION_MUTATION,
-    { input: manifestToCreateInput(manifest) },
-    token,
-  );
-  const applicationId = appData.createApplication.id;
+  let applicationId: string;
+  const mine = await gqlRequest<{ myApplications: Application[] }>(MY_APPLICATIONS_QUERY, {}, token);
+  const existing = mine.myApplications.find((a) => a.name === appName)?.id;
+  if (existing) {
+    applicationId = existing;
+  } else {
+    const appData = await gqlRequest<{ createApplication: Application }>(
+      CREATE_APPLICATION_MUTATION,
+      { input: manifestToCreateInput(manifest) },
+      token,
+    );
+    applicationId = appData.createApplication.id;
+  }
 
   // No image/env/ports override: the backend deploys from the app's services[].
   // Forward AI requirements declared in the manifest so the scheduler picks a
