@@ -41,7 +41,7 @@ export async function listApplicationsUseCase(): Promise<AppRow[]> {
           appName: app.name,
           image: app.dockerImage,
           status: inst.status,
-          address: inst.address ?? '-',
+          address: app.address ?? app.publicUrl ?? inst.address ?? '-',
         });
       }
     }),

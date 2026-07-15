@@ -34,6 +34,7 @@ export const DEPLOY_APPLICATION_MUTATION = `
   mutation DeployApplication($input: DeployApplicationInput!) {
     deployApplication(input: $input) {
       id status externalPort externalIp address applicationId machineId
+      application { id name publicUrl address }
     }
   }
 `;
@@ -42,7 +43,7 @@ export const APPLICATION_INSTANCE_QUERY = `
   query ApplicationInstance($id: ID!) {
     applicationInstance(id: $id) {
       id status externalPort externalIp address logs
-      application { name }
+      application { id name publicUrl address }
     }
   }
 `;
@@ -50,7 +51,7 @@ export const APPLICATION_INSTANCE_QUERY = `
 export const MY_APPLICATIONS_QUERY = `
   query MyApplications {
     myApplications {
-      id name dockerImage createdAt
+      id name dockerImage publicUrl address createdAt
     }
   }
 `;

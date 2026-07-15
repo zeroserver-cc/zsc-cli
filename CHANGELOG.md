@@ -7,6 +7,13 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-15
+
+### Alterado
+- `MY_APPLICATIONS_QUERY`, `DEPLOY_APPLICATION_MUTATION` e `APPLICATION_INSTANCE_QUERY` passam a trazer `publicUrl`/`address` da aplicação.
+- `zs deploy` exibe o endereço público estável da aplicação ao final de deploys bem-sucedidos.
+- `zs list` exibe o endereço da aplicação quando disponível, mantendo o fallback para o endereço da instância.
+
 ## [0.3.1] - 2026-07-15
 
 ### Adicionado

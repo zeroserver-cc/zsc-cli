@@ -78,8 +78,9 @@ function reportResult(spinner: Ora, { instance, timedOut }: DeployResult, appNam
   if (instance.status === 'RUNNING') {
     spinner.succeed(chalk.green(appName ? `Deploy successful: ${appName}` : 'Deploy successful!'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
-    if (instance.address) {
-      console.log(`Address:     ${chalk.underline.cyan(instance.address)}`);
+    const appAddress = instance.application?.address ?? instance.application?.publicUrl ?? instance.address;
+    if (appAddress) {
+      console.log(`Address:     ${chalk.underline.cyan(appAddress)}`);
     }
   } else {
     spinner.fail(chalk.red(`Deploy ended with status: ${instance.status}`));

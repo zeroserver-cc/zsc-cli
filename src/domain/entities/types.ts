@@ -28,6 +28,8 @@ export interface Application {
   id: string;
   name: string;
   dockerImage: string;
+  publicUrl?: string;
+  address?: string;
   createdAt: string;
 }
 
@@ -40,7 +42,7 @@ export interface ApplicationInstance {
   address?: string;
   logs?: string;
   createdAt: string;
-  application?: { name: string };
+  application?: Application;
 }
 
 export interface DeployInput {
