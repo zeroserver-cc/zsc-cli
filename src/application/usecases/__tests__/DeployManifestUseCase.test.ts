@@ -111,5 +111,9 @@ services:
   await deployManifestUseCase(tmpDir);
 
   const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
-  expect(deployVars.input).toMatchObject({ applicationId: 'app-ai', gpu: true, llm: false });
+  expect(deployVars.input).toMatchObject({
+    applicationId: 'app-ai',
+    requiresGpu: true,
+    requiresLlm: false,
+  });
 });

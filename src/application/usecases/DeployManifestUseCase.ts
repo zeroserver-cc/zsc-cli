@@ -47,9 +47,18 @@ export async function deployManifestUseCase(
   // No image/env/ports override: the backend deploys from the app's services[].
   // Forward AI requirements declared in the manifest so the scheduler picks a
   // node with the right GPU/ML capabilities.
+  const aiRequirements = manifest.ai
+    ? {
+        requiresGpu: manifest.ai.gpu,
+        requiresLlm: manifest.ai.llm,
+        requiresVideo: manifest.ai.video,
+        requiresAudio: manifest.ai.audio,
+        requiresImage: manifest.ai.image,
+      }
+    : {};
   const deployData = await gqlRequest<{ deployApplication: ApplicationInstance }>(
     DEPLOY_APPLICATION_MUTATION,
-    { input: { applicationId, ...manifest.ai } },
+    { input: { applicationId, ...aiRequirements } },
     token,
   );
 
