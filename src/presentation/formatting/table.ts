@@ -4,6 +4,7 @@ import { AppRow } from '../../application/usecases/ListApplicationsUseCase';
 import { MachineRow } from '../../application/usecases/ListMachinesUseCase';
 import { MachineDetail } from '../../application/usecases/GetMachineUseCase';
 import { parseDate } from './dates';
+import { formatSharedLimitValue } from './sharedLimits';
 
 const STATUS_COLORS: Record<string, (s: string) => string> = {
   RUNNING: chalk.green,
@@ -65,7 +66,7 @@ export function printMachineTable(rows: MachineRow[]): void {
   }
 
   const table = new Table({
-    head: ['Node ID', 'Name', 'Status', 'CPU', 'Memory', 'OS', 'Agent', 'Last Seen'].map((h) => chalk.bold(h)),
+    head: ['Node ID', 'Name', 'Status', 'CPU', 'Memory', 'OS', 'Agent', 'Shared', 'Last Seen'].map((h) => chalk.bold(h)),
     style: { head: [], border: [] },
   });
 
@@ -78,6 +79,7 @@ export function printMachineTable(rows: MachineRow[]): void {
       chalk.dim(row.memoryGb),
       chalk.dim(row.os),
       chalk.dim(row.agentVersion),
+      row.shared === '—' ? chalk.gray(row.shared) : row.shared,
       row.lastSeen,
     ]);
   }
@@ -99,6 +101,11 @@ export function printMachineDetail({ machine, instances }: MachineDetail): void 
   }
 
   console.log(`${chalk.bold('Agent:')}  ${machine.agentVersion || '-'}`);
+
+  console.log(chalk.bold('Shared limits:'));
+  console.log(`  vCPU:    ${formatSharedLimitValue(machine.sharedVCpu, 'vCPU')}`);
+  console.log(`  Memory:  ${formatSharedLimitValue(machine.sharedMemoryMb, 'MB')}`);
+  console.log(`  Storage: ${formatSharedLimitValue(machine.sharedStorageMb, 'MB')}`);
 
   if (machine.lastHeartbeat) {
     const hbDate = parseDate(machine.lastHeartbeat);

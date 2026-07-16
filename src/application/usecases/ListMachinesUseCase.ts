@@ -3,6 +3,7 @@ import { gqlRequest } from '../../infrastructure/graphql/client';
 import { MY_MACHINES_QUERY } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { formatDate } from '../../presentation/formatting/dates';
+import { formatSharedLimits } from '../../presentation/formatting/sharedLimits';
 
 export interface MachineRow {
   id: string;
@@ -13,6 +14,7 @@ export interface MachineRow {
   os: string;
   agentVersion: string;
   lastSeen: string;
+  shared: string;
 }
 
 export async function listMachinesUseCase(): Promise<MachineRow[]> {
@@ -32,6 +34,7 @@ export async function listMachinesUseCase(): Promise<MachineRow[]> {
     os: m.specs ? `${m.specs.os.name} ${m.specs.os.version}` : '-',
     agentVersion: m.agentVersion || '-',
     lastSeen: m.lastHeartbeat ? formatDate(m.lastHeartbeat) : 'never',
+    shared: formatSharedLimits(m),
   }));
 }
 
