@@ -7,6 +7,10 @@
 # of zeroserver-cc/zsc-cli, verifies its checksum, and installs it to
 # /usr/local/bin/zs. No Node.js required. Idempotent.
 #
+# Runs without sudo when the install directory is writable by the current user;
+# otherwise it automatically prefixes the necessary commands with sudo so the
+# user does not have to re-run the whole script as root.
+#
 # Env overrides:
 #   ZS_VERSION       release tag to install (default: latest)
 #   ZS_INSTALL_DIR   install directory (default: /usr/local/bin)
@@ -29,6 +33,22 @@ elif command -v wget >/dev/null 2>&1; then
 else
   err "neither curl nor wget found"
 fi
+
+# --- run a command with sudo only when the target directory is not writable --
+# $1 = directory that must be writable; remaining args = command to run
+sudo_if_needed() {
+  dir="$1"
+  shift
+  if [ -w "$dir" ] 2>/dev/null; then
+    "$@"
+  else
+    if command -v sudo >/dev/null 2>&1; then
+      sudo "$@"
+    else
+      err "no write permission for ${dir} and sudo is not available; run as root or set ZS_INSTALL_DIR to a writable directory"
+    fi
+  fi
+}
 
 # --- detect OS/arch ----------------------------------------------------------
 os="$(uname -s)"
@@ -95,19 +115,25 @@ fi
 
 # --- install (sudo only if needed) ------------------------------------------
 target="${INSTALL_DIR}/${BIN_NAME}"
-need_sudo=""
-if [ -d "$INSTALL_DIR" ]; then
-  [ -w "$INSTALL_DIR" ] || need_sudo="sudo"
-else
-  mkdir -p "$INSTALL_DIR" 2>/dev/null || need_sudo="sudo"
+
+# Try to create the install directory without sudo first; this gives the user a
+# clear, folder-specific error if neither the directory nor sudo are available.
+if [ ! -d "$INSTALL_DIR" ]; then
+  if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+    if ! command -v sudo >/dev/null 2>&1; then
+      err "cannot create ${INSTALL_DIR} (permission denied) and sudo is not available; run as root or set ZS_INSTALL_DIR to a writable directory"
+    fi
+    info "Creating ${INSTALL_DIR} with sudo..."
+    sudo mkdir -p "$INSTALL_DIR" || err "failed to create ${INSTALL_DIR} even with sudo"
+  fi
 fi
-if [ -n "$need_sudo" ]; then
-  info "Elevating with sudo to write ${target}..."
-  $need_sudo mkdir -p "$INSTALL_DIR"
-  $need_sudo mv "${tmp}/${BIN_NAME}" "$target"
-  $need_sudo chmod +x "$target"
-else
-  mv "${tmp}/${BIN_NAME}" "$target"
+
+# Move the binary into place, elevating only when the install dir is not writable.
+if ! sudo_if_needed "$INSTALL_DIR" mv "${tmp}/${BIN_NAME}" "$target"; then
+  err "failed to write ${target}: no write permission for ${INSTALL_DIR} and sudo failed"
+fi
+if ! sudo_if_needed "$INSTALL_DIR" chmod +x "$target"; then
+  err "failed to make ${target} executable: no write permission for ${INSTALL_DIR} and sudo failed"
 fi
 
 info "Installed $("$target" --version 2>/dev/null || echo "$BIN_NAME") to $target"

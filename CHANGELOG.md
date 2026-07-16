@@ -7,6 +7,14 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-07-16
+
+### Adicionado
+- `zs upgrade` solicita elevação automática com `sudo` quando o binário instalado não pode ser sobrescrito por falta de permissão, evitando que o usuário precise executar o comando manualmente como root.
+
+### Alterado
+- `install.sh` detecta permissão de escrita no diretório de destino e usa `sudo` apenas quando necessário; mensagens de erro agora indicam a pasta específica e a causa quando não é possível instalar.
+
 ## [0.3.4] - 2026-07-15
 
 ### Alterado

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { selfUpdate } from '../../infrastructure/self-update/updater';
 import { isPackagedBinary } from '../../application/selfUpdate/autoUpdate';
+import { canElevate, elevateAndRun, isRoot } from '../../infrastructure/system/elevate';
 import { VERSION } from '../../version';
 
 export function registerUpgradeCommand(program: Command): void {
@@ -22,10 +23,24 @@ export function registerUpgradeCommand(program: Command): void {
         case 'up-to-date':
           console.log(`zs is already up to date (${result.fromVersion}).`);
           break;
-        case 'permission':
-          console.error(`Can't write ${process.execPath}. Try: sudo zs upgrade`);
-          process.exitCode = 1;
+        case 'permission': {
+          // If we are not root and sudo is available, re-run the same command
+          // elevated so the user does not have to type `sudo zs upgrade` manually.
+          if (isRoot()) {
+            console.error(`Can't write ${process.execPath} even though this process is running as root.`);
+            process.exitCode = 1;
+            break;
+          }
+          if (!canElevate()) {
+            console.error(`Can't write ${process.execPath}. Run as root or install sudo, then try again.`);
+            process.exitCode = 1;
+            break;
+          }
+          console.error(`Permission denied for ${process.execPath}. Requesting elevation...`);
+          const code = await elevateAndRun(['upgrade']);
+          process.exit(code);
           break;
+        }
         case 'unsupported-arch':
           console.error('No prebuilt zs binary for this OS/architecture.');
           process.exitCode = 1;
