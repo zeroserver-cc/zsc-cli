@@ -10,6 +10,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Adicionado
 - `zs node configure <id>` permite ao provedor definir limites de recursos compartilhados do node (`--vcpu`, `--memory-mb`, `--storage-mb`) ou removê-los com `--clear` (ZSC-192).
 - `zs node list` e `zs node status` passam a exibir os limites de recursos configurados em cada node.
+- `zs deploy` aceita preferência geográfica de node: flags `--country` (código ISO 3166-1 alpha-2, ex. `BR`) e `--region` (ex. `RS`), ou a seção `placement:` no `zs.yaml` com os campos `country` e `region` (ZSC-194).
+- A preferência é suave: quando não há node na região pedida, o deploy cai para qualquer node elegível. No modo `zs.yaml`, as flags sobrescrevem o `placement:` do manifesto campo a campo.
+- Deploy bem-sucedido exibe a preferência enviada (`Placement: BR/RS (preferred)`) quando definida.
 
 ## [0.3.5] - 2026-07-16
 

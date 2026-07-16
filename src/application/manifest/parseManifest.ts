@@ -1,5 +1,5 @@
 import { parse } from 'yaml';
-import { AppManifest, ManifestAIRequirements, ManifestService } from '../../domain/entities/types';
+import { AppManifest, ManifestAIRequirements, ManifestPlacement, ManifestService } from '../../domain/entities/types';
 
 export class ManifestError extends Error {
   constructor(message: string) {
@@ -44,8 +44,9 @@ export function parseManifest(content: string): AppManifest {
   validateNamedVolumes(services);
 
   const ai = raw.ai !== undefined ? validateAIRequirements(raw.ai) : undefined;
+  const placement = raw.placement !== undefined ? validatePlacement(raw.placement) : undefined;
 
-  return { app, ai, services };
+  return { app, ai, placement, services };
 }
 
 function validateAIRequirements(raw: unknown): ManifestAIRequirements {
@@ -63,6 +64,32 @@ function validateAIRequirements(raw: unknown): ManifestAIRequirements {
       throw new ManifestError(`zs.yaml: "ai.${key}" must be true or false.`);
     }
     result[key as keyof ManifestAIRequirements] = value;
+  }
+
+  return result;
+}
+
+function validatePlacement(raw: unknown): ManifestPlacement {
+  if (!isRecord(raw)) {
+    throw new ManifestError(
+      'zs.yaml: "placement" must be a mapping with "country" and/or "region" (e.g. placement: { country: BR, region: RS }).',
+    );
+  }
+
+  const result: ManifestPlacement = {};
+
+  if (raw.country !== undefined) {
+    if (typeof raw.country !== 'string' || !/^[a-zA-Z]{2}$/.test(raw.country.trim())) {
+      throw new ManifestError('zs.yaml: "placement.country" must be a 2-letter ISO 3166-1 alpha-2 code (e.g. "BR").');
+    }
+    result.country = raw.country;
+  }
+
+  if (raw.region !== undefined) {
+    if (typeof raw.region !== 'string' || raw.region.trim() === '') {
+      throw new ManifestError('zs.yaml: "placement.region" must be a non-empty string (e.g. "RS").');
+    }
+    result.region = raw.region;
   }
 
   return result;
