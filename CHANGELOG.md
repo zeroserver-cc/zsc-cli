@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-17
+
 ### Adicionado
 - `zs node configure <id>` permite ao provedor definir limites de recursos compartilhados do node (`--vcpu`, `--memory-mb`, `--storage-mb`) ou removê-los com `--clear` (ZSC-192).
 - `zs node list` e `zs node status` passam a exibir os limites de recursos configurados em cada node.
