@@ -67,3 +67,29 @@ it('creates the application the first time when none matches', async () => {
   const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
   expect(deployVars.input.applicationId).toBe('app-new');
 });
+
+it('forwards the placement preference uppercased as preferredCountry/preferredRegion', async () => {
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  await deployApplicationUseCase({ image: 'ghcr.io/x/site:abc', appId: 'app-pinned', env: [], country: 'br', region: 'rs' });
+
+  const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+  expect(deployVars.input.preferredCountry).toBe('BR');
+  expect(deployVars.input.preferredRegion).toBe('RS');
+});
+
+it('omits the placement fields when no preference is given', async () => {
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  await deployApplicationUseCase({ image: 'ghcr.io/x/site:abc', appId: 'app-pinned', env: [] });
+
+  const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+  expect(deployVars.input).not.toHaveProperty('preferredCountry');
+  expect(deployVars.input).not.toHaveProperty('preferredRegion');
+});

@@ -180,4 +180,93 @@ services:
 `),
     ).toThrow(/"ai.gpu" must be true or false/);
   });
+
+  it('parses the placement section', () => {
+    const m = parseManifest(`
+app: geo-app
+placement:
+  country: br
+  region: RS
+services:
+  - name: web
+    image: nginx
+    exposed: true
+`);
+    expect(m.placement).toEqual({ country: 'br', region: 'RS' });
+  });
+
+  it('accepts a placement with only country or only region', () => {
+    const base = `
+services:
+  - name: web
+    image: nginx
+`;
+    expect(parseManifest(`app: a\nplacement:\n  country: BR\n${base}`).placement).toEqual({ country: 'BR' });
+    expect(parseManifest(`app: a\nplacement:\n  region: RS\n${base}`).placement).toEqual({ region: 'RS' });
+  });
+
+  it('omits placement when not declared', () => {
+    const m = parseManifest(DEMO);
+    expect(m.placement).toBeUndefined();
+  });
+
+  it('throws when placement is not a mapping', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+placement: BR
+services:
+  - name: web
+    image: nginx
+`),
+    ).toThrow(/"placement" must be a mapping/);
+  });
+
+  it('throws when placement.country is not a 2-letter code', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+placement:
+  country: BRA
+services:
+  - name: web
+    image: nginx
+`),
+    ).toThrow(/"placement.country" must be a 2-letter/);
+
+    expect(() =>
+      parseManifest(`
+app: x
+placement:
+  country: 12
+services:
+  - name: web
+    image: nginx
+`),
+    ).toThrow(/"placement.country" must be a 2-letter/);
+  });
+
+  it('throws when placement.region is not a non-empty string', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+placement:
+  region: 123
+services:
+  - name: web
+    image: nginx
+`),
+    ).toThrow(/"placement.region" must be a non-empty string/);
+
+    expect(() =>
+      parseManifest(`
+app: x
+placement:
+  region: ""
+services:
+  - name: web
+    image: nginx
+`),
+    ).toThrow(/"placement.region" must be a non-empty string/);
+  });
 });

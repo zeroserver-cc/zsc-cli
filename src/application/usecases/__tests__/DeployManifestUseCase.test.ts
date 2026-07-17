@@ -117,3 +117,78 @@ services:
     requiresLlm: false,
   });
 });
+
+it('forwards the manifest placement uppercased as preferredCountry/preferredRegion', async () => {
+  writeManifest(`
+app: geo-app
+placement:
+  country: br
+  region: rs
+services:
+  - name: web
+    image: nginx
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'geo-app' }] } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  const result = await deployManifestUseCase(tmpDir);
+
+  const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+  expect(deployVars.input.preferredCountry).toBe('BR');
+  expect(deployVars.input.preferredRegion).toBe('RS');
+  expect(result.placement).toEqual({ country: 'BR', region: 'RS' });
+});
+
+it('lets CLI flag overrides win over the manifest placement per field', async () => {
+  writeManifest(`
+app: geo-app
+placement:
+  country: BR
+  region: RS
+services:
+  - name: web
+    image: nginx
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'geo-app' }] } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  const result = await deployManifestUseCase(tmpDir, undefined, { placement: { country: 'US' } });
+
+  const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+  expect(deployVars.input.preferredCountry).toBe('US');
+  expect(deployVars.input.preferredRegion).toBe('RS');
+  expect(result.placement).toEqual({ country: 'US', region: 'RS' });
+});
+
+it('omits the placement fields when the manifest declares none', async () => {
+  writeManifest(`
+app: demo-app
+services:
+  - name: web
+    image: nginx
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'demo-app' }] } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  const result = await deployManifestUseCase(tmpDir);
+
+  const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+  expect(deployVars.input).not.toHaveProperty('preferredCountry');
+  expect(deployVars.input).not.toHaveProperty('preferredRegion');
+  expect(result.placement).toBeUndefined();
+});

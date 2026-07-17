@@ -51,6 +51,8 @@ export interface DeployInput {
   appId?: string;
   port?: number;
   env?: string[];
+  country?: string;
+  region?: string;
 }
 
 /** AI/ML resources declared by the application. */
@@ -60,6 +62,17 @@ export interface ManifestAIRequirements {
   video?: boolean;
   audio?: boolean;
   image?: boolean;
+}
+
+/**
+ * Soft geographic preference for the node that runs the deploy (ZSC-194).
+ * The backend falls back to any eligible node when nothing matches.
+ */
+export interface ManifestPlacement {
+  /** ISO 3166-1 alpha-2 country code (e.g. "BR"). */
+  country?: string;
+  /** Region/state code within the country (e.g. "RS"). */
+  region?: string;
 }
 
 // A single service (container) in a zs.yaml manifest. Maps 1:1 to the backend's
@@ -78,6 +91,7 @@ export interface ManifestService {
 export interface AppManifest {
   app: string;
   ai?: ManifestAIRequirements;
+  placement?: ManifestPlacement;
   services: ManifestService[];
 }
 

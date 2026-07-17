@@ -6,6 +6,7 @@ import {
   MY_APPLICATIONS_QUERY,
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
+import { toDeployPlacementInput } from '../placement';
 import { waitForInstance, WaitResult } from './waitForInstance';
 
 export type DeployResult = WaitResult;
@@ -57,6 +58,9 @@ export async function deployApplicationUseCase(
         containerName: appName,
         env: input.env ?? [],
         ...(ports && { ports }),
+        // Soft geographic preference (ZSC-194): the backend falls back to any
+        // eligible node when nothing matches the requested country/region.
+        ...toDeployPlacementInput({ country: input.country, region: input.region }),
       },
     },
     token,
