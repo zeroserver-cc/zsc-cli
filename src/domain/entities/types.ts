@@ -98,6 +98,10 @@ export interface Machine {
   lastHeartbeat?: string;
   agentVersion?: string;
   createdAt: string;
+  // Resource limits the provider shares with applications. Null means no limit.
+  sharedVCpu?: number | null;
+  sharedMemoryMb?: number | null;
+  sharedStorageMb?: number | null;
 }
 
 export interface ApplicationVolume {

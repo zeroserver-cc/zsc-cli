@@ -84,6 +84,7 @@ export const MY_MACHINES_QUERY = `
   query MyMachines {
     myMachines {
       id name status lastHeartbeat createdAt agentVersion
+      sharedVCpu sharedMemoryMb sharedStorageMb
       specs {
         cpu { cores model }
         memory { total available }
@@ -98,12 +99,21 @@ export const MACHINE_QUERY = `
   query Machine($id: ID!) {
     machine(id: $id) {
       id name status lastHeartbeat createdAt agentVersion
+      sharedVCpu sharedMemoryMb sharedStorageMb
       specs {
         cpu { cores model frequency }
         memory { total available }
         storage { total available }
         os { name version architecture }
       }
+    }
+  }
+`;
+
+export const UPDATE_MACHINE_RESOURCE_LIMITS_MUTATION = `
+  mutation UpdateMachineResourceLimits($id: ID!, $sharedVCpu: Float, $sharedMemoryMb: Int, $sharedStorageMb: Int) {
+    updateMachineResourceLimits(id: $id, sharedVCpu: $sharedVCpu, sharedMemoryMb: $sharedMemoryMb, sharedStorageMb: $sharedStorageMb) {
+      id name status sharedVCpu sharedMemoryMb sharedStorageMb
     }
   }
 `;
