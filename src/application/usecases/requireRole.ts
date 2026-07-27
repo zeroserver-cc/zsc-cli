@@ -16,9 +16,9 @@ export function requireRole(allowed: UserRole[]): void {
     storedRoles && storedRoles.length > 0 ? (storedRoles as UserRole[]) : legacyRole ? [legacyRole] : [];
   if (!userRoles.some((role) => allowed.includes(role))) {
     const rolesLabel = allowed.join(' or ');
-    console.error(
-      chalk.red(`This command requires ${rolesLabel} role. Your role: ${userRoles.join(', ') || 'unknown'}.`),
-    );
+    const detail =
+      userRoles.length > 1 ? `Your roles: ${userRoles.join(', ')}` : `Your role: ${userRoles[0] ?? 'unknown'}`;
+    console.error(chalk.red(`This command requires ${rolesLabel} role. ${detail}.`));
     process.exit(1);
   }
 }

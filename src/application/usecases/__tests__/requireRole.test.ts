@@ -61,6 +61,7 @@ describe('requireRole', () => {
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining('This command requires provider or admin role'),
     );
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Your role: developer.'));
   });
 
   it('falls back to the legacy scalar role when roles are absent', () => {
@@ -81,6 +82,6 @@ describe('requireRole', () => {
     mockSession(['developer', 'provider'], 'developer');
 
     expect(() => requireRole(['admin'])).toThrow('process.exit');
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('developer, provider'));
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Your roles: developer, provider.'));
   });
 });

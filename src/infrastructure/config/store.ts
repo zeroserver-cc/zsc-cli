@@ -44,7 +44,8 @@ export function getConfigValue(key: keyof ConfigData): string | undefined {
 
 export function getConfigArray(key: 'roles'): string[] | undefined {
   const value = read()[key];
-  return Array.isArray(value) ? value : undefined;
+  // A hand-edited config could mix non-string values into the array; drop them.
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
 }
 
 // Always returns a usable base URL. `read()` merges DEFAULTS, but config.json is

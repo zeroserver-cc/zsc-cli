@@ -12,7 +12,7 @@ export async function loginUseCase(email: string, password: string): Promise<Aut
   setConfigValue('refreshToken', data.login.refreshToken);
   setConfigValue('token', data.login.accessToken);
   setConfigValue('role', data.login.user.role);
-  // Older backends may not return roles yet; fall back to the single active role.
+  // Defensive fallback in case the roles field ever comes back null or empty.
   setConfigValue('roles', data.login.user.roles ?? [data.login.user.role]);
   return data.login;
 }

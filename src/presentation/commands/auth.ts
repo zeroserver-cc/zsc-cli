@@ -58,7 +58,7 @@ export function registerAuthCommands(program: Command): void {
           process.exit(1);
         }
         const user = await whoamiUseCase();
-        // Older backends may not return roles yet; show at least the active one.
+        // Fall back to the active role alone if roles comes back null or empty.
         const roles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
         const rolesLabel = roles
           .map((role) => (role === user.role ? chalk.green(role) : chalk.gray(role)))

@@ -66,8 +66,11 @@ function storeSession(accessToken: string, refreshToken: string, role: string, r
   setConfigValue('refreshToken', refreshToken);
   setConfigValue('token', accessToken);
   setConfigValue('role', role);
-  // Older backends may not return roles yet; fall back to the single active role.
-  setConfigValue('roles', roles ?? [role]);
+  // Only overwrite the stored role set when the response actually carries it,
+  // so a response without the field can't downgrade a richer stored set.
+  if (roles) {
+    setConfigValue('roles', roles);
+  }
 }
 
 function clearSession(): void {

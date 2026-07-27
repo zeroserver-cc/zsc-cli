@@ -151,4 +151,28 @@ describe('refreshCurrentSession', () => {
     expect(mockedSetConfigValue).toHaveBeenCalledWith('refreshToken', 'refresh-b');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('roles', ['developer']);
   });
+
+  it('does not overwrite stored roles when the refresh response omits the field', async () => {
+    mockedGetConfigValue.mockImplementation((key) =>
+      key === 'refreshToken' ? 'refresh-a' : undefined,
+    );
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          refreshToken: {
+            accessToken: 'token-b',
+            refreshToken: 'refresh-b',
+            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+            user: { role: 'developer' },
+          },
+        },
+      },
+    });
+
+    const result = await refreshCurrentSession();
+
+    expect(result).toBe('token-b');
+    expect(mockedSetConfigValue).toHaveBeenCalledWith('role', 'developer');
+    expect(mockedSetConfigValue).not.toHaveBeenCalledWith('roles', expect.anything());
+  });
 });
