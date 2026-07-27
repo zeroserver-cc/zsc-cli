@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-27
+
 ### Adicionado
 - Suporte a múltiplas roles por usuário: o CLI passa a pedir `roles` (conjunto de papéis) nas operações `login`, `refreshToken` e `me`, além da role ativa (`role`), e persiste ambas na sessão local (`~/.config/zsc/config.json`).
 - `zs whoami` exibe todas as roles do usuário, com a role ativa destacada em verde.
