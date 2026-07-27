@@ -4,7 +4,10 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  /** Active role, returned by the backend at login/refresh time. */
   role: UserRole;
+  /** Full role membership set. May be absent in responses from older backends. */
+  roles: UserRole[];
 }
 
 export interface AuthPayload {

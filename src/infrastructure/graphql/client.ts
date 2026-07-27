@@ -57,15 +57,17 @@ interface RefreshResponse {
     accessToken: string;
     refreshToken: string;
     expiresAt: string;
-    user: { role: string };
+    user: { role: string; roles?: string[] };
   };
 }
 
-function storeSession(accessToken: string, refreshToken: string, role: string): void {
+function storeSession(accessToken: string, refreshToken: string, role: string, roles?: string[]): void {
   setConfigValue('accessToken', accessToken);
   setConfigValue('refreshToken', refreshToken);
   setConfigValue('token', accessToken);
   setConfigValue('role', role);
+  // Older backends may not return roles yet; fall back to the single active role.
+  setConfigValue('roles', roles ?? [role]);
 }
 
 function clearSession(): void {
@@ -73,6 +75,7 @@ function clearSession(): void {
   deleteConfigValue('refreshToken');
   deleteConfigValue('token');
   deleteConfigValue('role');
+  deleteConfigValue('roles');
 }
 
 async function performRefresh(url: string, refreshToken: string): Promise<string | null> {
@@ -83,7 +86,7 @@ async function performRefresh(url: string, refreshToken: string): Promise<string
       { refreshToken },
     );
     const result = data.refreshToken;
-    storeSession(result.accessToken, result.refreshToken, result.user.role);
+    storeSession(result.accessToken, result.refreshToken, result.user.role, result.user.roles);
     return result.accessToken;
   } catch {
     clearSession();

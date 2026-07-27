@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { UserRole } from '../../domain/entities/types';
-import { getConfigValue } from '../../infrastructure/config/store';
+import { getConfigArray, getConfigValue } from '../../infrastructure/config/store';
 
 export function requireRole(allowed: UserRole[]): void {
   const token = getConfigValue('accessToken');
@@ -8,10 +8,17 @@ export function requireRole(allowed: UserRole[]): void {
     console.error(chalk.red('Not logged in. Run "zs login" first.'));
     process.exit(1);
   }
-  const role = getConfigValue('role') as UserRole | undefined;
-  if (!role || !allowed.includes(role)) {
+  // Sessions created before multi-role support only have the scalar `role`;
+  // fall back to it when the membership array is absent.
+  const storedRoles = getConfigArray('roles');
+  const legacyRole = getConfigValue('role') as UserRole | undefined;
+  const userRoles: UserRole[] =
+    storedRoles && storedRoles.length > 0 ? (storedRoles as UserRole[]) : legacyRole ? [legacyRole] : [];
+  if (!userRoles.some((role) => allowed.includes(role))) {
     const rolesLabel = allowed.join(' or ');
-    console.error(chalk.red(`This command requires ${rolesLabel} role. Your role: ${role ?? 'unknown'}.`));
+    console.error(
+      chalk.red(`This command requires ${rolesLabel} role. Your role: ${userRoles.join(', ') || 'unknown'}.`),
+    );
     process.exit(1);
   }
 }
