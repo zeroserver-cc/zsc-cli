@@ -20,7 +20,7 @@ afterEach(() => {
 describe('loginWithTokenUseCase', () => {
   it('validates token via Me query and stores session', async () => {
     mockedGqlRequest.mockResolvedValueOnce({
-      me: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer' },
+      me: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer', roles: ['developer', 'provider'] },
     });
 
     const result = await loginWithTokenUseCase('access-token-123', 'refresh-token-456');
@@ -36,11 +36,12 @@ describe('loginWithTokenUseCase', () => {
     expect(mockedSetConfigValue).toHaveBeenCalledWith('token', 'access-token-123');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('refreshToken', 'refresh-token-456');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('role', 'developer');
+    expect(mockedSetConfigValue).toHaveBeenCalledWith('roles', ['developer', 'provider']);
   });
 
   it('works without refresh token', async () => {
     mockedGqlRequest.mockResolvedValueOnce({
-      me: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer' },
+      me: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer', roles: ['developer'] },
     });
 
     const result = await loginWithTokenUseCase('access-token-123');

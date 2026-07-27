@@ -61,7 +61,7 @@ describe('gqlRequest', () => {
               accessToken: 'token-b',
               refreshToken: 'refresh-b',
               expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-              user: { role: 'developer' },
+              user: { role: 'developer', roles: ['developer', 'provider'] },
             },
           },
         },
@@ -73,6 +73,7 @@ describe('gqlRequest', () => {
     expect(result).toEqual({ me: { id: '1' } });
     expect(mockedSetConfigValue).toHaveBeenCalledWith('accessToken', 'token-b');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('refreshToken', 'refresh-b');
+    expect(mockedSetConfigValue).toHaveBeenCalledWith('roles', ['developer', 'provider']);
     expect(mockedAxios.post).toHaveBeenCalledTimes(3);
   });
 
@@ -137,7 +138,7 @@ describe('refreshCurrentSession', () => {
             accessToken: 'token-b',
             refreshToken: 'refresh-b',
             expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-            user: { role: 'developer' },
+            user: { role: 'developer', roles: ['developer'] },
           },
         },
       },
@@ -148,5 +149,30 @@ describe('refreshCurrentSession', () => {
     expect(result).toBe('token-b');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('accessToken', 'token-b');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('refreshToken', 'refresh-b');
+    expect(mockedSetConfigValue).toHaveBeenCalledWith('roles', ['developer']);
+  });
+
+  it('does not overwrite stored roles when the refresh response omits the field', async () => {
+    mockedGetConfigValue.mockImplementation((key) =>
+      key === 'refreshToken' ? 'refresh-a' : undefined,
+    );
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        data: {
+          refreshToken: {
+            accessToken: 'token-b',
+            refreshToken: 'refresh-b',
+            expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+            user: { role: 'developer' },
+          },
+        },
+      },
+    });
+
+    const result = await refreshCurrentSession();
+
+    expect(result).toBe('token-b');
+    expect(mockedSetConfigValue).toHaveBeenCalledWith('role', 'developer');
+    expect(mockedSetConfigValue).not.toHaveBeenCalledWith('roles', expect.anything());
   });
 });

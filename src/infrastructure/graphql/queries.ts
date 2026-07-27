@@ -2,7 +2,7 @@ export const LOGIN_MUTATION = `
   mutation Login($input: LoginInput!) {
     login(input: $input) {
       token accessToken refreshToken expiresAt
-      user { id username email role }
+      user { id username email role roles }
     }
   }
 `;
@@ -11,14 +11,14 @@ export const REFRESH_TOKEN_MUTATION = `
   mutation RefreshToken($refreshToken: String!) {
     refreshToken(refreshToken: $refreshToken) {
       token accessToken refreshToken expiresAt
-      user { id username email role }
+      user { id username email role roles }
     }
   }
 `;
 
 export const ME_QUERY = `
   query Me {
-    me { id username email role }
+    me { id username email role roles }
   }
 `;
 

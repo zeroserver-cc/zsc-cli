@@ -8,6 +8,8 @@ interface ConfigData {
   accessToken?: string;
   refreshToken?: string;
   role?: string;
+  /** Full role membership set of the logged-in user. Absent in sessions created before multi-role support. */
+  roles?: string[];
   /** ISO timestamp of the last auto-update check, used to throttle it to once a day. */
   lastUpdateCheck?: string;
 }
@@ -36,7 +38,14 @@ function write(data: ConfigData): void {
 }
 
 export function getConfigValue(key: keyof ConfigData): string | undefined {
-  return read()[key];
+  const value = read()[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+export function getConfigArray(key: 'roles'): string[] | undefined {
+  const value = read()[key];
+  // A hand-edited config could mix non-string values into the array; drop them.
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : undefined;
 }
 
 // Always returns a usable base URL. `read()` merges DEFAULTS, but config.json is
@@ -49,9 +58,9 @@ export function getBackendUrl(): string {
   return trimmed !== '' ? trimmed : DEFAULT_BACKEND_URL;
 }
 
-export function setConfigValue(key: keyof ConfigData, value: string): void {
+export function setConfigValue(key: keyof ConfigData, value: string | string[]): void {
   const data = read();
-  (data[key] as string) = value;
+  (data as unknown as Record<string, unknown>)[key] = value;
   write(data);
 }
 

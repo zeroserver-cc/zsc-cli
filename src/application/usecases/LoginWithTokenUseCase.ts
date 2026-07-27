@@ -25,6 +25,7 @@ export async function loginWithTokenUseCase(
     setConfigValue('refreshToken', refreshToken);
   }
   setConfigValue('role', data.me.role);
+  setConfigValue('roles', data.me.roles ?? [data.me.role]);
 
   return {
     accessToken,

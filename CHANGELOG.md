@@ -7,6 +7,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- Suporte a múltiplas roles por usuário: o CLI passa a pedir `roles` (conjunto de papéis) nas operações `login`, `refreshToken` e `me`, além da role ativa (`role`), e persiste ambas na sessão local (`~/.config/zsc/config.json`).
+- `zs whoami` exibe todas as roles do usuário, com a role ativa destacada em verde.
+- Nota de release: como as queries GraphQL passam a pedir `roles` incondicionalmente, esta versão do CLI só pode ser publicada depois que o backend com suporte a `roles` estiver em produção; contra um backend antigo as queries de auth falham por erro de validação.
+
+### Alterado
+- A verificação de permissão dos comandos (`requireRole`) agora aceita qualquer role do conjunto do usuário: um usuário provider+developer roda `zs deploy` e `zs node list` na mesma sessão, sem trocar de papel. Sessões criadas antes desta versão (sem `roles` salvo) continuam funcionando pelo fallback para a role única.
+- `zs logout` e a limpeza de sessão também removem as `roles` persistidas.
+
 ## [0.4.0] - 2026-07-17
 
 ### Adicionado
