@@ -111,6 +111,34 @@ describe('gqlRequest', () => {
     expect(mockedDeleteConfigValue).toHaveBeenCalledWith('accessToken');
     expect(mockedDeleteConfigValue).toHaveBeenCalledWith('refreshToken');
   });
+
+  it('in apikey mode, exits with a clear message instead of refreshing or wiping the session', async () => {
+    mockedGetConfigValue.mockImplementation((key) => {
+      if (key === 'accessToken') return 'zsk_dead';
+      if (key === 'authType') return 'apikey';
+      return undefined;
+    });
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`process.exit(${code})`);
+    }) as never);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockedAxios.post.mockResolvedValueOnce({ data: { errors: [{ message: 'Invalid token' }] } });
+
+    try {
+      await expect(gqlRequest('query { me { id } }')).rejects.toThrow('process.exit(1)');
+
+      // No refresh attempt (single HTTP call), no session wipe, no token rotation.
+      expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+      expect(mockedDeleteConfigValue).not.toHaveBeenCalled();
+      expect(mockedSetConfigValue).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('zs login --api-key'));
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
 });
 
 describe('refreshCurrentSession', () => {

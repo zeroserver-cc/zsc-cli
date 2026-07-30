@@ -41,6 +41,26 @@ pass the code with `--otp` instead:
 zs login -e "$ZS_EMAIL" -p "$ZS_PASSWORD" --otp "$ZS_OTP"
 ```
 
+### API keys (CI and automation)
+
+For CI/CD and scripts, create an API key in the portal (format `zsk_...`) and
+log in with it instead of email/password:
+
+```sh
+# Interactive: hidden prompt for the key.
+zs login --api-key
+
+# Non-interactive: pipe the key on stdin, so it never lands in argv or shell history.
+printf %s "$ZS_API_KEY" | zs login --api-key --token-stdin
+```
+
+API keys carry the scopes you grant them in the portal; a command that needs a
+scope the key does not have fails with `Missing scope: <scope>`. Keys can also
+expire or be revoked — in that case every command fails with an authentication
+error and you must generate a new key in the portal and run `zs login
+--api-key` again. Unlike JWT sessions, API key sessions are never refreshed
+automatically: the key is used as-is until it stops working.
+
 ## Private images (registry credentials)
 
 To pull private images (e.g. GitHub Container Registry) the backend needs a

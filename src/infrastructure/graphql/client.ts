@@ -79,6 +79,7 @@ function clearSession(): void {
   deleteConfigValue('token');
   deleteConfigValue('role');
   deleteConfigValue('roles');
+  deleteConfigValue('authType');
 }
 
 async function performRefresh(url: string, refreshToken: string): Promise<string | null> {
@@ -137,6 +138,16 @@ export async function gqlRequest<T>(
         handleAxiosError(backendUrl, error);
       }
       throw error;
+    }
+
+    // API keys have no refresh flow. Surface the failure and stop instead of
+    // silently wiping the session like we do for expired JWTs, so the user
+    // keeps the (dead) key for debugging and gets an actionable message.
+    if (getConfigValue('authType') === 'apikey') {
+      console.error(
+        'API key inválida, expirada ou revogada. Gere uma nova no portal e rode zs login --api-key novamente.',
+      );
+      process.exit(1);
     }
 
     const refreshToken = getConfigValue('refreshToken');

@@ -7,11 +7,12 @@ import {
   TwoFactorRequiredError,
 } from '../../application/usecases/LoginUseCase';
 import { loginWithTokenUseCase } from '../../application/usecases/LoginWithTokenUseCase';
+import { loginWithApiKeyUseCase } from '../../application/usecases/LoginWithApiKeyUseCase';
 import { whoamiUseCase } from '../../application/usecases/WhoamiUseCase';
 import { AuthPayload } from '../../domain/entities/types';
 import { handleError } from '../formatting/errors';
 import { getConfigValue } from '../../infrastructure/config/store';
-import { prompt, promptPassword } from '../io/prompt';
+import { prompt, promptPassword, readStdin } from '../io/prompt';
 
 const MAX_OTP_ATTEMPTS = 3;
 
@@ -68,10 +69,19 @@ export function registerAuthCommands(program: Command): void {
     .option('-e, --email <email>', 'Account email')
     .option('-p, --password <password>', 'Account password')
     .option('--otp <code>', '2FA code (TOTP or recovery code), for non-interactive login')
+    .option('--api-key', 'Log in with a portal API key (zsk_...) instead of email/password')
+    .option('--token-stdin', 'Read the API key from stdin (with --api-key, for CI)')
     .option('-t, --token <token>', 'Access token (skips email/password login)')
     .option('--refresh-token <refreshToken>', 'Optional refresh token when using --token')
     .action(async (opts) => {
       try {
+        if (opts.apiKey) {
+          const apiKey = opts.tokenStdin ? (await readStdin()).trim() : await promptPassword('API key: ');
+          const result = await loginWithApiKeyUseCase(apiKey);
+          console.log(chalk.green('✓'), `Logged in as ${chalk.bold(result.user.username)} (${result.user.role}) via API key`);
+          return;
+        }
+
         if (opts.token) {
           const result = await loginWithTokenUseCase(opts.token, opts.refreshToken);
           console.log(chalk.green('✓'), `Logged in as ${chalk.bold(result.user.username)} (${result.user.role})`);
@@ -118,7 +128,8 @@ export function registerAuthCommands(program: Command): void {
         const rolesLabel = roles
           .map((role) => (role === user.role ? chalk.green(role) : chalk.gray(role)))
           .join(', ');
-        console.log(`${chalk.bold(user.username)} <${user.email}> [${rolesLabel}]`);
+        const authSuffix = getConfigValue('authType') === 'apikey' ? chalk.gray(' (api key)') : '';
+        console.log(`${chalk.bold(user.username)} <${user.email}> [${rolesLabel}]${authSuffix}`);
       } catch (err) {
         handleError(err);
       }

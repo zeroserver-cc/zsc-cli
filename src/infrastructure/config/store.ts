@@ -10,6 +10,8 @@ interface ConfigData {
   role?: string;
   /** Full role membership set of the logged-in user. Absent in sessions created before multi-role support. */
   roles?: string[];
+  /** How the session authenticates: JWT (default, refreshable) or a portal API key (no refresh flow). */
+  authType?: 'jwt' | 'apikey';
   /** ISO timestamp of the last auto-update check, used to throttle it to once a day. */
   lastUpdateCheck?: string;
 }
