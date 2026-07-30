@@ -7,6 +7,10 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- `zs login` suporta contas com 2FA (TOTP): nova flag `--otp <code>` para login não interativo; sem ela, o CLI pede `2FA code:` quando o backend exige o código e permite até 3 tentativas em caso de código inválido antes de falhar.
+- Códigos de recuperação (formato `xxxx-xxxx`) são aceitos no lugar do TOTP, tanto na flag `--otp` quanto no prompt interativo.
+
 ## [0.5.0] - 2026-07-27
 
 ### Adicionado

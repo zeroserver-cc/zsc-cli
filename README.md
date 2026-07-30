@@ -14,6 +14,33 @@ Cliente de linha de comando da **ZeroServer Community Cloud** para Developers. P
 - [ ] `zs logs`
 - [ ] `zs stop`
 
+## Authentication
+
+```sh
+zs login                 # interactive: prompts for email and password
+zs login -e you@example.com -p <password>
+```
+
+### Two-factor authentication (TOTP)
+
+If your account has 2FA enabled, the CLI asks for the code after the password:
+
+```sh
+zs login -e you@example.com -p <password>
+# 2FA code: 123456
+```
+
+The prompt accepts the current TOTP from your authenticator app or one of your
+recovery codes (`xxxx-xxxx-xxxx-xxxx`). A wrong code can be retried up to 3 times before
+the login fails.
+
+In non-interactive environments (CI, pipelines), the prompt is never shown;
+pass the code with `--otp` instead:
+
+```sh
+zs login -e "$ZS_EMAIL" -p "$ZS_PASSWORD" --otp "$ZS_OTP"
+```
+
 ## Private images (registry credentials)
 
 To pull private images (e.g. GitHub Container Registry) the backend needs a
