@@ -31,6 +31,17 @@ function isAuthError(error: unknown): boolean {
   );
 }
 
+// Matches only the backend's UNAUTHENTICATED messages. Authorization failures
+// ("Access denied: ...", "Missing scope: ...") must NOT match: with an API key
+// those mean the key is valid but not allowed for that action/resource, and
+// the error must propagate instead of being misreported as a dead key.
+function isDeadApiKeyError(error: unknown): boolean {
+  if (!(error instanceof GraphQLError)) return false;
+  const firstError = error.errors?.[0] as { message?: string } | undefined;
+  const message = firstError?.message?.toLowerCase() ?? error.message.toLowerCase();
+  return message.includes('invalid token') || message.includes('authentication required');
+}
+
 async function rawGqlRequest<T>(
   url: string,
   query: string,
@@ -140,14 +151,19 @@ export async function gqlRequest<T>(
       throw error;
     }
 
-    // API keys have no refresh flow. Surface the failure and stop instead of
-    // silently wiping the session like we do for expired JWTs, so the user
-    // keeps the (dead) key for debugging and gets an actionable message.
+    // API keys have no refresh flow. Only genuinely unauthenticated responses
+    // mean a dead key: surface those and stop instead of silently wiping the
+    // session like we do for expired JWTs. Anything else (ownership/scope
+    // authorization failures included) propagates untouched — never falling
+    // into the JWT refresh/wipe path below.
     if (getConfigValue('authType') === 'apikey') {
-      console.error(
-        'API key inválida, expirada ou revogada. Gere uma nova no portal e rode zs login --api-key novamente.',
-      );
-      process.exit(1);
+      if (isDeadApiKeyError(error)) {
+        console.error(
+          'API key is invalid, expired, or revoked. Generate a new one in the portal and run "zs login --api-key" again.',
+        );
+        process.exit(1);
+      }
+      throw error;
     }
 
     const refreshToken = getConfigValue('refreshToken');
