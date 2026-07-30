@@ -1,5 +1,14 @@
 export type UserRole = 'admin' | 'provider' | 'developer';
 
+export type TeamRole = 'admin' | 'member' | 'viewer';
+
+/** An account the user can act as: their own (teamRole null) or a team they belong to. */
+export interface Account {
+  id: string;
+  username: string;
+  teamRole: TeamRole | null;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -8,6 +17,8 @@ export interface User {
   role: UserRole;
   /** Full role membership set. Optional: may be absent or null in some responses. */
   roles?: UserRole[];
+  /** Account the session is acting as. Null/absent means the user's own account. */
+  activeAccountId?: string | null;
 }
 
 export interface AuthPayload {

@@ -4,6 +4,7 @@ import {
   TwoFactorRequiredError,
 } from '../LoginUseCase';
 import { gqlRequest, GraphQLError } from '../../../infrastructure/graphql/client';
+import { deleteConfigValue } from '../../../infrastructure/config/store';
 import { AuthPayload } from '../../../domain/entities/types';
 
 jest.mock('../../../infrastructure/graphql/client', () => ({
@@ -40,6 +41,8 @@ describe('loginUseCase with 2FA', () => {
     expect(mockedGqlRequest).toHaveBeenCalledWith(expect.anything(), {
       input: { email: 'dev@zsc.cloud', password: 'secret' },
     });
+    // Fresh sessions always start acting as the own account.
+    expect(deleteConfigValue).toHaveBeenCalledWith('activeAccountId');
   });
 
   it('passes the totpCode inside the login input when provided', async () => {

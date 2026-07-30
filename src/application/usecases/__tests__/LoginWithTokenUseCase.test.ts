@@ -37,6 +37,7 @@ describe('loginWithTokenUseCase', () => {
     expect(mockedSetConfigValue).toHaveBeenCalledWith('refreshToken', 'refresh-token-456');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('role', 'developer');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('roles', ['developer', 'provider']);
+    expect(deleteConfigValue).toHaveBeenCalledWith('activeAccountId');
   });
 
   it('works without refresh token', async () => {

@@ -22,6 +22,21 @@ export const ME_QUERY = `
   }
 `;
 
+export const MY_ACCOUNTS_QUERY = `
+  query MyAccounts {
+    myAccounts { id username teamRole }
+  }
+`;
+
+export const SWITCH_ACCOUNT_MUTATION = `
+  mutation SwitchAccount($accountId: ID!) {
+    switchAccount(accountId: $accountId) {
+      token accessToken refreshToken expiresAt
+      user { id username email role roles activeAccountId }
+    }
+  }
+`;
+
 export const CREATE_APPLICATION_MUTATION = `
   mutation CreateApplication($input: CreateApplicationInput!) {
     createApplication(input: $input) {

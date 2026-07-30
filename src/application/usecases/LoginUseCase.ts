@@ -46,6 +46,8 @@ export async function loginUseCase(
   setConfigValue('role', data.login.user.role);
   // Defensive fallback in case the roles field ever comes back null or empty.
   setConfigValue('roles', data.login.user.roles ?? [data.login.user.role]);
+  // Fresh sessions always start acting as the own account.
+  deleteConfigValue('activeAccountId');
   return data.login;
 }
 
@@ -56,4 +58,5 @@ export function logoutUseCase(): void {
   deleteConfigValue('role');
   deleteConfigValue('roles');
   deleteConfigValue('authType');
+  deleteConfigValue('activeAccountId');
 }

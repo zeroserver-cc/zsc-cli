@@ -13,6 +13,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `zs login --api-key`: autenticação por API key do portal (formato `zsk_...`), para CI/CD e automação. A chave é lida por prompt oculto ou por stdin com `--token-stdin`, validada via `me` e persistida sem refresh token (`authType: apikey`). Chaves sem o prefixo `zsk_` são rejeitadas antes de chamar o backend.
 - Em sessão de API key, erro de autenticação não tenta refresh nem limpa a sessão silenciosamente: o CLI informa que a chave está inválida/expirada/revogada e orienta gerar uma nova no portal, saindo com código não-zero. Comportamento JWT inalterado.
 - `zs whoami` indica sessões de API key com o sufixo `(api key)`.
+- Suporte a teams: novo comando `zs account` (`list`, `switch <id-ou-username>` e bare) para agir como uma conta de time. `list` marca a conta ativa; `switch` aceita username exato ou prefixo único de id, reemite os tokens da sessão no contexto da conta alvo e persiste `activeAccountId`. Troca de conta não está disponível em sessões de API key (falha cedo com mensagem clara).
+- `zs whoami` e `zs account` exibem a linha da conta ativa (`Account: own` ou `Account: @time (team role: member)`).
+- Todo login novo (senha, token ou API key) limpa o `activeAccountId`: sessões novas sempre começam na conta própria; `zs logout` e a limpeza de sessão também removem o campo.
 
 ## [0.5.0] - 2026-07-27
 

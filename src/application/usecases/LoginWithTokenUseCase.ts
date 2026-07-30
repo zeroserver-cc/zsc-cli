@@ -1,7 +1,7 @@
 import { User } from '../../domain/entities/types';
 import { gqlRequest } from '../../infrastructure/graphql/client';
 import { ME_QUERY } from '../../infrastructure/graphql/queries';
-import { setConfigValue } from '../../infrastructure/config/store';
+import { deleteConfigValue, setConfigValue } from '../../infrastructure/config/store';
 
 export interface TokenLoginResult {
   accessToken: string;
@@ -27,6 +27,8 @@ export async function loginWithTokenUseCase(
   }
   setConfigValue('role', data.me.role);
   setConfigValue('roles', data.me.roles ?? [data.me.role]);
+  // Fresh sessions always start acting as the own account.
+  deleteConfigValue('activeAccountId');
 
   return {
     accessToken,
