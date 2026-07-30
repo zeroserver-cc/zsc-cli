@@ -31,7 +31,7 @@ zs login -e you@example.com -p <password>
 ```
 
 The prompt accepts the current TOTP from your authenticator app or one of your
-recovery codes (`xxxx-xxxx`). A wrong code can be retried up to 3 times before
+recovery codes (`xxxx-xxxx-xxxx-xxxx`). A wrong code can be retried up to 3 times before
 the login fails.
 
 In non-interactive environments (CI, pipelines), the prompt is never shown;
