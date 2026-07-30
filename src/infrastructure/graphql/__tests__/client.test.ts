@@ -111,6 +111,113 @@ describe('gqlRequest', () => {
     expect(mockedDeleteConfigValue).toHaveBeenCalledWith('accessToken');
     expect(mockedDeleteConfigValue).toHaveBeenCalledWith('refreshToken');
   });
+
+  it('in apikey mode, exits with a clear message instead of refreshing or wiping the session', async () => {
+    mockedGetConfigValue.mockImplementation((key) => {
+      if (key === 'accessToken') return 'zsk_dead';
+      if (key === 'authType') return 'apikey';
+      return undefined;
+    });
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`process.exit(${code})`);
+    }) as never);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockedAxios.post.mockResolvedValueOnce({ data: { errors: [{ message: 'Invalid token' }] } });
+
+    try {
+      await expect(gqlRequest('query { me { id } }')).rejects.toThrow('process.exit(1)');
+
+      // No refresh attempt (single HTTP call), no session wipe, no token rotation.
+      expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+      expect(mockedDeleteConfigValue).not.toHaveBeenCalled();
+      expect(mockedSetConfigValue).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(
+        'API key is invalid, expired, or revoked. Generate a new one in the portal and run "zs login --api-key" again.',
+      );
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('in apikey mode, treats "Authentication required" as a dead key', async () => {
+    mockedGetConfigValue.mockImplementation((key) => {
+      if (key === 'accessToken') return 'zsk_dead';
+      if (key === 'authType') return 'apikey';
+      return undefined;
+    });
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`process.exit(${code})`);
+    }) as never);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockedAxios.post.mockResolvedValueOnce({ data: { errors: [{ message: 'Authentication required' }] } });
+
+    try {
+      await expect(gqlRequest('query { me { id } }')).rejects.toThrow('process.exit(1)');
+
+      expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+      expect(mockedDeleteConfigValue).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('API key is invalid'));
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    } finally {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('in apikey mode, propagates "Access denied" authorization errors without exiting or wiping', async () => {
+    mockedGetConfigValue.mockImplementation((key) => {
+      if (key === 'accessToken') return 'zsk_valid';
+      if (key === 'authType') return 'apikey';
+      return undefined;
+    });
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`process.exit(${code})`);
+    }) as never);
+
+    mockedAxios.post.mockResolvedValueOnce({
+      data: { errors: [{ message: 'Access denied: insufficient permissions' }] },
+    });
+
+    try {
+      await expect(gqlRequest('query { me { id } }')).rejects.toThrow(GraphQLError);
+
+      // A valid key hitting someone else's resource is a normal error: no
+      // dead-key exit, no refresh attempt, no session wipe.
+      expect(exitSpy).not.toHaveBeenCalled();
+      expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+      expect(mockedDeleteConfigValue).not.toHaveBeenCalled();
+      expect(mockedSetConfigValue).not.toHaveBeenCalled();
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
+
+  it('in apikey mode, propagates network errors without exiting or wiping', async () => {
+    mockedGetConfigValue.mockImplementation((key) => {
+      if (key === 'accessToken') return 'zsk_valid';
+      if (key === 'authType') return 'apikey';
+      return undefined;
+    });
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`process.exit(${code})`);
+    }) as never);
+    (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(true);
+
+    mockedAxios.post.mockRejectedValueOnce({ code: 'ECONNREFUSED', message: 'connect ECONNREFUSED' });
+
+    try {
+      await expect(gqlRequest('query { me { id } }')).rejects.toThrow('Cannot reach backend');
+
+      expect(exitSpy).not.toHaveBeenCalled();
+      expect(mockedDeleteConfigValue).not.toHaveBeenCalled();
+    } finally {
+      exitSpy.mockRestore();
+    }
+  });
 });
 
 describe('refreshCurrentSession', () => {

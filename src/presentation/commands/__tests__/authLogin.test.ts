@@ -5,7 +5,8 @@ import {
   loginUseCase,
   TwoFactorRequiredError,
 } from '../../../application/usecases/LoginUseCase';
-import { prompt, promptPassword } from '../../io/prompt';
+import { prompt, promptPassword, readStdin } from '../../io/prompt';
+import { loginWithApiKeyUseCase } from '../../../application/usecases/LoginWithApiKeyUseCase';
 import { AuthPayload } from '../../../domain/entities/types';
 
 jest.mock('../../../application/usecases/LoginUseCase', () => ({
@@ -14,16 +15,20 @@ jest.mock('../../../application/usecases/LoginUseCase', () => ({
   logoutUseCase: jest.fn(),
 }));
 jest.mock('../../../application/usecases/LoginWithTokenUseCase');
+jest.mock('../../../application/usecases/LoginWithApiKeyUseCase');
 jest.mock('../../../application/usecases/WhoamiUseCase');
 jest.mock('../../../infrastructure/config/store');
 jest.mock('../../io/prompt', () => ({
   prompt: jest.fn(),
   promptPassword: jest.fn(),
+  readStdin: jest.fn(),
 }));
 
 const mockedLoginUseCase = loginUseCase as jest.MockedFunction<typeof loginUseCase>;
 const mockedPrompt = prompt as jest.MockedFunction<typeof prompt>;
 const mockedPromptPassword = promptPassword as jest.MockedFunction<typeof promptPassword>;
+const mockedReadStdin = readStdin as jest.MockedFunction<typeof readStdin>;
+const mockedLoginWithApiKey = loginWithApiKeyUseCase as jest.MockedFunction<typeof loginWithApiKeyUseCase>;
 
 const payload: AuthPayload = {
   token: 'token-a',
@@ -152,5 +157,58 @@ describe('zs login with 2FA', () => {
     expect(mockedPrompt).toHaveBeenCalledTimes(3);
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('2FA code cannot be empty.'));
     expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('zs login --api-key', () => {
+  let logSpy: jest.SpyInstance;
+  let errorSpy: jest.SpyInstance;
+  let exitSpy: jest.SpyInstance;
+
+  const API_KEY = `zsk_${'a'.repeat(64)}`;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`process.exit(${code})`);
+    }) as never);
+  });
+
+  afterEach(() => {
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  async function runLogin(...args: string[]): Promise<void> {
+    const program = new Command();
+    program.exitOverride();
+    registerAuthCommands(program);
+    await program.parseAsync(['node', 'zs', 'login', ...args]);
+  }
+
+  it('reads the key from a hidden prompt and logs in', async () => {
+    mockedPromptPassword.mockResolvedValueOnce(API_KEY);
+    mockedLoginWithApiKey.mockResolvedValueOnce({ user: payload.user });
+
+    await runLogin('--api-key');
+
+    expect(mockedPromptPassword).toHaveBeenCalledWith('API key: ');
+    expect(mockedLoginWithApiKey).toHaveBeenCalledWith(API_KEY);
+    expect(mockedReadStdin).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith(expect.anything(), expect.stringContaining('via API key'));
+  });
+
+  it('reads the key from stdin with --token-stdin', async () => {
+    mockedReadStdin.mockResolvedValueOnce(`${API_KEY}\n`);
+    mockedLoginWithApiKey.mockResolvedValueOnce({ user: payload.user });
+
+    await runLogin('--api-key', '--token-stdin');
+
+    expect(mockedReadStdin).toHaveBeenCalledTimes(1);
+    expect(mockedLoginWithApiKey).toHaveBeenCalledWith(API_KEY);
+    expect(mockedPromptPassword).not.toHaveBeenCalled();
   });
 });

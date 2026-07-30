@@ -10,6 +10,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Adicionado
 - `zs login` suporta contas com 2FA (TOTP): nova flag `--otp <code>` para login não interativo; sem ela, o CLI pede `2FA code:` quando o backend exige o código e permite até 3 tentativas em caso de código inválido antes de falhar.
 - Códigos de recuperação (formato `xxxx-xxxx`) são aceitos no lugar do TOTP, tanto na flag `--otp` quanto no prompt interativo.
+- `zs login --api-key`: autenticação por API key do portal (formato `zsk_...`), para CI/CD e automação. A chave é lida por prompt oculto ou por stdin com `--token-stdin`, validada via `me` e persistida sem refresh token (`authType: apikey`). Chaves sem o prefixo `zsk_` são rejeitadas antes de chamar o backend.
+- Em sessão de API key, erro de autenticação não tenta refresh nem limpa a sessão silenciosamente: o CLI informa que a chave está inválida/expirada/revogada e orienta gerar uma nova no portal, saindo com código não-zero. Comportamento JWT inalterado.
+- `zs whoami` indica sessões de API key com o sufixo `(api key)`.
 
 ## [0.5.0] - 2026-07-27
 

@@ -21,6 +21,7 @@ export async function loginWithTokenUseCase(
 
   setConfigValue('accessToken', accessToken);
   setConfigValue('token', accessToken);
+  setConfigValue('authType', 'jwt');
   if (refreshToken) {
     setConfigValue('refreshToken', refreshToken);
   }
