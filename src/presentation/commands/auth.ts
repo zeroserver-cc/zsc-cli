@@ -9,6 +9,8 @@ import {
 import { loginWithTokenUseCase } from '../../application/usecases/LoginWithTokenUseCase';
 import { loginWithApiKeyUseCase } from '../../application/usecases/LoginWithApiKeyUseCase';
 import { whoamiUseCase } from '../../application/usecases/WhoamiUseCase';
+import { getActiveAccountUseCase } from '../../application/usecases/AccountUseCase';
+import { formatAccountLine } from './account';
 import { AuthPayload } from '../../domain/entities/types';
 import { handleError } from '../formatting/errors';
 import { getConfigValue } from '../../infrastructure/config/store';
@@ -130,6 +132,7 @@ export function registerAuthCommands(program: Command): void {
           .join(', ');
         const authSuffix = getConfigValue('authType') === 'apikey' ? chalk.gray(' (api key)') : '';
         console.log(`${chalk.bold(user.username)} <${user.email}> [${rolesLabel}]${authSuffix}`);
+        console.log(formatAccountLine(await getActiveAccountUseCase()));
       } catch (err) {
         handleError(err);
       }

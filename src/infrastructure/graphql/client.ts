@@ -91,6 +91,7 @@ function clearSession(): void {
   deleteConfigValue('role');
   deleteConfigValue('roles');
   deleteConfigValue('authType');
+  deleteConfigValue('activeAccountId');
 }
 
 async function performRefresh(url: string, refreshToken: string): Promise<string | null> {

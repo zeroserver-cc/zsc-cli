@@ -42,6 +42,7 @@ describe('loginWithApiKeyUseCase', () => {
     expect(mockedSetConfigValue).toHaveBeenCalledWith('roles', ['developer']);
     expect(mockedSetConfigValue).not.toHaveBeenCalledWith('refreshToken', expect.anything());
     expect(mockedDeleteConfigValue).toHaveBeenCalledWith('refreshToken');
+    expect(mockedDeleteConfigValue).toHaveBeenCalledWith('activeAccountId');
   });
 
   it('rejects keys without the zsk_ prefix before hitting the backend', async () => {

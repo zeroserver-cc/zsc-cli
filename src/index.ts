@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { registerAuthCommands } from './presentation/commands/auth';
+import { registerAccountCommands } from './presentation/commands/account';
 import { registerConfigCommands } from './presentation/commands/config';
 import { registerDeployCommand } from './presentation/commands/deploy';
 import { registerListCommand } from './presentation/commands/list';
@@ -21,6 +22,7 @@ program
   .version(VERSION);
 
 registerAuthCommands(program);
+registerAccountCommands(program);
 registerConfigCommands(program);
 registerDeployCommand(program);
 registerListCommand(program);

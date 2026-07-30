@@ -12,6 +12,8 @@ interface ConfigData {
   roles?: string[];
   /** How the session authenticates: JWT (default, refreshable) or a portal API key (no refresh flow). */
   authType?: 'jwt' | 'apikey';
+  /** Account the session is acting as (teams). Absent means the user's own account. */
+  activeAccountId?: string;
   /** ISO timestamp of the last auto-update check, used to throttle it to once a day. */
   lastUpdateCheck?: string;
 }

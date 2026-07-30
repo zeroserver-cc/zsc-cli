@@ -61,6 +61,22 @@ error and you must generate a new key in the portal and run `zs login
 --api-key` again. Unlike JWT sessions, API key sessions are never refreshed
 automatically: the key is used as-is until it stops working.
 
+### Teams (acting as another account)
+
+If you belong to teams, you can act as a team account instead of your own:
+
+```sh
+zs account              # shows the account you are currently acting as
+zs account list         # all accounts you can act as (* = active)
+zs account switch acme  # by exact username or unique id prefix
+```
+
+Switching re-issues your session tokens scoped to the target account and shows
+a confirmation (`Now acting as @acme (team member)`). `zs whoami` also prints
+the active account line. A fresh `zs login` always starts on your own account.
+Account switching requires a session login — it is not available for API key
+sessions, which are bound to the key's owner.
+
 ## Private images (registry credentials)
 
 To pull private images (e.g. GitHub Container Registry) the backend needs a

@@ -28,6 +28,8 @@ export async function loginWithApiKeyUseCase(apiKey: string): Promise<ApiKeyLogi
   setConfigValue('role', data.me.role);
   // Defensive fallback in case the roles field ever comes back null or empty.
   setConfigValue('roles', data.me.roles ?? [data.me.role]);
+  // API key sessions are bound to the key's owner and cannot switch accounts.
+  deleteConfigValue('activeAccountId');
 
   return { user: data.me };
 }
