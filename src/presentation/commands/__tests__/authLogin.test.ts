@@ -52,12 +52,15 @@ describe('zs login with 2FA', () => {
     exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`process.exit(${code})`);
     }) as never);
+    // The 2FA flow refuses to prompt without a TTY; pretend we have one.
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
   });
 
   afterEach(() => {
     logSpy.mockRestore();
     errorSpy.mockRestore();
     exitSpy.mockRestore();
+    Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
   });
 
   async function runLogin(...args: string[]): Promise<void> {
@@ -124,5 +127,30 @@ describe('zs login with 2FA', () => {
     await runLogin('-e', 'dev@zsc.cloud', '-p', 'secret');
 
     expect(mockedLoginUseCase).toHaveBeenNthCalledWith(2, 'dev@zsc.cloud', 'secret', 'abcd-efgh');
+  });
+
+  it('fails fast without prompting when stdin is not a TTY', async () => {
+    Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
+    mockedLoginUseCase.mockRejectedValueOnce(new TwoFactorRequiredError());
+
+    await expect(runLogin('-e', 'dev@zsc.cloud', '-p', 'secret')).rejects.toThrow('process.exit(1)');
+
+    expect(mockedPrompt).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringContaining('pass it with --otp <code>'),
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('counts empty prompt answers against the attempt budget instead of looping forever', async () => {
+    mockedLoginUseCase.mockRejectedValue(new TwoFactorRequiredError());
+    mockedPrompt.mockResolvedValue('   ');
+
+    await expect(runLogin('-e', 'dev@zsc.cloud', '-p', 'secret')).rejects.toThrow('process.exit(1)');
+
+    expect(mockedPrompt).toHaveBeenCalledTimes(3);
+    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('2FA code cannot be empty.'));
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });
