@@ -25,4 +25,15 @@ describe('manifestToCreateInput', () => {
       exposed: true,
     });
   });
+
+  it('passes a service command through to createApplication', () => {
+    const manifest: AppManifest = {
+      app: 'twenty',
+      services: [{ name: 'worker', image: 'twentycrm/twenty:latest', command: ['yarn', 'worker:prod'] }],
+    };
+
+    const input = manifestToCreateInput(manifest);
+
+    expect(input.services[0].command).toEqual(['yarn', 'worker:prod']);
+  });
 });
