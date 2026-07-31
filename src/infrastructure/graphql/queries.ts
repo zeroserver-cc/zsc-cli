@@ -45,6 +45,14 @@ export const CREATE_APPLICATION_MUTATION = `
   }
 `;
 
+export const UPDATE_APPLICATION_MUTATION = `
+  mutation UpdateApplication($id: ID!, $input: UpdateApplicationInput!) {
+    updateApplication(id: $id, input: $input) {
+      id name dockerImage
+    }
+  }
+`;
+
 export const DEPLOY_APPLICATION_MUTATION = `
   mutation DeployApplication($input: DeployApplicationInput!) {
     deployApplication(input: $input) {

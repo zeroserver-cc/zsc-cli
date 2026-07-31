@@ -7,6 +7,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Corrigido
+- `zs deploy` com `zs.yaml` não ignora mais mudanças na composição: antes, ao reutilizar um app existente pelo nome, o re-deploy subia com os `services` antigos salvos no backend. Agora o CLI chama `updateApplication` com os `services` do manifesto atual antes de disparar o deploy, então alterações de imagem, env, ports, volumes e `dependsOn` no `zs.yaml` passam a valer no re-deploy. O `config` do app não é tocado no update, preservando ajustes feitos pelo portal.
+
 ## [0.6.0] - 2026-07-30
 
 ### Adicionado

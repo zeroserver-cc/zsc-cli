@@ -9,6 +9,7 @@ import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
   MY_APPLICATIONS_QUERY,
+  UPDATE_APPLICATION_MUTATION,
 } from '../../../infrastructure/graphql/queries';
 
 jest.mock('../../../infrastructure/graphql/client');
@@ -59,30 +60,48 @@ services:
   const result = await deployManifestUseCase(tmpDir);
 
   expect(mockGql.mock.calls.map((c) => c[0])).toContain(CREATE_APPLICATION_MUTATION);
+  expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(UPDATE_APPLICATION_MUTATION);
   const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
   expect(deployVars.input.applicationId).toBe('app-new');
   expect(result.manifest.app).toBe('demo-app');
 });
 
-it('reuses an existing application by manifest name without creating a new one', async () => {
+it('syncs the composition via updateApplication before redeploying an existing app', async () => {
   writeManifest(`
 app: demo-app
 services:
   - name: web
-    image: nginx
-    ports: ["80"]
+    image: nginx:1.27
+    env: ["MODE=prod"]
+    ports: ["8080:80"]
     exposed: true
+  - name: worker
+    image: ghcr.io/me/worker:2.0
+    dependsOn: ["web"]
 `);
 
   mockGql.mockImplementation(async (query: string) => {
     if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'demo-app' }] } as any;
+    if (query === UPDATE_APPLICATION_MUTATION) return { updateApplication: { id: 'app-42', name: 'demo-app' } } as any;
     if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
     throw new Error(`unexpected query: ${query}`);
   });
 
   const result = await deployManifestUseCase(tmpDir);
 
-  expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(CREATE_APPLICATION_MUTATION);
+  const calledQueries = mockGql.mock.calls.map((c) => c[0]);
+  expect(calledQueries).not.toContain(CREATE_APPLICATION_MUTATION);
+  expect(calledQueries.indexOf(UPDATE_APPLICATION_MUTATION)).toBeGreaterThanOrEqual(0);
+  expect(calledQueries.indexOf(UPDATE_APPLICATION_MUTATION)).toBeLessThan(
+    calledQueries.indexOf(DEPLOY_APPLICATION_MUTATION),
+  );
+
+  const updateVars = mockGql.mock.calls.find((c) => c[0] === UPDATE_APPLICATION_MUTATION)![1] as any;
+  expect(updateVars.id).toBe('app-42');
+  expect(updateVars.input.name).toBe('demo-app');
+  expect(updateVars.input.services).toEqual(result.manifest.services);
+  expect(updateVars.input).not.toHaveProperty('config');
+
   const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
   expect(deployVars.input.applicationId).toBe('app-42');
   expect(result.manifest.app).toBe('demo-app');
@@ -132,6 +151,7 @@ services:
 
   mockGql.mockImplementation(async (query: string) => {
     if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'geo-app' }] } as any;
+    if (query === UPDATE_APPLICATION_MUTATION) return { updateApplication: { id: 'app-42', name: 'geo-app' } } as any;
     if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
     throw new Error(`unexpected query: ${query}`);
   });
@@ -158,6 +178,7 @@ services:
 
   mockGql.mockImplementation(async (query: string) => {
     if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'geo-app' }] } as any;
+    if (query === UPDATE_APPLICATION_MUTATION) return { updateApplication: { id: 'app-42', name: 'geo-app' } } as any;
     if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
     throw new Error(`unexpected query: ${query}`);
   });
@@ -181,6 +202,7 @@ services:
 
   mockGql.mockImplementation(async (query: string) => {
     if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'demo-app' }] } as any;
+    if (query === UPDATE_APPLICATION_MUTATION) return { updateApplication: { id: 'app-42', name: 'demo-app' } } as any;
     if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
     throw new Error(`unexpected query: ${query}`);
   });
