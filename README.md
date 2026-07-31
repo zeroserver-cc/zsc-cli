@@ -13,6 +13,7 @@ Cliente de linha de comando da **ZeroServer Community Cloud** para Developers. P
 - [ ] `zs list`
 - [ ] `zs logs`
 - [ ] `zs stop`
+- [ ] `zs restart`
 
 ## Authentication
 
