@@ -66,9 +66,9 @@ export async function deployApplicationUseCase(
     token,
   );
 
-  return waitForInstance(deployData.deployApplication, token, onProgress);
+  return waitForInstance(deployData.deployApplication, applicationId, token, onProgress);
 }
 
-function deriveAppName(image: string): string {
+export function deriveAppName(image: string): string {
   return image.split('/').pop()?.split(':')[0] ?? image;
 }

@@ -88,6 +88,6 @@ export async function deployManifestUseCase(
     token,
   );
 
-  const result = await waitForInstance(deployData.deployApplication, token, onProgress);
+  const result = await waitForInstance(deployData.deployApplication, applicationId, token, onProgress);
   return { ...result, manifest, ...(placement && { placement }) };
 }
