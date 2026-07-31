@@ -116,6 +116,7 @@ function validateService(svc: unknown, index: number): ManifestService {
   if (svc.ports !== undefined) service.ports = toStringArray(svc.ports, `${where}.ports`);
   if (svc.volumes !== undefined) service.volumes = toVolumeStringArray(svc.volumes, `${where}.volumes`);
   if (svc.dependsOn !== undefined) service.dependsOn = toStringArray(svc.dependsOn, `${where}.dependsOn`);
+  if (svc.command !== undefined) service.command = toStrictStringArray(svc.command, `${where}.command`);
   if (svc.exposed !== undefined) {
     if (typeof svc.exposed !== 'boolean') {
       throw new ManifestError(`zs.yaml: ${where}.exposed must be true or false.`);
@@ -135,6 +136,17 @@ function toStringArray(value: unknown, where: string): string[] {
     if (typeof item === 'string') return item;
     if (typeof item === 'number') return String(item);
     throw new ManifestError(`zs.yaml: ${where}[${i}] must be a string or number.`);
+  });
+}
+
+// command must be a real argv list; unlike ports, numbers are not coerced.
+function toStrictStringArray(value: unknown, where: string): string[] {
+  if (!Array.isArray(value)) {
+    throw new ManifestError(`zs.yaml: ${where} must be a list of strings.`);
+  }
+  return value.map((item, i) => {
+    if (typeof item === 'string') return item;
+    throw new ManifestError(`zs.yaml: ${where}[${i}] must be a string.`);
   });
 }
 

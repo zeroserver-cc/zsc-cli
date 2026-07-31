@@ -145,6 +145,49 @@ services:
     expect(m.services[0].volumes).toEqual(['/host/config:/etc/nginx/conf.d:ro']);
   });
 
+  it('accepts a command list per service', () => {
+    const m = parseManifest(`
+app: twenty
+services:
+  - name: worker
+    image: twentycrm/twenty:latest
+    command:
+      - yarn
+      - worker:prod
+`);
+    expect(m.services[0].command).toEqual(['yarn', 'worker:prod']);
+  });
+
+  it('omits command when not declared', () => {
+    const m = parseManifest(DEMO);
+    expect(m.services[0].command).toBeUndefined();
+  });
+
+  it('throws when command is not a list', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: web
+    image: nginx
+    command: yarn worker:prod
+`),
+    ).toThrow(/services\[0\]\.command must be a list of strings/);
+  });
+
+  it('throws when a command item is not a string', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: web
+    image: nginx
+    command:
+      - 8080
+`),
+    ).toThrow(/services\[0\]\.command\[0\] must be a string/);
+  });
+
   it('parses AI requirements', () => {
     const m = parseManifest(`
 app: ia-app

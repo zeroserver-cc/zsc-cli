@@ -99,6 +99,8 @@ export interface ManifestService {
   volumes?: string[];
   dependsOn?: string[];
   exposed?: boolean;
+  /** Overrides the image CMD (e.g. a worker process of the same image). */
+  command?: string[];
 }
 
 // Parsed and validated zs.yaml manifest (multi-service application).
