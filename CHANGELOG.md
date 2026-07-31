@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-31
+
 ### Adicionado
 - `zs deployments <app>`: histórico de deploys de uma aplicação (últimos 20), em tabela com status colorido (SUCCESS/FAILED/ROLLED_BACK/PENDING), imagem encurtada (prefixo de registry removido quando longa), duração (createdAt→finishedAt, `—` quando pendente), data de criação e erro truncado em 60 caracteres.
 
