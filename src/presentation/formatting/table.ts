@@ -1,5 +1,6 @@
 import Table from 'cli-table3';
 import chalk from 'chalk';
+import { Deployment } from '../../domain/entities/types';
 import { AppRow } from '../../application/usecases/ListApplicationsUseCase';
 import { MachineRow } from '../../application/usecases/ListMachinesUseCase';
 import { MachineDetail } from '../../application/usecases/GetMachineUseCase';
@@ -135,6 +136,70 @@ export function printMachineDetail({ machine, instances }: MachineDetail): void 
       chalk.cyan(inst.application?.dockerImage ?? '-'),
       colorStatus(inst.status),
       inst.address ? chalk.underline(inst.address) : chalk.gray('-'),
+    ]);
+  }
+
+  console.log(table.toString());
+}
+
+const DEPLOYMENT_STATUS_COLORS: Record<string, (s: string) => string> = {
+  SUCCESS: chalk.green,
+  FAILED: chalk.red,
+  ROLLED_BACK: chalk.yellow,
+  PENDING: chalk.gray,
+};
+
+function colorDeploymentStatus(status: string): string {
+  const colorFn = DEPLOYMENT_STATUS_COLORS[status] ?? ((s: string) => s);
+  return colorFn(status);
+}
+
+// Long registry-prefixed images (ghcr.io/org/app:tag) blow up the table; keep
+// the meaningful tail (last path segment with its tag) once they outgrow it.
+function shortImage(image: string): string {
+  if (image.length <= 40) return image;
+  const lastSegment = image.slice(image.lastIndexOf('/') + 1);
+  return lastSegment || image;
+}
+
+function formatDeploymentDuration(createdAt: string, finishedAt?: string | null): string {
+  if (!finishedAt) return '—';
+  const ms = Date.parse(finishedAt) - Date.parse(createdAt);
+  if (isNaN(ms) || ms < 0) return '—';
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest > 0 ? `${minutes}m${rest}s` : `${minutes}m`;
+}
+
+function shortCreatedAt(iso: string): string {
+  return iso.slice(0, 16).replace('T', ' ');
+}
+
+function truncateError(error?: string | null): string {
+  if (!error) return '—';
+  return error.length > 60 ? `${error.slice(0, 59)}…` : error;
+}
+
+export function printDeploymentsTable(deployments: Deployment[]): void {
+  if (!deployments.length) {
+    console.log(chalk.gray('No deployments found.'));
+    return;
+  }
+
+  const table = new Table({
+    head: ['Status', 'Image', 'Duration', 'Created', 'Error'].map((h) => chalk.bold(h)),
+    style: { head: [], border: [] },
+  });
+
+  for (const deployment of deployments) {
+    table.push([
+      colorDeploymentStatus(deployment.status),
+      chalk.cyan(shortImage(deployment.image)),
+      formatDeploymentDuration(deployment.createdAt, deployment.finishedAt),
+      shortCreatedAt(deployment.createdAt),
+      deployment.error ? chalk.red(truncateError(deployment.error)) : chalk.gray('—'),
     ]);
   }
 
