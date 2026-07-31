@@ -7,6 +7,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- Novo comando `zs restart <instance-id>`: reinicia uma instância de aplicação em execução via mutation `restartApplication`, exigindo role `developer` ou `admin` e exibindo o status da instância ao final, no mesmo formato do `zs stop`.
+
 ## [0.7.0] - 2026-07-31
 
 ### Corrigido
