@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-31
+
 ### Adicionado
 - O `zs.yaml` aceita `command` por serviço (lista de strings), que sobrescreve o CMD da imagem: permite rodar processos alternativos da mesma imagem, como um worker (`command: [yarn, worker:prod]` no Twenty). O valor é validado no parse (rejeita string solta ou itens não-string com erro claro) e repassado ao backend em `createApplication`/`updateApplication`.
 - Novo comando `zs restart <instance-id>`: reinicia uma instância de aplicação em execução via mutation `restartApplication`, exigindo role `developer` ou `admin` e exibindo o status da instância ao final, no mesmo formato do `zs stop`.
