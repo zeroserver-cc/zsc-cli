@@ -22,7 +22,8 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 
 - `zs login` / `zs logout`: autenticacao (usuario/senha ou token).
 - `zs deploy`: sobe uma aplicacao (imagem de container) na malha; aceita preferencia geografica de node via `--country`/`--region` ou secao `placement:` no `zs.yaml` (preferencia suave, com fallback para qualquer node elegivel).
-- `zs list`: lista aplicacoes e instancias.
+- `zs list`: lista aplicacoes (uma linha por app, modelo de instancia estavel).
+- `zs deployments <app>`: historico de deploys de uma aplicacao (status, imagem, duracao, erro).
 - `zs logs`: logs de uma instancia.
 - `zs stop`: para uma aplicacao.
 - `zs remove`: remove uma aplicacao.

@@ -47,6 +47,21 @@ export interface Application {
   createdAt: string;
 }
 
+export type DeploymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'ROLLED_BACK';
+
+/** One entry of an application's deployment history (stable-instance model). */
+export interface Deployment {
+  id: string;
+  image: string;
+  status: string;
+  error?: string | null;
+  rollbackOf?: string | null;
+  triggeredBy?: string | null;
+  correlationId?: string | null;
+  createdAt: string;
+  finishedAt?: string | null;
+}
+
 export interface ApplicationInstance {
   id: string;
   applicationId: string;

@@ -71,6 +71,14 @@ export const APPLICATION_INSTANCE_QUERY = `
   }
 `;
 
+export const DEPLOYMENTS_QUERY = `
+  query Deployments($applicationId: ID!, $offset: Int, $limit: Int) {
+    deployments(applicationId: $applicationId, offset: $offset, limit: $limit) {
+      id image status error rollbackOf createdAt finishedAt
+    }
+  }
+`;
+
 export const MY_APPLICATIONS_QUERY = `
   query MyApplications {
     myApplications {

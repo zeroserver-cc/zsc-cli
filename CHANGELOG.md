@@ -7,6 +7,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- `zs deployments <app>`: histórico de deploys de uma aplicação (últimos 20), em tabela com status colorido (SUCCESS/FAILED/ROLLED_BACK/PENDING), imagem encurtada (prefixo de registry removido quando longa), duração (createdAt→finishedAt, `—` quando pendente), data de criação e erro truncado em 60 caracteres.
+
+### Alterado
+- `zs list` passa a exibir uma única linha por aplicação, seguindo o modelo de instância estável: se instâncias mortas históricas (STOPPED/ERROR/FAILED) ainda vierem do backend, o CLI mostra a instância viva mais recente; se todas estiverem mortas, mostra a mais recente (app parado continua visível).
+
 ## [0.8.0] - 2026-07-31
 
 ### Adicionado
