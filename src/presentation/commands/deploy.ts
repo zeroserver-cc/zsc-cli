@@ -95,16 +95,38 @@ async function runManifest(opts: DeployOptions): Promise<void> {
   }
 }
 
-function reportResult(spinner: Ora, { instance, timedOut }: DeployResult, appName?: string, placement?: ManifestPlacement): void {
+function reportResult(spinner: Ora, { instance, deployment, timedOut }: DeployResult, appName?: string, placement?: ManifestPlacement): void {
   if (timedOut) {
-    spinner.warn(chalk.yellow('Deploy timed out waiting for RUNNING status.'));
+    spinner.warn(chalk.yellow('Deploy timed out waiting for a terminal status.'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
     console.log(`Last status: ${instance.status}`);
-    console.log(chalk.gray('Check "zs list" for updates.'));
+    console.log(chalk.gray(`Check "zs deployments ${appName ?? '<app-name>'}" and "zs list" for updates.`));
     return;
   }
 
-  if (instance.status === 'RUNNING') {
+  // The deployment record is the source of truth for this deploy: on redeploy
+  // the stable instance keeps RUNNING even when the new deployment failed.
+  if (deployment?.status === 'FAILED') {
+    spinner.fail(chalk.red(`Deploy failed${appName ? `: ${appName}` : '.'}`));
+    console.log(`Instance ID: ${chalk.bold(instance.id)}`);
+    if (deployment.error) {
+      console.log(`Error:       ${chalk.red(deployment.error)}`);
+    }
+    console.log(chalk.gray(`Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`));
+    return;
+  }
+
+  if (deployment?.status === 'ROLLED_BACK') {
+    spinner.fail(chalk.red(`Deploy failed${appName ? `: ${appName}` : '.'} The previous image was restored (rollback).`));
+    console.log(`Instance ID: ${chalk.bold(instance.id)}`);
+    if (deployment.error) {
+      console.log(`Error:       ${chalk.red(deployment.error)}`);
+    }
+    console.log(chalk.gray(`Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`));
+    return;
+  }
+
+  if (deployment?.status === 'SUCCESS' || instance.status === 'RUNNING') {
     spinner.succeed(chalk.green(appName ? `Deploy successful: ${appName}` : 'Deploy successful!'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
     const appAddress = instance.application?.address ?? instance.application?.publicUrl ?? instance.address;
