@@ -4,6 +4,7 @@ import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
   MY_APPLICATIONS_QUERY,
+  UPDATE_APPLICATION_MUTATION,
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { loadManifestFile } from '../manifest/loadManifestFile';
@@ -24,9 +25,10 @@ export interface ManifestDeployOptions {
 
 /**
  * Deploy a multi-service application described by a zs.yaml in `dir` (ZSC-110).
- * Reuses the application by name when it already exists, creates it with the
- * full services[] the first time, triggers the deploy, then polls until the
- * instance is terminal.
+ * Reuses the application by name when it already exists (syncing its services[]
+ * from the manifest first, so zs.yaml changes are not silently ignored),
+ * creates it with the full services[] the first time, triggers the deploy,
+ * then polls until the instance is terminal.
  */
 export async function deployManifestUseCase(
   dir: string = process.cwd(),
@@ -44,6 +46,14 @@ export async function deployManifestUseCase(
   const existing = mine.myApplications.find((a) => a.name === appName)?.id;
   if (existing) {
     applicationId = existing;
+    // The backend deploys from the app's stored services[], so a redeploy must
+    // first sync the composition from the current zs.yaml. config is omitted on
+    // purpose: an empty object would wipe config set via the portal.
+    await gqlRequest<{ updateApplication: Application }>(
+      UPDATE_APPLICATION_MUTATION,
+      { id: applicationId, input: { name: manifest.app, services: manifest.services } },
+      token,
+    );
   } else {
     const appData = await gqlRequest<{ createApplication: Application }>(
       CREATE_APPLICATION_MUTATION,
