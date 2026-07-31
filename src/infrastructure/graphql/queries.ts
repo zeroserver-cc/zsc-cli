@@ -95,6 +95,14 @@ export const STOP_APPLICATION_MUTATION = `
   }
 `;
 
+export const RESTART_APPLICATION_MUTATION = `
+  mutation RestartApplication($instanceId: ID!) {
+    restartApplication(instanceId: $instanceId) {
+      id status
+    }
+  }
+`;
+
 export const REMOVE_APPLICATION_MUTATION = `
   mutation RemoveApplication($instanceId: ID!) {
     removeApplication(instanceId: $instanceId) {
