@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-07-31
+
 ### Corrigido
 - `zs deploy` não declara mais sucesso em re-deploy com falha: no modelo de instância estável a instância permanece RUNNING mesmo quando o novo deploy falha (ex.: imagem inválida), e o CLI só observava o status da instância. Agora o CLI acompanha o registro de deployment mais recente da aplicação: FAILED exibe a mensagem de erro do deploy, ROLLED_BACK informa que a imagem anterior foi restaurada e SUCCESS confirma o sucesso. Enquanto o deployment está PENDING o CLI continua aguardando, mesmo com a instância RUNNING. As mensagens de falha e de timeout passam a sugerir `zs deployments <app>` e `zs logs <instance-id>`.
 
