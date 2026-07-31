@@ -82,7 +82,10 @@ it('reports success when the deployment reaches SUCCESS', async () => {
 it('reports a rolled back deployment as a terminal outcome', async () => {
   mockBackend('RUNNING', [
     [deployment('PENDING')],
-    [deployment('ROLLED_BACK', { error: 'container failed to start' })],
+    [
+      deployment('ROLLED_BACK', { id: 'dep-rb', rollbackOf: 'dep-failed' }),
+      deployment('FAILED', { id: 'dep-failed', error: 'container failed to start', createdAt: '2026-07-31T00:00:00Z' }),
+    ],
   ]);
 
   const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
@@ -91,6 +94,42 @@ it('reports a rolled back deployment as a terminal outcome', async () => {
 
   expect(result.timedOut).toBe(false);
   expect(result.deployment?.status).toBe('ROLLED_BACK');
+  // The history page is carried through so the presentation layer can resolve
+  // the rollbackOf pointer to the original FAILED deployment and its error.
+  const cause = result.deployments?.find((d) => d.id === result.deployment?.rollbackOf);
+  expect(cause?.status).toBe('FAILED');
+  expect(cause?.error).toBe('container failed to start');
+});
+
+it('falls back to instance-only polling when the deployments query fails', async () => {
+  // E.g. an API key with only deploys:write (the deployments resolver requires
+  // deploys:read), an older backend, or a transient failure: keep the legacy
+  // behavior as the floor instead of aborting the wait.
+  let instancePolls = 0;
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === APPLICATION_INSTANCE_QUERY) {
+      instancePolls++;
+      return { applicationInstance: instance(instancePolls >= 2 ? 'RUNNING' : 'PENDING') } as any;
+    }
+    if (query === DEPLOYMENTS_QUERY) {
+      throw new Error('Missing scope: deploys:read');
+    }
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  const onProgress = jest.fn();
+  const resultPromise = waitForInstance(instance('PENDING'), 'app-1', 'a-token', onProgress);
+  await jest.runAllTimersAsync();
+  const result = await resultPromise;
+
+  expect(result.timedOut).toBe(false);
+  expect(result.deployment).toBeUndefined();
+  expect(result.deployments).toBeUndefined();
+  expect(result.instance.status).toBe('RUNNING');
+  const warnings = onProgress.mock.calls.filter((c) =>
+    String(c[0]).includes('deployment history unavailable'),
+  );
+  expect(warnings).toHaveLength(1);
 });
 
 it('stops waiting when the instance fails on its own, even with the deployment PENDING', async () => {

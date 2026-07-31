@@ -9,7 +9,11 @@ const MAX_POLLS = 60; // 3 minutes
 
 export interface WaitResult {
   instance: ApplicationInstance;
+  /** Newest deployment of the application: the source of truth for this deploy. */
   deployment?: Deployment;
+  /** Recent deployment history (last fetched page), so the presentation layer
+   * can resolve related records (e.g. the FAILED cause of a ROLLED_BACK). */
+  deployments?: Deployment[];
   timedOut: boolean;
 }
 
@@ -20,6 +24,9 @@ export interface WaitResult {
  * The instance status alone is not enough: on redeploy the stable instance
  * stays RUNNING while the new deployment is still PENDING, so the newest
  * deployment record is the source of truth for the outcome of this deploy.
+ * When the deployment history cannot be read (missing deploys:read scope,
+ * older backend, transient failure), the wait degrades to the legacy
+ * instance-only behavior instead of aborting the deploy.
  */
 export async function waitForInstance(
   initial: ApplicationInstance,
@@ -28,11 +35,25 @@ export async function waitForInstance(
   onProgress?: (status: string) => void,
 ): Promise<WaitResult> {
   let instance = initial;
+  let warnedUnavailable = false;
+  const fetchHistory = async (): Promise<Deployment[] | undefined> => {
+    try {
+      return await fetchDeploymentHistory(applicationId, token);
+    } catch {
+      if (!warnedUnavailable) {
+        warnedUnavailable = true;
+        onProgress?.('deployment history unavailable, falling back to instance status');
+      }
+      return undefined;
+    }
+  };
+
   // The backend creates the PENDING deployment synchronously inside the deploy
   // mutation, so the newest record is always the deploy just triggered. Fetch
   // it before evaluating the initial instance: on redeploy the instance is
   // already RUNNING and must not short-circuit the wait.
-  let deployment = await fetchNewestDeployment(applicationId, token);
+  let history = await fetchHistory();
+  let deployment = newestDeployment(history);
   let polls = 0;
 
   while (!isDone(instance, deployment) && polls < MAX_POLLS) {
@@ -44,14 +65,22 @@ export async function waitForInstance(
         { id: instance.id },
         token,
       ),
-      fetchNewestDeployment(applicationId, token),
+      fetchHistory(),
     ]);
     instance = pollData.applicationInstance ?? instance;
-    deployment = latest ?? deployment;
+    if (latest) {
+      history = latest;
+      deployment = newestDeployment(latest) ?? deployment;
+    }
     polls++;
   }
 
-  return { instance, deployment, timedOut: polls >= MAX_POLLS && !isDone(instance, deployment) };
+  return {
+    instance,
+    deployment,
+    deployments: history,
+    timedOut: polls >= MAX_POLLS && !isDone(instance, deployment),
+  };
 }
 
 // A deploy is done when the newest deployment reaches a terminal state
@@ -75,18 +104,20 @@ function progressLabel(instance: ApplicationInstance, deployment?: Deployment): 
   return instance.status;
 }
 
-// The backend returns history newest-first, but sort client-side by createdAt
-// to not depend on that ordering.
-async function fetchNewestDeployment(
-  applicationId: string,
-  token: string,
-): Promise<Deployment | undefined> {
+async function fetchDeploymentHistory(applicationId: string, token: string): Promise<Deployment[]> {
   const data = await gqlRequest<{ deployments: Deployment[] }>(
     DEPLOYMENTS_QUERY,
     { applicationId, limit: 5 },
     token,
   );
-  return [...data.deployments].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+  return data.deployments;
+}
+
+// The backend returns history newest-first, but sort client-side by createdAt
+// to not depend on that ordering.
+function newestDeployment(deployments?: Deployment[]): Deployment | undefined {
+  if (!deployments) return undefined;
+  return [...deployments].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
 }
 
 function sleep(ms: number): Promise<void> {

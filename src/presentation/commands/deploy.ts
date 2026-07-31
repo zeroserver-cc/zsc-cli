@@ -1,7 +1,7 @@
 import { Command, InvalidArgumentError } from 'commander';
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
-import { deployApplicationUseCase, DeployResult } from '../../application/usecases/DeployApplicationUseCase';
+import { deployApplicationUseCase, DeployResult, deriveAppName } from '../../application/usecases/DeployApplicationUseCase';
 import { deployManifestUseCase } from '../../application/usecases/DeployManifestUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
 import { loadManifestFile } from '../../application/manifest/loadManifestFile';
@@ -60,7 +60,7 @@ Examples:
 async function runSingleImage(image: string, opts: DeployOptions): Promise<void> {
   const spinner = ora(`Deploying ${chalk.cyan(image)}…`).start();
   try {
-    const name = opts.name ?? manifestAppName(process.cwd());
+    const name = opts.name ?? manifestAppName(process.cwd()) ?? deriveAppName(image);
     const result = await deployApplicationUseCase(
       { image, name, appId: opts.appId, port: opts.port, env: opts.env, country: opts.country, region: opts.region },
       (status) => { spinner.text = `Status: ${chalk.yellow(status)}…`; },
@@ -95,7 +95,7 @@ async function runManifest(opts: DeployOptions): Promise<void> {
   }
 }
 
-function reportResult(spinner: Ora, { instance, deployment, timedOut }: DeployResult, appName?: string, placement?: ManifestPlacement): void {
+export function reportResult(spinner: Ora, { instance, deployment, deployments, timedOut }: DeployResult, appName?: string, placement?: ManifestPlacement): void {
   if (timedOut) {
     spinner.warn(chalk.yellow('Deploy timed out waiting for a terminal status.'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
@@ -119,8 +119,12 @@ function reportResult(spinner: Ora, { instance, deployment, timedOut }: DeployRe
   if (deployment?.status === 'ROLLED_BACK') {
     spinner.fail(chalk.red(`Deploy failed${appName ? `: ${appName}` : '.'} The previous image was restored (rollback).`));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
-    if (deployment.error) {
-      console.log(`Error:       ${chalk.red(deployment.error)}`);
+    // The rollback deployment carries no error itself; the root cause lives on
+    // the original FAILED deployment it points to via rollbackOf.
+    const cause = deployments?.find((d) => d.id === deployment.rollbackOf);
+    const reason = cause?.error ?? deployment.error;
+    if (reason) {
+      console.log(`Error:       ${chalk.red(reason)}`);
     }
     console.log(chalk.gray(`Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`));
     return;
