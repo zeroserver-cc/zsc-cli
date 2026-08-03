@@ -113,6 +113,7 @@ function validateService(svc: unknown, index: number): ManifestService {
   const service: ManifestService = { name, image: svc.image };
 
   if (svc.env !== undefined) service.env = toStringArray(svc.env, `${where}.env`);
+  if (svc.envFile !== undefined) service.envFile = toEnvFile(svc.envFile, `${where}.envFile`);
   if (svc.ports !== undefined) service.ports = toStringArray(svc.ports, `${where}.ports`);
   if (svc.volumes !== undefined) service.volumes = toVolumeStringArray(svc.volumes, `${where}.volumes`);
   if (svc.dependsOn !== undefined) service.dependsOn = toStringArray(svc.dependsOn, `${where}.dependsOn`);
@@ -127,9 +128,29 @@ function validateService(svc: unknown, index: number): ManifestService {
   return service;
 }
 
+// envFile accepts a single path or a list of paths (docker-compose style);
+// anything else (number, mapping, empty value) is a manifest error.
+function toEnvFile(value: unknown, where: string): string | string[] {
+  if (typeof value === 'string') {
+    if (value.trim() === '') {
+      throw new ManifestError(`zs.yaml: ${where} must be a non-empty path (e.g. ".env").`);
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      throw new ManifestError(`zs.yaml: ${where} must list at least one .env file path.`);
+    }
+    return value.map((item, i) => {
+      if (typeof item === 'string' && item.trim() !== '') return item;
+      throw new ManifestError(`zs.yaml: ${where}[${i}] must be a non-empty string (path to a .env file).`);
+    });
+  }
+  throw new ManifestError(`zs.yaml: ${where} must be a string or a list of strings (paths to .env files).`);
+}
+
 // ports may be written as numbers (e.g. "- 3000"); the backend expects strings.
-function toStringArray(value: unknown, where: string): string[] {
-  if (!Array.isArray(value)) {
+function toStringArray(value: unknown, where: string): string[] {  if (!Array.isArray(value)) {
     throw new ManifestError(`zs.yaml: ${where} must be a list.`);
   }
   return value.map((item, i) => {

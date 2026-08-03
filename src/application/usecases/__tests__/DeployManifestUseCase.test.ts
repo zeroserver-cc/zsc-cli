@@ -214,3 +214,62 @@ services:
   expect(deployVars.input).not.toHaveProperty('preferredRegion');
   expect(result.placement).toBeUndefined();
 });
+
+it('sends the envFile-merged env to createApplication (envFile first, zs.yaml env last)', async () => {
+  fs.writeFileSync(path.join(tmpDir, '.env'), 'FOO=from-file\nBAR=file\n');
+  writeManifest(`
+app: env-app
+services:
+  - name: api
+    image: ghcr.io/me/api:1.0
+    envFile: .env
+    env:
+      - BAR=yaml
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [] } as any;
+    if (query === CREATE_APPLICATION_MUTATION) return { createApplication: { id: 'app-env' } } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  const result = await deployManifestUseCase(tmpDir);
+
+  const createVars = mockGql.mock.calls.find((c) => c[0] === CREATE_APPLICATION_MUTATION)![1] as any;
+  expect(createVars.input.services[0].env).toEqual(['FOO=from-file', 'BAR=yaml']);
+  expect(createVars.input.services[0]).not.toHaveProperty('envFile');
+  expect(result.warnings).toEqual([]);
+});
+
+it('warns about a missing envFile and continues the deploy without those vars', async () => {
+  writeManifest(`
+app: env-app
+services:
+  - name: api
+    image: ghcr.io/me/api:1.0
+    envFile: .env.local
+    env:
+      - A=1
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [] } as any;
+    if (query === CREATE_APPLICATION_MUTATION) return { createApplication: { id: 'app-env' } } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  const progress: string[] = [];
+  const result = await deployManifestUseCase(tmpDir, (status) => progress.push(status));
+
+  const expectedWarning = "zs.yaml: envFile '.env.local' not found for service 'api'; skipping";
+  expect(result.warnings).toEqual([expectedWarning]);
+  expect(progress).toContain(expectedWarning);
+
+  const createVars = mockGql.mock.calls.find((c) => c[0] === CREATE_APPLICATION_MUTATION)![1] as any;
+  expect(createVars.input.services[0].env).toEqual(['A=1']);
+  expect(mockGql.mock.calls.map((c) => c[0])).toContain(DEPLOY_APPLICATION_MUTATION);
+});

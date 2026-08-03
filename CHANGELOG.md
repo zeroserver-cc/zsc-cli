@@ -7,6 +7,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- O `zs.yaml` aceita `envFile` por serviço (string ou lista, inspirado no docker-compose), apontando para arquivo(s) `.env` carregados durante o `zs deploy`. O parse segue o formato clássico: linhas `KEY=VALUE`, ignora linhas vazias e comentários (`#`), remove aspas simples/duplas ao redor do valor e não faz expansão de variáveis nem suporta `export ` (linhas fora do formato são ignoradas com warning). Caminhos relativos resolvem a partir do diretório do `zs.yaml`, não do diretório atual. Precedência: os envFiles são aplicados na ordem da lista (o último sobrescreve o anterior) e as entradas de `env` do `zs.yaml` sobrescrevem as do envFile; o backend recebe o env já mesclado em `createApplication`/`updateApplication`. Arquivo ausente emite um warning claro por arquivo (`zs.yaml: envFile '<arquivo>' not found for service '<serviço>'; skipping`) e o deploy continua normalmente, sem falhar.
+
 ## [0.9.1] - 2026-07-31
 
 ### Corrigido

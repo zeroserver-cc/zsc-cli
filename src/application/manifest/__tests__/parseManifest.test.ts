@@ -312,4 +312,67 @@ services:
 `),
     ).toThrow(/"placement.region" must be a non-empty string/);
   });
+
+  it('accepts envFile as a string or a list of strings', () => {
+    const single = parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+    envFile: .env
+`);
+    expect(single.services[0].envFile).toBe('.env');
+
+    const list = parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+    envFile: [.env, .env.local]
+`);
+    expect(list.services[0].envFile).toEqual(['.env', '.env.local']);
+  });
+
+  it('rejects envFile of invalid types with a clear error', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+    envFile: 42
+`),
+    ).toThrow(/services\[0\]\.envFile must be a string or a list of strings/);
+
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+    envFile:
+      path: .env
+`),
+    ).toThrow(/services\[0\]\.envFile must be a string or a list of strings/);
+
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+    envFile: [.env, 42]
+`),
+    ).toThrow(/services\[0\]\.envFile\[1\] must be a non-empty string/);
+
+    expect(() =>
+      parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+    envFile: []
+`),
+    ).toThrow(/services\[0\]\.envFile must list at least one/);
+  });
 });
