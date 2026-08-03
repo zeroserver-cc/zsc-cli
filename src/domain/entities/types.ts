@@ -110,6 +110,13 @@ export interface ManifestService {
   name: string;
   image: string;
   env?: string[];
+  /**
+   * .env file(s) loaded at deploy time, docker-compose style. Relative paths
+   * resolve from the zs.yaml directory. envFile entries are merged first, then
+   * `env` overrides them; with a list, later files override earlier ones.
+   * A missing file warns and is skipped; it never fails the deploy.
+   */
+  envFile?: string | string[];
   ports?: string[];
   volumes?: string[];
   dependsOn?: string[];

@@ -16,6 +16,8 @@ export interface ManifestDeployResult extends WaitResult {
   manifest: AppManifest;
   /** Effective placement sent to the backend (flags win over zs.yaml), when set. */
   placement?: ManifestPlacement;
+  /** Non-fatal problems found while loading the manifest (e.g. missing envFile). */
+  warnings: string[];
 }
 
 export interface ManifestDeployOptions {
@@ -38,7 +40,11 @@ export async function deployManifestUseCase(
   const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
-  const manifest = loadManifestFile(dir);
+  const warnings: string[] = [];
+  const manifest = loadManifestFile(dir, (warning) => {
+    warnings.push(warning);
+    onProgress?.(warning);
+  });
   const appName = manifest.app;
 
   let applicationId: string;
@@ -89,5 +95,5 @@ export async function deployManifestUseCase(
   );
 
   const result = await waitForInstance(deployData.deployApplication, applicationId, token, onProgress);
-  return { ...result, manifest, ...(placement && { placement }) };
+  return { ...result, manifest, warnings, ...(placement && { placement }) };
 }

@@ -89,6 +89,11 @@ async function runManifest(opts: DeployOptions): Promise<void> {
       { placement: { country: opts.country, region: opts.region } },
     );
     reportResult(spinner, result, result.manifest.app, result.placement);
+    // Warnings (e.g. missing envFile) also flashed on the spinner during the
+    // run; print them persistently once the spinner is done.
+    for (const warning of result.warnings) {
+      console.log(chalk.yellow(`Warning: ${warning}`));
+    }
   } catch (err) {
     spinner.fail('Deploy failed.');
     handleError(err);
