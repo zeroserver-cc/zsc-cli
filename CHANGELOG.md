@@ -7,9 +7,15 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-04
+
 ### Adicionado
 - Managed Databases (PostgreSQL/MySQL, Fase 2): novo grupo de comandos `zs db` para developers. `zs db create --engine <postgres|mysql> --name <nome>` provisiona um banco gerenciado pela plataforma e orienta o attach; `zs db list` mostra tabela com nome, engine, status, node e último dump; `zs db connection <nome-ou-id>` imprime a connection string (DATABASE_URL) com aviso de segredo; `zs db delete <nome-ou-id>` (destrutivo: dump final + teardown) e `zs db restore <nome-ou-id>` (sobrescreve os dados atuais pelo último dump) pedem confirmação interativa, pulável com `--yes`. Os comandos que recebem alvo aceitam nome exato ou prefixo único de id, no padrão do `zs account switch`, com erro claro em ambiguidade ou inexistência.
 - O `zs.yaml` aceita o campo app-level `database: <nome-do-banco>`: no `zs deploy` o CLI resolve o nome para `databaseId` via `myDatabases` e o envia no input de `deployApplication`, atachando a app ao banco (colocation no node do banco e `DATABASE_URL` injetada pelo backend). Nome inexistente ou ambíguo falha o deploy com erro claro; sem o campo no manifesto o CLI não envia `databaseId`, preservando o attach persistido no backend.
+
+## [0.10.0] - 2026-08-03
+
+### Adicionado
 - O `zs.yaml` aceita `envFile` por serviço (string ou lista, inspirado no docker-compose), apontando para arquivo(s) `.env` carregados durante o `zs deploy`. O parse segue o formato clássico: linhas `KEY=VALUE`, ignora linhas vazias e comentários (`#`), remove aspas simples/duplas ao redor do valor e não faz expansão de variáveis nem suporta `export ` (linhas fora do formato são ignoradas com warning). Caminhos relativos resolvem a partir do diretório do `zs.yaml`, não do diretório atual. Precedência: os envFiles são aplicados na ordem da lista (o último sobrescreve o anterior) e as entradas de `env` do `zs.yaml` sobrescrevem as do envFile; o backend recebe o env já mesclado em `createApplication`/`updateApplication`. Arquivo ausente emite um warning claro por arquivo (`zs.yaml: envFile '<arquivo>' not found for service '<serviço>'; skipping`) e o deploy continua normalmente, sem falhar.
 
 ## [0.9.1] - 2026-07-31
