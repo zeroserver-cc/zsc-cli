@@ -9,6 +9,7 @@ import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
   MY_APPLICATIONS_QUERY,
+  MY_DATABASES_QUERY,
   UPDATE_APPLICATION_MUTATION,
 } from '../../../infrastructure/graphql/queries';
 
@@ -272,4 +273,75 @@ services:
   const createVars = mockGql.mock.calls.find((c) => c[0] === CREATE_APPLICATION_MUTATION)![1] as any;
   expect(createVars.input.services[0].env).toEqual(['A=1']);
   expect(mockGql.mock.calls.map((c) => c[0])).toContain(DEPLOY_APPLICATION_MUTATION);
+});
+
+it('resolves the manifest "database" name to a databaseId on the deploy input', async () => {
+  writeManifest(`
+app: db-app
+database: app-db
+services:
+  - name: api
+    image: ghcr.io/me/api:1.0
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [] } as any;
+    if (query === CREATE_APPLICATION_MUTATION) return { createApplication: { id: 'app-db-1' } } as any;
+    if (query === MY_DATABASES_QUERY) {
+      return { myDatabases: [{ id: 'db-1', name: 'app-db', engine: 'POSTGRES', status: 'RUNNING' }] } as any;
+    }
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  await deployManifestUseCase(tmpDir);
+
+  const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+  expect(deployVars.input.databaseId).toBe('db-1');
+});
+
+it('fails the deploy with a clear error when the manifest database does not exist', async () => {
+  writeManifest(`
+app: db-app
+database: missing-db
+services:
+  - name: api
+    image: ghcr.io/me/api:1.0
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [] } as any;
+    if (query === CREATE_APPLICATION_MUTATION) return { createApplication: { id: 'app-db-1' } } as any;
+    if (query === MY_DATABASES_QUERY) return { myDatabases: [] } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  await expect(deployManifestUseCase(tmpDir)).rejects.toThrow(/Unknown database "missing-db"/);
+  expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(DEPLOY_APPLICATION_MUTATION);
+});
+
+it('omits databaseId when the manifest declares no database, preserving the persisted attach', async () => {
+  writeManifest(`
+app: demo-app
+services:
+  - name: web
+    image: nginx
+    exposed: true
+`);
+
+  mockGql.mockImplementation(async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY) return { myApplications: [{ id: 'app-42', name: 'demo-app' }] } as any;
+    if (query === UPDATE_APPLICATION_MUTATION) return { updateApplication: { id: 'app-42', name: 'demo-app' } } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    throw new Error(`unexpected query: ${query}`);
+  });
+
+  await deployManifestUseCase(tmpDir);
+
+  const deployVars = mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+  expect(deployVars.input).not.toHaveProperty('databaseId');
+  expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(MY_DATABASES_QUERY);
 });

@@ -10,6 +10,7 @@ import { getConfigValue } from '../../infrastructure/config/store';
 import { loadManifestFile } from '../manifest/loadManifestFile';
 import { manifestToCreateInput } from '../manifest/toCreateInput';
 import { normalizePlacement, toDeployPlacementInput } from '../placement';
+import { resolveDatabaseUseCase } from './ManagedDatabaseUseCase';
 import { waitForInstance, WaitResult } from './waitForInstance';
 
 export interface ManifestDeployResult extends WaitResult {
@@ -88,9 +89,13 @@ export async function deployManifestUseCase(
     country: options.placement?.country ?? manifest.placement?.country,
     region: options.placement?.region ?? manifest.placement?.region,
   });
+  // Managed database attach (Fase 2): the manifest names the database; the name
+  // is resolved to an id at deploy time. When the manifest has no "database"
+  // the field is omitted entirely, so the backend keeps any persisted attach.
+  const databaseId = manifest.database ? (await resolveDatabaseUseCase(manifest.database)).id : undefined;
   const deployData = await gqlRequest<{ deployApplication: ApplicationInstance }>(
     DEPLOY_APPLICATION_MUTATION,
-    { input: { applicationId, ...aiRequirements, ...toDeployPlacementInput(placement) } },
+    { input: { applicationId, ...aiRequirements, ...toDeployPlacementInput(placement), ...(databaseId && { databaseId }) } },
     token,
   );
 

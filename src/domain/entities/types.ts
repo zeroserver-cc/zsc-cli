@@ -130,7 +130,26 @@ export interface AppManifest {
   app: string;
   ai?: ManifestAIRequirements;
   placement?: ManifestPlacement;
+  /** Name of a managed database owned by the account; the deploy attaches to it. */
+  database?: string;
   services: ManifestService[];
+}
+
+export type ManagedDatabaseEngine = 'POSTGRES' | 'MYSQL';
+
+export type ManagedDatabaseStatus = 'PENDING' | 'RUNNING' | 'ERROR' | 'DELETING' | 'DELETED';
+
+/** Platform-provisioned database (Fase 2). Credentials never appear on this type. */
+export interface ManagedDatabase {
+  id: string;
+  name: string;
+  engine: ManagedDatabaseEngine;
+  version: string;
+  status: ManagedDatabaseStatus;
+  machineId?: string | null;
+  lastDumpAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type MachineStatus = 'OFFLINE' | 'REGISTERING' | 'IDLE' | 'BUSY' | 'OVERLOADED' | 'ONLINE';
