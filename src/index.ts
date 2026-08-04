@@ -13,6 +13,7 @@ import { registerNodeCommands } from './presentation/commands/nodes';
 import { registerRegistryCommands } from './presentation/commands/registry';
 import { registerDomainCommands } from './presentation/commands/domain';
 import { registerVolumeCommand } from './presentation/commands/volume';
+import { registerDatabaseCommands } from './presentation/commands/database';
 import { registerUpgradeCommand } from './presentation/commands/upgrade';
 import { VERSION } from './version';
 
@@ -37,6 +38,7 @@ registerNodeCommands(program);
 registerRegistryCommands(program);
 registerDomainCommands(program);
 registerVolumeCommand(program);
+registerDatabaseCommands(program);
 registerUpgradeCommand(program);
 // This module only builds and exports the command tree. Parsing is driven by the
 // entry points — `src/cli.ts` for the standalone binary and `bin/zs.js` for the

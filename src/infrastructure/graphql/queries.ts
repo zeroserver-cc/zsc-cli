@@ -246,3 +246,41 @@ export const RESTORE_APPLICATION_VOLUMES_MUTATION = `
     }
   }
 `;
+
+const MANAGED_DATABASE_FIELDS = `
+  id name engine version status machineId lastDumpAt createdAt updatedAt
+`;
+
+export const MY_DATABASES_QUERY = `
+  query MyDatabases {
+    myDatabases {
+      ${MANAGED_DATABASE_FIELDS}
+    }
+  }
+`;
+
+export const MANAGED_DATABASE_CONNECTION_STRING_QUERY = `
+  query ManagedDatabaseConnectionString($id: ID!) {
+    managedDatabaseConnectionString(id: $id)
+  }
+`;
+
+export const CREATE_MANAGED_DATABASE_MUTATION = `
+  mutation CreateManagedDatabase($input: CreateManagedDatabaseInput!) {
+    createManagedDatabase(input: $input) {
+      ${MANAGED_DATABASE_FIELDS}
+    }
+  }
+`;
+
+export const DELETE_MANAGED_DATABASE_MUTATION = `
+  mutation DeleteManagedDatabase($id: ID!) {
+    deleteManagedDatabase(id: $id)
+  }
+`;
+
+export const RESTORE_MANAGED_DATABASE_MUTATION = `
+  mutation RestoreManagedDatabase($id: ID!) {
+    restoreManagedDatabase(id: $id)
+  }
+`;

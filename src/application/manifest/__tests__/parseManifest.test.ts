@@ -375,4 +375,47 @@ services:
 `),
     ).toThrow(/services\[0\]\.envFile must list at least one/);
   });
+
+  it('parses the app-level "database" field', () => {
+    const m = parseManifest(`
+app: x
+database: app-db
+services:
+  - name: api
+    image: nginx
+`);
+    expect(m.database).toBe('app-db');
+  });
+
+  it('leaves "database" undefined when the manifest does not declare it', () => {
+    const m = parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+`);
+    expect(m.database).toBeUndefined();
+  });
+
+  it('rejects a "database" that is not a non-empty string', () => {
+    expect(() =>
+      parseManifest(`
+app: x
+database: 42
+services:
+  - name: api
+    image: nginx
+`),
+    ).toThrow(/"database" must be a non-empty string/);
+
+    expect(() =>
+      parseManifest(`
+app: x
+database: ""
+services:
+  - name: api
+    image: nginx
+`),
+    ).toThrow(/"database" must be a non-empty string/);
+  });
 });

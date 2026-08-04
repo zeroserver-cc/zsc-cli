@@ -45,8 +45,18 @@ export function parseManifest(content: string): AppManifest {
 
   const ai = raw.ai !== undefined ? validateAIRequirements(raw.ai) : undefined;
   const placement = raw.placement !== undefined ? validatePlacement(raw.placement) : undefined;
+  const database = raw.database !== undefined ? validateDatabase(raw.database) : undefined;
 
-  return { app, ai, placement, services };
+  return { app, ai, placement, database, services };
+}
+
+function validateDatabase(raw: unknown): string {
+  if (typeof raw !== 'string' || raw.trim() === '') {
+    throw new ManifestError(
+      'zs.yaml: "database" must be a non-empty string (the name of a managed database; create one with "zs db create").',
+    );
+  }
+  return raw;
 }
 
 function validateAIRequirements(raw: unknown): ManifestAIRequirements {
