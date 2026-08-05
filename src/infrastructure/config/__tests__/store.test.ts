@@ -1,4 +1,5 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, existsSync } from 'fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import { spawn } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -107,6 +108,51 @@ describe('legacy session migration', () => {
     expect(getConfigValue('accessToken')).toBe('new-token');
     expect(readJson(configFilePath()).accessToken).toBeUndefined();
   });
+
+  it('survives concurrent first-run migrations without losing the session', async () => {
+    // Regression test: two processes racing the migration used to end with the
+    // migrated tokens destroyed — a reader saw a half-written default.json,
+    // parsed it as {} and its read-modify-write clobbered the real contents.
+    writeLegacyConfig({
+      backendUrl: 'https://api.zeroserver.cc',
+      accessToken: 'AT',
+      refreshToken: 'RT',
+      role: 'developer',
+    });
+
+    const tsNodeRegister = require.resolve('ts-node/register/transpile-only');
+    const storeModule = join(__dirname, '..', 'store');
+    const workerPath = join(home, 'race-worker.js');
+    writeFileSync(
+      workerPath,
+      `process.env.HOME = ${JSON.stringify(home)};\n` +
+        `require(${JSON.stringify(tsNodeRegister)});\n` +
+        `const store = require(${JSON.stringify(storeModule)});\n` +
+        `store.getConfigValue('accessToken');\n` +
+        `store.setConfigValue('username', 'dev');\n`,
+    );
+
+    const repoRoot = join(__dirname, '..', '..', '..');
+    const runWorker = (): Promise<void> =>
+      new Promise((resolvePromise, rejectPromise) => {
+        const child = spawn('node', [workerPath], { cwd: repoRoot, stdio: 'inherit' });
+        child.on('error', rejectPromise);
+        child.on('exit', (code) =>
+          code === 0 ? resolvePromise() : rejectPromise(new Error(`worker exited with ${code}`)),
+        );
+      });
+
+    // All workers race the same legacy config at once, like two terminals (or
+    // parallel CI jobs) running zs right after the upgrade.
+    await Promise.all(Array.from({ length: 6 }, runWorker));
+
+    const session = readJson(sessionFilePath('default'));
+    expect(session.accessToken).toBe('AT');
+    expect(session.refreshToken).toBe('RT');
+    const global = readJson(configFilePath());
+    expect(global.accessToken).toBeUndefined();
+    expect(global.backendUrl).toBe('https://api.zeroserver.cc');
+  }, 60_000);
 });
 
 describe('profile routing', () => {
@@ -156,6 +202,35 @@ describe('profile routing', () => {
 
     expect(getConfigValue('accessToken')).toBeUndefined();
     expect(readJson(sessionFilePath('cliente-x')).accessToken).toBe('token-x');
+  });
+});
+
+describe('file permissions and atomic writes', () => {
+  it('re-tightens a session file that was left world-readable', () => {
+    mkdirSync(join(configDirPath(), 'sessions'), { recursive: true });
+    writeFileSync(sessionFilePath('default'), JSON.stringify({ accessToken: 't' }), { mode: 0o644 });
+
+    setConfigValue('refreshToken', 'r');
+
+    // eslint-disable-next-line no-bitwise
+    expect(statSync(sessionFilePath('default')).mode & 0o777).toBe(0o600);
+    expect(readJson(sessionFilePath('default')).accessToken).toBe('t');
+  });
+
+  it('creates the sessions directory owner-only', () => {
+    setConfigValue('accessToken', 't');
+
+    // eslint-disable-next-line no-bitwise
+    expect(statSync(join(configDirPath(), 'sessions')).mode & 0o777).toBe(0o700);
+  });
+
+  it('writes atomically, leaving no temp files behind', () => {
+    setConfigValue('accessToken', 't');
+    setConfigValue('refreshToken', 'r');
+
+    const leftovers = readdirSync(join(configDirPath(), 'sessions')).filter((f) => f.endsWith('.tmp'));
+    expect(leftovers).toEqual([]);
+    expect(readJson(sessionFilePath('default'))).toEqual({ accessToken: 't', refreshToken: 'r' });
   });
 });
 

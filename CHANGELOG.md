@@ -13,6 +13,14 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Alterado
 - A sessão que vivia em `~/.config/zsc/config.json` migra transparentemente para o perfil `default` (`sessions/default.json`) na primeira execução, sem perder o login atual. O `config.json` passa a guardar apenas configurações globais (`backendUrl`, `lastUpdateCheck`, `activeProfile`).
 
+### Corrigido
+- Migração da sessão legada não perde mais os tokens quando dois processos `zs` rodam ao mesmo tempo na primeira execução após o upgrade: as escritas de configuração passam a ser atômicas (arquivo temporário + rename), eliminando leituras de arquivo parcialmente escrito que faziam um processo sobrescrever a sessão migrada pelo outro.
+
+### Seguranca
+- O `activeProfile` gravado no `config.json` passa por a mesma validação de nome de perfil das demais fontes (`--profile`, `ZS_PROFILE`, `zs.toml`): um valor com `..` ou separadores de caminho deixava a resolução de sessão ler/gravar arquivos fora de `~/.config/zsc/sessions/`. Valor inválido agora falha com erro claro orientando a correção (`zs session use default`).
+- Arquivos de sessão pré-existentes com permissão aberta (ex.: 0644) voltam para 0600 na próxima escrita, e os diretórios `~/.config/zsc` e `~/.config/zsc/sessions` são criados/ajustados para 0700.
+- Nomes de perfil com mais de 64 caracteres são rejeitados na validação, em vez de explodir com um erro cru de `ENAMETOOLONG` no meio do login.
+
 ## [0.11.0] - 2026-08-04
 
 ### Adicionado

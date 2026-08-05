@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
+import { basename, join } from 'path';
 import { configDir, configPath, sessionPath, sessionsDir } from './paths';
 import { DEFAULT_PROFILE, resolveActiveProfile } from './profile';
 
@@ -56,9 +57,25 @@ function readJsonFile(path: string): Record<string, unknown> {
 
 function writeJsonFile(path: string, data: Record<string, unknown>): void {
   const dir = path.startsWith(sessionsDir()) ? sessionsDir() : configDir();
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  // Session files hold credentials; keep them owner-only like config.json always was.
-  writeFileSync(path, JSON.stringify(data, null, 2), { mode: 0o600 });
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  // Credentials live in this tree: keep it owner-only even if someone loosened
+  // permissions by hand. Best-effort so a read-only dir fails on the write below.
+  try {
+    chmodSync(dir, 0o700);
+  } catch {}
+  // Write to a temp file and rename atomically: a concurrent reader must never
+  // see a half-written file. A partial JSON parses as {} in readJsonFile and the
+  // next read-modify-write would clobber the real contents — observed in a race
+  // between two processes to destroy a freshly migrated session.
+  const tmp = join(dir, `.${basename(path)}.${process.pid}.tmp`);
+  writeFileSync(tmp, JSON.stringify(data, null, 2), { mode: 0o600 });
+  renameSync(tmp, path);
+  // writeFileSync's mode only applies at creation; an existing file kept its
+  // old permissions, so re-tighten after the rename (a 0644 session file would
+  // otherwise stay world-readable forever).
+  try {
+    chmodSync(path, 0o600);
+  } catch {}
 }
 
 // Sessions used to live inside config.json itself. On first access after the
