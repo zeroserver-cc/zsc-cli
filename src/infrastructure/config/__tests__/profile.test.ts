@@ -74,6 +74,21 @@ describe('resolveActiveProfile precedence', () => {
 
     expect(resolveActiveProfile(cwd)).toEqual({ name: 'adhoc', source: 'flag' });
   });
+
+  it('rejects a global activeProfile that would escape the sessions directory', () => {
+    writeGlobalConfig({ backendUrl: 'https://api.zeroserver.cc', activeProfile: '../../escape' });
+
+    expect(() => resolveActiveProfile(cwd)).toThrow(/not a valid profile name/);
+    expect(() => resolveActiveProfile(cwd)).toThrow(/zs session use default/);
+  });
+
+  it('still falls back to default when config.json is corrupted JSON', () => {
+    const dir = join(home, '.config', 'zsc');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'config.json'), '{"activeProfile": "work"###');
+
+    expect(resolveActiveProfile(cwd)).toEqual({ name: DEFAULT_PROFILE, source: 'default' });
+  });
 });
 
 describe('zs.toml parsing', () => {
@@ -113,6 +128,11 @@ describe('profile name validation', () => {
       expect(() => assertValidProfileName(name)).toThrow(/Invalid profile name/);
     },
   );
+
+  it('rejects names that would overflow the filesystem filename limit', () => {
+    expect(() => assertValidProfileName('a'.repeat(65))).toThrow(/too long/);
+    expect(() => assertValidProfileName('a'.repeat(64))).not.toThrow();
+  });
 
   it('rejects path traversal through ZS_PROFILE', () => {
     process.env.ZS_PROFILE = '../other';

@@ -19,7 +19,14 @@ export interface ActiveProfile {
 // like "../other" must never reach a path join).
 const PROFILE_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
+// Well under the 255-byte filename limit, so a valid name can never blow up
+// later with a raw ENAMETOOLONG in the middle of a login.
+const MAX_PROFILE_NAME_LENGTH = 64;
+
 export function assertValidProfileName(name: string): void {
+  if (name.length > MAX_PROFILE_NAME_LENGTH) {
+    throw new Error(`Invalid profile name: too long (maximum ${MAX_PROFILE_NAME_LENGTH} characters).`);
+  }
   if (!PROFILE_NAME_PATTERN.test(name)) {
     throw new Error(
       `Invalid profile name "${name}". Use letters, digits, '.', '_' or '-', starting with a letter or digit.`,
@@ -43,15 +50,29 @@ export function setProfileFlag(name: string | undefined): void {
 // resolves the active profile to find the session file, so routing this read
 // through it would be circular.
 function readGlobalActiveProfile(): string | undefined {
+  let raw: { activeProfile?: unknown };
   try {
     if (!existsSync(configPath())) return undefined;
-    const raw = JSON.parse(readFileSync(configPath(), 'utf-8')) as { activeProfile?: unknown };
-    if (typeof raw.activeProfile !== 'string') return undefined;
-    const name = raw.activeProfile.trim();
-    return name !== '' ? name : undefined;
+    raw = JSON.parse(readFileSync(configPath(), 'utf-8')) as { activeProfile?: unknown };
   } catch {
+    // An unreadable/corrupted config.json carries no selection; fall through
+    // to the default profile instead of crashing every command.
     return undefined;
   }
+  if (typeof raw.activeProfile !== 'string') return undefined;
+  const name = raw.activeProfile.trim();
+  if (name === '') return undefined;
+  // This name becomes a file name under sessions/, exactly like a flag or env
+  // value: an unvalidated "../x" here is a path traversal out of the sessions
+  // directory. Fail loudly rather than read or write tokens outside it.
+  try {
+    assertValidProfileName(name);
+  } catch {
+    throw new Error(
+      `Invalid "activeProfile" in ${configPath()}: "${name}" is not a valid profile name. Fix the file or run "zs session use default".`,
+    );
+  }
+  return name;
 }
 
 /**
