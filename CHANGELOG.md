@@ -21,6 +21,13 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Arquivos de sessão pré-existentes com permissão aberta (ex.: 0644) voltam para 0600 na próxima escrita, e os diretórios `~/.config/zsc` e `~/.config/zsc/sessions` são criados/ajustados para 0700.
 - Nomes de perfil com mais de 64 caracteres são rejeitados na validação, em vez de explodir com um erro cru de `ENAMETOOLONG` no meio do login.
 
+## [0.12.0] - 2026-08-05
+
+### Adicionado
+- Replicação multi-node de Managed Databases (Fase 2): `zs db create` ganha a flag `--replicas <0|1|2>`, que define quantas réplicas de leitura em outros nodes o banco terá (failover automático; `0` = single-node, sem HA). Sem a flag o CLI não envia o campo e vale o default do backend (1 réplica). Valores fora de 0-2 são rejeitados com erro claro.
+- `zs db list` passa a exibir a coluna `Replicas`, com o resumo das réplicas de leitura vivas (ex.: `1 streaming`, `2 syncing`, `1 failed`, `0` para single-node); réplica com falha domina o resumo para se destacar na tabela.
+- `zs db create` imprime o resumo de réplicas logo após a criação, e `zs db connection` menciona a `DATABASE_READ_URL` quando o banco tem réplica streaming: apps atachadas via `database:` no `zs.yaml` recebem a variável apontando para a réplica quando uma divide o node da app (senão ela aponta para o primário).
+
 ## [0.11.0] - 2026-08-04
 
 ### Adicionado
