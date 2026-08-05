@@ -139,6 +139,27 @@ export type ManagedDatabaseEngine = 'POSTGRES' | 'MYSQL';
 
 export type ManagedDatabaseStatus = 'PENDING' | 'RUNNING' | 'ERROR' | 'DELETING' | 'DELETED';
 
+export type ManagedDatabaseReplicaRole = 'PRIMARY' | 'REPLICA';
+
+export type ManagedDatabaseReplicaStatus =
+  | 'PROVISIONING'
+  | 'SYNCING'
+  | 'STREAMING'
+  | 'STALE'
+  | 'PROMOTED'
+  | 'FAILED'
+  | 'DELETED';
+
+/** One physical copy of a managed database (primary or read replica). */
+export interface ManagedDatabaseReplica {
+  id: string;
+  role: ManagedDatabaseReplicaRole;
+  status: ManagedDatabaseReplicaStatus;
+  machineId?: string | null;
+  lagBytes?: number | null;
+  lagSeconds?: number | null;
+}
+
 /** Platform-provisioned database (Fase 2). Credentials never appear on this type. */
 export interface ManagedDatabase {
   id: string;
@@ -148,6 +169,7 @@ export interface ManagedDatabase {
   status: ManagedDatabaseStatus;
   machineId?: string | null;
   lastDumpAt?: string | null;
+  replicas: ManagedDatabaseReplica[];
   createdAt: string;
   updatedAt: string;
 }

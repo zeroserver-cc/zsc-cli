@@ -30,6 +30,7 @@ const db = (overrides: Partial<ManagedDatabase>): ManagedDatabase => ({
   status: 'RUNNING',
   machineId: 'machine-1',
   lastDumpAt: '2026-08-04T12:00:00.000Z',
+  replicas: [],
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
   ...overrides,
@@ -115,6 +116,39 @@ describe('createDatabaseUseCase', () => {
       'a-token',
     );
     expect(result.status).toBe('PENDING');
+  });
+
+  it('sends the replica count when provided', async () => {
+    mockGql.mockResolvedValue({ createManagedDatabase: db({ status: 'PENDING' }) } as any);
+
+    await createDatabaseUseCase('app-db', 'POSTGRES', 2);
+
+    expect(mockGql).toHaveBeenCalledWith(
+      CREATE_MANAGED_DATABASE_MUTATION,
+      { input: { name: 'app-db', engine: 'POSTGRES', replicas: 2 } },
+      'a-token',
+    );
+  });
+
+  it('sends an explicit zero replica count (single-node, no HA)', async () => {
+    mockGql.mockResolvedValue({ createManagedDatabase: db({ status: 'PENDING' }) } as any);
+
+    await createDatabaseUseCase('app-db', 'MYSQL', 0);
+
+    expect(mockGql).toHaveBeenCalledWith(
+      CREATE_MANAGED_DATABASE_MUTATION,
+      { input: { name: 'app-db', engine: 'MYSQL', replicas: 0 } },
+      'a-token',
+    );
+  });
+
+  it('omits replicas when not provided so the backend default applies', async () => {
+    mockGql.mockResolvedValue({ createManagedDatabase: db({ status: 'PENDING' }) } as any);
+
+    await createDatabaseUseCase('app-db', 'POSTGRES');
+
+    const [, variables] = mockGql.mock.calls[0] as [string, { input: Record<string, unknown> }];
+    expect(variables.input).not.toHaveProperty('replicas');
   });
 });
 
