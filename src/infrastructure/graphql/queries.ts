@@ -249,6 +249,7 @@ export const RESTORE_APPLICATION_VOLUMES_MUTATION = `
 
 const MANAGED_DATABASE_FIELDS = `
   id name engine version status machineId lastDumpAt createdAt updatedAt
+  replicas { id role status machineId lagBytes lagSeconds }
 `;
 
 export const MY_DATABASES_QUERY = `

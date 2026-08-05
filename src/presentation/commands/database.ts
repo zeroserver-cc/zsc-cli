@@ -12,6 +12,7 @@ import {
 import { requireRole } from '../../application/usecases/requireRole';
 import { ManagedDatabaseEngine, ManagedDatabaseStatus } from '../../domain/entities/types';
 import { handleError } from '../formatting/errors';
+import { replicaSummary } from '../formatting/replicas';
 import { prompt } from '../io/prompt';
 
 function parseEngine(value: string): ManagedDatabaseEngine {
@@ -20,6 +21,14 @@ function parseEngine(value: string): ManagedDatabaseEngine {
     throw new InvalidArgumentError('must be "postgres" or "mysql"');
   }
   return normalized;
+}
+
+function parseReplicas(value: string): number {
+  const replicas = Number(value);
+  if (!Number.isInteger(replicas) || replicas < 0 || replicas > 2) {
+    throw new InvalidArgumentError('must be 0, 1 or 2');
+  }
+  return replicas;
 }
 
 function statusLabel(status: ManagedDatabaseStatus): string {
@@ -45,13 +54,19 @@ export function registerDatabaseCommands(program: Command): void {
     .description('Provision a managed database')
     .requiredOption('--engine <engine>', 'Database engine: postgres or mysql', parseEngine)
     .requiredOption('--name <name>', 'Database name (DNS-safe; apps attach to it by this name)')
-    .action(async (opts: { engine: ManagedDatabaseEngine; name: string }) => {
+    .option(
+      '--replicas <count>',
+      'Read replicas on other nodes for automatic failover (0-2; backend default is 1; 0 = single-node, no HA)',
+      parseReplicas,
+    )
+    .action(async (opts: { engine: ManagedDatabaseEngine; name: string; replicas?: number }) => {
       requireRole(['developer', 'admin']);
       const spinner = ora(`Creating ${opts.engine.toLowerCase()} database ${chalk.cyan(opts.name)}…`).start();
       try {
-        const database = await createDatabaseUseCase(opts.name, opts.engine);
+        const database = await createDatabaseUseCase(opts.name, opts.engine, opts.replicas);
         spinner.succeed(`Database ${chalk.bold(database.name)} created (status ${statusLabel(database.status)}).`);
         console.log(`ID:      ${chalk.bold(database.id)}`);
+        console.log(`Replicas: ${replicaSummary(database.replicas)}`);
         console.log(
           chalk.gray(
             `Attach an app by adding "database: ${database.name}" to its zs.yaml and redeploying, ` +
@@ -78,13 +93,14 @@ export function registerDatabaseCommands(program: Command): void {
           return;
         }
         const table = new Table({
-          head: ['Name', 'Engine', 'Status', 'Node', 'Last Dump'],
+          head: ['Name', 'Engine', 'Status', 'Replicas', 'Node', 'Last Dump'],
         });
         for (const database of databases) {
           table.push([
             database.name,
             database.engine,
             statusLabel(database.status),
+            replicaSummary(database.replicas),
             database.machineId ?? '-',
             database.lastDumpAt ? new Date(database.lastDumpAt).toLocaleString() : '-',
           ]);
@@ -109,6 +125,14 @@ export function registerDatabaseCommands(program: Command): void {
         console.log(
           chalk.gray(`Apps attached via "database: ${database.name}" in zs.yaml receive it automatically as DATABASE_URL.`),
         );
+        if (database.replicas.some((replica) => replica.role === 'REPLICA' && replica.status === 'STREAMING')) {
+          console.log(
+            chalk.gray(
+              'This database has a streaming read replica: attached apps also receive DATABASE_READ_URL, ' +
+                'pointing at the replica when one shares the app node (it falls back to the primary otherwise).',
+            ),
+          );
+        }
       } catch (err) {
         spinner.fail('Failed to fetch the connection string.');
         handleError(err);

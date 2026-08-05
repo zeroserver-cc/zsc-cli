@@ -45,11 +45,18 @@ export async function resolveDatabaseUseCase(nameOrId: string): Promise<ManagedD
   throw new Error(`Unknown database "${nameOrId}". Run "zs db list" to see your managed databases.`);
 }
 
-export async function createDatabaseUseCase(name: string, engine: ManagedDatabaseEngine): Promise<ManagedDatabase> {
+export async function createDatabaseUseCase(
+  name: string,
+  engine: ManagedDatabaseEngine,
+  replicas?: number,
+): Promise<ManagedDatabase> {
   const token = requireToken();
+  // Omitted when undefined so the backend default (1 replica) applies.
+  const input: { name: string; engine: ManagedDatabaseEngine; replicas?: number } = { name, engine };
+  if (replicas !== undefined) input.replicas = replicas;
   const data = await gqlRequest<{ createManagedDatabase: ManagedDatabase }>(
     CREATE_MANAGED_DATABASE_MUTATION,
-    { input: { name, engine } },
+    { input },
     token,
   );
   return data.createManagedDatabase;
