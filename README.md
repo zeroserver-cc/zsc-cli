@@ -63,6 +63,33 @@ error and you must generate a new key in the portal and run `zs login
 --api-key` again. Unlike JWT sessions, API key sessions are never refreshed
 automatically: the key is used as-is until it stops working.
 
+### Session profiles (multiple logins)
+
+You can stay logged into several accounts at once. Each profile keeps its own
+session under `~/.config/zsc/sessions/<profile>.json`; the active profile is
+resolved in this order:
+
+1. `--profile <name>` global flag
+2. `ZS_PROFILE` environment variable
+3. `session = "<name>"` in a `zs.toml` next to your `zs.yaml` (commit it to pin
+   the project to the right account)
+4. the global default set with `zs session use <name>`
+5. the `default` profile
+
+```sh
+zs login --profile cliente-x     # log a second account into its own profile
+zs session list                  # all profiles (* = active, with its source)
+zs session use cliente-x         # make cliente-x the global default
+zs logout --profile cliente-x    # end just that profile's session
+```
+
+Running any command with a profile that has no session yet authenticates on
+the spot: interactively it asks for email/password (with the usual 2FA flow);
+in CI it uses `ZS_ACCESS_TOKEN` (plus optional `ZS_REFRESH_TOKEN`), and with no
+terminal available it fails with `Profile "X" has no session...`. A session
+created before profiles existed is migrated automatically into the `default`
+profile on the first run — nothing to do.
+
 ### Teams (acting as another account)
 
 If you belong to teams, you can act as a team account instead of your own:

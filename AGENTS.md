@@ -20,7 +20,8 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 
 ## Comandos implementados
 
-- `zs login` / `zs logout`: autenticacao (usuario/senha ou token).
+- `zs login` / `zs logout`: autenticacao (usuario/senha ou token), com `--profile` para gravar/encerrar a sessao de um perfil especifico.
+- `zs session list` / `zs session use <perfil>`: multiplas contas logadas (perfis de sessao em `~/.config/zsc/sessions/<perfil>.json`); precedencia do perfil ativo: `--profile` > `ZS_PROFILE` > `session` do `zs.toml` (ao lado do `zs.yaml`) > default global > `default`.
 - `zs deploy`: sobe uma aplicacao (imagem de container) na malha; aceita preferencia geografica de node via `--country`/`--region` ou secao `placement:` no `zs.yaml` (preferencia suave, com fallback para qualquer node elegivel).
 - `zs list`: lista aplicacoes (uma linha por app, modelo de instancia estavel).
 - `zs deployments <app>`: historico de deploys de uma aplicacao (status, imagem, duracao, erro).
@@ -30,12 +31,12 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 - `zs nodes`: inspeciona nos da malha.
 - `zs node configure`: provedor define limites de CPU/memoria/storage compartilhados do node.
 - `zs registry login/list/logout`: gerencia credenciais de registries privados.
-- `zs config`: gerencia configuracao local (endpoint, profile).
+- `zs config`: gerencia configuracao local global (endpoint; o default de perfil fica em `zs session use`).
 - `zs upgrade`: auto-atualizacao do binario.
 
 ## Regras locais
 
-- Token de sessao armazenado de forma segura (keytar quando disponivel). Nunca logar segredo.
+- Sessoes em `~/.config/zsc/sessions/<perfil>.json` (mode 0600); `config.json` so guarda configuracoes globais. Nunca logar segredo.
 - Mensagens de sucesso/erro/progresso claras; codigos de saida corretos para scripting.
 - Consome o mesmo schema GraphQL do website; mantenha tipos sincronizados.
 - Termo Developer no produto e na ajuda.
@@ -44,7 +45,6 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 
 1. Expandir cobertura de testes (jest).
 2. Implementar `zs deploy` com suporte a variaveis de ambiente e volumes.
-3. Suporte a multiplos profiles/sessoes no `zs login`.
 
 ## Registro de mudanças
 

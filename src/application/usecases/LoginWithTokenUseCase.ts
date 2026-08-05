@@ -27,6 +27,9 @@ export async function loginWithTokenUseCase(
   }
   setConfigValue('role', data.me.role);
   setConfigValue('roles', data.me.roles ?? [data.me.role]);
+  // Identifies the profile in `zs session list` without a network round-trip.
+  setConfigValue('username', data.me.username);
+  setConfigValue('email', data.me.email);
   // Fresh sessions always start acting as the own account.
   deleteConfigValue('activeAccountId');
 
