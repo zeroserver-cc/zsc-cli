@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-05
+
 ### Adicionado
 - Replicação multi-node de Managed Databases (Fase 2): `zs db create` ganha a flag `--replicas <0|1|2>`, que define quantas réplicas de leitura em outros nodes o banco terá (failover automático; `0` = single-node, sem HA). Sem a flag o CLI não envia o campo e vale o default do backend (1 réplica). Valores fora de 0-2 são rejeitados com erro claro.
 - `zs db list` passa a exibir a coluna `Replicas`, com o resumo das réplicas de leitura vivas (ex.: `1 streaming`, `2 syncing`, `1 failed`, `0` para single-node); réplica com falha domina o resumo para se destacar na tabela.
