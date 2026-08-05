@@ -1,68 +1,16 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import {
-  InvalidTwoFactorCodeError,
-  loginUseCase,
-  logoutUseCase,
-  TwoFactorRequiredError,
-} from '../../application/usecases/LoginUseCase';
+import { logoutUseCase } from '../../application/usecases/LoginUseCase';
 import { loginWithTokenUseCase } from '../../application/usecases/LoginWithTokenUseCase';
 import { loginWithApiKeyUseCase } from '../../application/usecases/LoginWithApiKeyUseCase';
 import { whoamiUseCase } from '../../application/usecases/WhoamiUseCase';
 import { getActiveAccountUseCase } from '../../application/usecases/AccountUseCase';
 import { formatAccountLine } from './account';
-import { AuthPayload } from '../../domain/entities/types';
 import { handleError } from '../formatting/errors';
 import { getConfigValue } from '../../infrastructure/config/store';
+import { describeProfileSource, resolveActiveProfile } from '../../infrastructure/config/profile';
 import { prompt, promptPassword, readStdin } from '../io/prompt';
-
-const MAX_OTP_ATTEMPTS = 3;
-
-// Drives the 2FA flow around loginUseCase: prompts for the code when the
-// backend requires it and lets the user retry a wrong code (TOTP or recovery
-// code). Every code submission, including empty answers that never reach the
-// backend, counts against the same MAX_OTP_ATTEMPTS budget, so the loop is
-// always bounded.
-async function loginWithTwoFactor(
-  email: string,
-  password: string,
-  otp?: string,
-): Promise<AuthPayload> {
-  let totpCode = otp;
-  let attempts = 0;
-  for (;;) {
-    try {
-      return await loginUseCase(email, password, totpCode);
-    } catch (err) {
-      const required = err instanceof TwoFactorRequiredError;
-      const invalid = err instanceof InvalidTwoFactorCodeError;
-      if (!required && !invalid) throw err;
-
-      // A submitted code the backend rejected consumed an attempt.
-      if (invalid) attempts++;
-      if (attempts >= MAX_OTP_ATTEMPTS) throw err;
-      if (invalid) console.error(chalk.red('Invalid 2FA code. Try again.'));
-
-      // readline's question() never resolves on a TTY-less stdin (CI,
-      // /dev/null): fail fast instead of hanging forever.
-      if (!process.stdin.isTTY) {
-        throw new Error('2FA code required. In non-interactive environments, pass it with --otp <code>.');
-      }
-
-      const answer = (await prompt('2FA code: ')).trim();
-      if (!answer) {
-        // An empty answer is omitted from the mutation, so the backend would
-        // answer "required" again forever. Count it as a failed attempt.
-        attempts++;
-        if (attempts >= MAX_OTP_ATTEMPTS) throw new TwoFactorRequiredError();
-        console.error(chalk.red('2FA code cannot be empty.'));
-        totpCode = undefined;
-        continue;
-      }
-      totpCode = answer;
-    }
-  }
-}
+import { loginWithTwoFactor } from '../loginFlow';
 
 export function registerAuthCommands(program: Command): void {
   program
@@ -75,12 +23,17 @@ export function registerAuthCommands(program: Command): void {
     .option('--token-stdin', 'Read the API key from stdin (with --api-key, for CI)')
     .option('-t, --token <token>', 'Access token (skips email/password login)')
     .option('--refresh-token <refreshToken>', 'Optional refresh token when using --token')
+    .option('--profile <name>', 'Store the session under this profile')
     .action(async (opts) => {
       try {
+        const profile = resolveActiveProfile();
+        const profileNote = chalk.gray(`Session stored in profile "${profile.name}".`);
+
         if (opts.apiKey) {
           const apiKey = opts.tokenStdin ? (await readStdin()).trim() : await promptPassword('API key: ');
           const result = await loginWithApiKeyUseCase(apiKey);
           console.log(chalk.green('✓'), `Logged in as ${chalk.bold(result.user.username)} (${result.user.role}) via API key`);
+          console.log(profileNote);
           return;
         }
 
@@ -92,6 +45,7 @@ export function registerAuthCommands(program: Command): void {
           } else {
             console.log(chalk.yellow('No refresh token provided; session will not be renewable once it expires.'));
           }
+          console.log(profileNote);
           return;
         }
 
@@ -101,6 +55,7 @@ export function registerAuthCommands(program: Command): void {
         const payload = await loginWithTwoFactor(email, password, opts.otp);
         console.log(chalk.green('✓'), `Logged in as ${chalk.bold(payload.user.username)} (${payload.user.role})`);
         console.log(chalk.gray(`Token expires: ${payload.expiresAt}`));
+        console.log(profileNote);
       } catch (err) {
         handleError(err);
       }
@@ -109,9 +64,11 @@ export function registerAuthCommands(program: Command): void {
   program
     .command('logout')
     .description('Clear the current session')
+    .option('--profile <name>', 'Clear the session of this profile')
     .action(() => {
+      const profile = resolveActiveProfile();
       logoutUseCase();
-      console.log(chalk.green('✓'), 'Logged out.');
+      console.log(chalk.green('✓'), `Logged out of profile "${profile.name}".`);
     });
 
   program
@@ -119,9 +76,10 @@ export function registerAuthCommands(program: Command): void {
     .description('Show the currently authenticated user')
     .action(async () => {
       try {
+        const profile = resolveActiveProfile();
         const token = getConfigValue('accessToken');
         if (!token) {
-          console.log(chalk.yellow('Not logged in.'));
+          console.log(chalk.yellow(`Not logged in (profile "${profile.name}").`));
           process.exit(1);
         }
         const user = await whoamiUseCase();
@@ -132,6 +90,7 @@ export function registerAuthCommands(program: Command): void {
           .join(', ');
         const authSuffix = getConfigValue('authType') === 'apikey' ? chalk.gray(' (api key)') : '';
         console.log(`${chalk.bold(user.username)} <${user.email}> [${rolesLabel}]${authSuffix}`);
+        console.log(`Profile: ${profile.name} ${chalk.gray(`(${describeProfileSource(profile.source)})`)}`);
         console.log(formatAccountLine(await getActiveAccountUseCase()));
       } catch (err) {
         handleError(err);

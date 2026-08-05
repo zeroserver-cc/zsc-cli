@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
-import { join } from 'path';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { configDir, configPath, sessionPath, sessionsDir } from './paths';
+import { DEFAULT_PROFILE, resolveActiveProfile } from './profile';
 
 interface ConfigData {
   backendUrl: string;
@@ -14,12 +14,15 @@ interface ConfigData {
   authType?: 'jwt' | 'apikey';
   /** Account the session is acting as (teams). Absent means the user's own account. */
   activeAccountId?: string;
+  /** Login identity, recorded at login so `zs session list` can show who each profile belongs to. */
+  username?: string;
+  email?: string;
+  /** Profile selected with `zs session use`, the global default when no flag/env/zs.toml selects one. */
+  activeProfile?: string;
   /** ISO timestamp of the last auto-update check, used to throttle it to once a day. */
   lastUpdateCheck?: string;
 }
 
-const CONFIG_DIR = join(homedir(), '.config', 'zsc');
-const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
 // Points at the ZeroServer production API out of the box, so a fresh install can
 // `zs login` and `zs deploy` with no configuration. Override for local/self-hosted
 // backends with `zs config set backend-url <url>`. Single source of truth — do not
@@ -27,18 +30,95 @@ const CONFIG_PATH = join(CONFIG_DIR, 'config.json');
 export const DEFAULT_BACKEND_URL = 'https://api.zeroserver.cc';
 const DEFAULTS: ConfigData = { backendUrl: DEFAULT_BACKEND_URL };
 
-function read(): ConfigData {
+// Global settings live in config.json and are shared by every profile; session
+// fields live in sessions/<profile>.json so several logins can coexist.
+const GLOBAL_KEYS = new Set<keyof ConfigData>(['backendUrl', 'lastUpdateCheck', 'activeProfile']);
+const SESSION_KEYS: readonly (keyof ConfigData)[] = [
+  'token',
+  'accessToken',
+  'refreshToken',
+  'role',
+  'roles',
+  'authType',
+  'activeAccountId',
+  'username',
+  'email',
+];
+
+function readJsonFile(path: string): Record<string, unknown> {
   try {
-    if (existsSync(CONFIG_PATH)) {
-      return { ...DEFAULTS, ...JSON.parse(readFileSync(CONFIG_PATH, 'utf-8')) };
+    if (existsSync(path)) {
+      return JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>;
     }
   } catch {}
-  return { ...DEFAULTS };
+  return {};
 }
 
-function write(data: ConfigData): void {
-  if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(CONFIG_PATH, JSON.stringify(data, null, 2), { mode: 0o600 });
+function writeJsonFile(path: string, data: Record<string, unknown>): void {
+  const dir = path.startsWith(sessionsDir()) ? sessionsDir() : configDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  // Session files hold credentials; keep them owner-only like config.json always was.
+  writeFileSync(path, JSON.stringify(data, null, 2), { mode: 0o600 });
+}
+
+// Sessions used to live inside config.json itself. On first access after the
+// upgrade, move any legacy session fields into the `default` profile so the
+// existing login survives untouched; global settings stay in config.json.
+let migrationAttempted = false;
+
+function migrateLegacySession(): void {
+  if (migrationAttempted) return;
+  migrationAttempted = true;
+  try {
+    if (!existsSync(configPath())) return;
+    const raw = readJsonFile(configPath());
+
+    const legacy: Record<string, unknown> = {};
+    for (const key of SESSION_KEYS) {
+      if (raw[key] !== undefined) legacy[key] = raw[key];
+    }
+    if (Object.keys(legacy).length === 0) return;
+
+    // Never overwrite a default profile that already exists (e.g. a partial
+    // earlier migration); in that case just strip the stale legacy fields.
+    if (!existsSync(sessionPath(DEFAULT_PROFILE))) {
+      writeJsonFile(sessionPath(DEFAULT_PROFILE), legacy);
+    }
+
+    const remaining: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      if (!(SESSION_KEYS as readonly string[]).includes(key)) remaining[key] = value;
+    }
+    writeJsonFile(configPath(), remaining);
+  } catch {
+    // A failed migration must not break reads; it is retried on the next write.
+  }
+}
+
+/** Test-only hook: the migration guard is process-level state that must reset between tests. */
+export function resetStoreStateForTests(): void {
+  migrationAttempted = false;
+}
+
+function read(): ConfigData {
+  migrateLegacySession();
+  const global = readJsonFile(configPath());
+  const session = readJsonFile(sessionPath(resolveActiveProfile().name));
+  return { ...DEFAULTS, ...global, ...session } as ConfigData;
+}
+
+function writeScoped(key: keyof ConfigData, mutate: (data: Record<string, unknown>) => void): void {
+  migrateLegacySession();
+  if (GLOBAL_KEYS.has(key)) {
+    const data = readJsonFile(configPath());
+    mutate(data);
+    writeJsonFile(configPath(), data);
+  } else {
+    const path = sessionPath(resolveActiveProfile().name);
+    const data = readJsonFile(path);
+    mutate(data);
+    writeJsonFile(path, data);
+  }
 }
 
 export function getConfigValue(key: keyof ConfigData): string | undefined {
@@ -63,13 +143,48 @@ export function getBackendUrl(): string {
 }
 
 export function setConfigValue(key: keyof ConfigData, value: string | string[]): void {
-  const data = read();
-  (data as unknown as Record<string, unknown>)[key] = value;
-  write(data);
+  writeScoped(key, (data) => {
+    data[key] = value;
+  });
 }
 
 export function deleteConfigValue(key: keyof ConfigData): void {
-  const data = read();
-  delete data[key];
-  write(data);
+  writeScoped(key, (data) => {
+    delete data[key];
+  });
+}
+
+export interface SessionProfileInfo {
+  name: string;
+  username?: string;
+  email?: string;
+  /** True when the profile holds a usable credential (access or refresh token). */
+  hasSession: boolean;
+}
+
+function toProfileInfo(name: string, data: Record<string, unknown>): SessionProfileInfo {
+  const accessToken = typeof data.accessToken === 'string' ? data.accessToken : undefined;
+  const refreshToken = typeof data.refreshToken === 'string' ? data.refreshToken : undefined;
+  return {
+    name,
+    username: typeof data.username === 'string' ? data.username : undefined,
+    email: typeof data.email === 'string' ? data.email : undefined,
+    hasSession: Boolean(accessToken || refreshToken),
+  };
+}
+
+/** Profiles with a session file on disk, sorted by name. */
+export function listSessionProfiles(): SessionProfileInfo[] {
+  migrateLegacySession();
+  if (!existsSync(sessionsDir())) return [];
+  return readdirSync(sessionsDir())
+    .filter((file) => file.endsWith('.json'))
+    .map((file) => file.slice(0, -'.json'.length))
+    .sort()
+    .map((name) => toProfileInfo(name, readJsonFile(sessionPath(name))));
+}
+
+/** Whether a profile exists and holds a usable credential. */
+export function profileHasSession(name: string): boolean {
+  return toProfileInfo(name, readJsonFile(sessionPath(name))).hasSession;
 }

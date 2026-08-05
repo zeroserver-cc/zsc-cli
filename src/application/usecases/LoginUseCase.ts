@@ -46,6 +46,9 @@ export async function loginUseCase(
   setConfigValue('role', data.login.user.role);
   // Defensive fallback in case the roles field ever comes back null or empty.
   setConfigValue('roles', data.login.user.roles ?? [data.login.user.role]);
+  // Identifies the profile in `zs session list` without a network round-trip.
+  setConfigValue('username', data.login.user.username);
+  setConfigValue('email', data.login.user.email);
   // Fresh sessions always start acting as the own account.
   deleteConfigValue('activeAccountId');
   return data.login;

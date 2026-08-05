@@ -7,6 +7,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- Múltiplas contas logadas (perfis de sessão): cada perfil vira uma sessão independente em `~/.config/zsc/sessions/<perfil>.json` (mode 0600), com usuário/email gravados no login. O perfil ativo é resolvido por precedência: flag global `--profile` > env `ZS_PROFILE` > campo `session` do `zs.toml` (ao lado do `zs.yaml`, commitável) > default global definido por `zs session use <perfil>` > perfil `default`. Novos comandos `zs session list` (lista perfis com usuário/email, marcando o ativo e a origem da seleção) e `zs session use <perfil>`. `zs login`/`zs logout` aceitam `--profile`; `zs whoami` passa a exibir o perfil ativo e sua origem. Ao rodar um comando com um perfil sem sessão, o CLI autentica na hora (via `ZS_ACCESS_TOKEN`/`ZS_REFRESH_TOKEN` em CI, ou prompt interativo de login com 2FA); sem TTY, falha com erro claro (`Profile "X" has no session. Run "zs login --profile X" first.`).
+
+### Alterado
+- A sessão que vivia em `~/.config/zsc/config.json` migra transparentemente para o perfil `default` (`sessions/default.json`) na primeira execução, sem perder o login atual. O `config.json` passa a guardar apenas configurações globais (`backendUrl`, `lastUpdateCheck`, `activeProfile`).
+
 ## [0.11.0] - 2026-08-04
 
 ### Adicionado
