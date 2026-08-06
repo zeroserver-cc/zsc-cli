@@ -8,7 +8,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Alterado
-- Workflows de CI (`ci.yml` e `release.yml`) passam a cancelar runs obsoletos do mesmo ref (`concurrency` com `cancel-in-progress`, grupo por workflow+ref) e o CI deixa de disparar para mudanças apenas em arquivos Markdown (`paths-ignore: ['**.md']` no push/pull_request). Reduz o consumo de minutos do GitHub Actions.
+- Workflows de CI (`ci.yml` e `release.yml`) passam a cancelar runs obsoletos do mesmo ref (`concurrency` com `cancel-in-progress`, grupo por workflow+ref) e o CI deixa de disparar para mudanças apenas em arquivos Markdown (`paths-ignore: ['**.md']` no push/pull_request) e o trigger de push fica restrito à `main` (antes, pushes em branches `feature/**`/`fix/**` disparavam um run duplicado do mesmo trabalho do PR). Reduz o consumo de minutos do GitHub Actions.
 
 ## [0.12.1] - 2026-08-05
 
