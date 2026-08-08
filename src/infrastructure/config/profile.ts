@@ -25,11 +25,13 @@ const MAX_PROFILE_NAME_LENGTH = 64;
 
 export function assertValidProfileName(name: string): void {
   if (name.length > MAX_PROFILE_NAME_LENGTH) {
-    throw new Error(`Invalid profile name: too long (maximum ${MAX_PROFILE_NAME_LENGTH} characters).`);
+    throw new Error(
+      `Invalid profile name: too long (maximum ${MAX_PROFILE_NAME_LENGTH} characters).`
+    );
   }
   if (!PROFILE_NAME_PATTERN.test(name)) {
     throw new Error(
-      `Invalid profile name "${name}". Use letters, digits, '.', '_' or '-', starting with a letter or digit.`,
+      `Invalid profile name "${name}". Use letters, digits, '.', '_' or '-', starting with a letter or digit.`
     );
   }
 }
@@ -69,7 +71,7 @@ function readGlobalActiveProfile(): string | undefined {
     assertValidProfileName(name);
   } catch {
     throw new Error(
-      `Invalid "activeProfile" in ${configPath()}: "${name}" is not a valid profile name. Fix the file or run "zs session use default".`,
+      `Invalid "activeProfile" in ${configPath()}: "${name}" is not a valid profile name. Fix the file or run "zs session use default".`
     );
   }
   return name;
@@ -90,14 +92,16 @@ function readZsTomlSession(cwd: string): string | undefined {
     parsed = parse(readFileSync(tomlPath, 'utf-8'));
   } catch (err) {
     throw new Error(
-      `Could not parse ${tomlPath}: ${err instanceof Error ? err.message : String(err)}`,
+      `Could not parse ${tomlPath}: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
   const session = (parsed as { session?: unknown }).session;
   if (session === undefined || session === null) return undefined;
   if (typeof session !== 'string') {
-    throw new Error(`Invalid "session" in ${tomlPath}: expected a string, e.g. session = "cliente-x".`);
+    throw new Error(
+      `Invalid "session" in ${tomlPath}: expected a string, e.g. session = "cliente-x".`
+    );
   }
   const name = session.trim();
   try {

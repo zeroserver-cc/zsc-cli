@@ -1,12 +1,14 @@
 import { resolveRegistryLogin, RegistryLoginPrompts } from '../resolveRegistryLogin';
 
-function makePrompts(overrides: Partial<RegistryLoginPrompts> = {}): jest.Mocked<RegistryLoginPrompts> {
+function makePrompts(
+  overrides: Partial<RegistryLoginPrompts> = {}
+): jest.Mocked<RegistryLoginPrompts> {
   return {
     promptHost: jest.fn(async () => 'prompted-host'),
     promptUsername: jest.fn(async () => 'prompted-user'),
     promptToken: jest.fn(async () => 'prompted-token'),
     readStdin: jest.fn(async () => 'stdin-token\n'),
-    ...overrides,
+    ...overrides
   } as jest.Mocked<RegistryLoginPrompts>;
 }
 
@@ -17,7 +19,7 @@ describe('resolveRegistryLogin', () => {
 
       const inputs = await resolveRegistryLogin(
         { registryHost: 'ghcr.io', username: 'ci', tokenStdin: true },
-        io,
+        io
       );
 
       expect(inputs).toEqual({ registryHost: 'ghcr.io', username: 'ci', token: 'stdin-token' });
@@ -32,7 +34,7 @@ describe('resolveRegistryLogin', () => {
 
       const inputs = await resolveRegistryLogin(
         { registryHost: 'ghcr.io', username: 'ci', tokenStdin: true },
-        io,
+        io
       );
 
       expect(inputs.token).toBe('tok-123');
@@ -41,9 +43,9 @@ describe('resolveRegistryLogin', () => {
     it('throws when the registry host is missing', async () => {
       const io = makePrompts();
 
-      await expect(
-        resolveRegistryLogin({ username: 'ci', tokenStdin: true }, io),
-      ).rejects.toThrow(/Registry host is required/);
+      await expect(resolveRegistryLogin({ username: 'ci', tokenStdin: true }, io)).rejects.toThrow(
+        /Registry host is required/
+      );
       expect(io.readStdin).not.toHaveBeenCalled();
     });
 
@@ -51,7 +53,7 @@ describe('resolveRegistryLogin', () => {
       const io = makePrompts();
 
       await expect(
-        resolveRegistryLogin({ registryHost: 'ghcr.io', tokenStdin: true }, io),
+        resolveRegistryLogin({ registryHost: 'ghcr.io', tokenStdin: true }, io)
       ).rejects.toThrow(/--username is required/);
     });
 
@@ -59,7 +61,7 @@ describe('resolveRegistryLogin', () => {
       const io = makePrompts({ readStdin: jest.fn(async () => '   \n') });
 
       await expect(
-        resolveRegistryLogin({ registryHost: 'ghcr.io', username: 'ci', tokenStdin: true }, io),
+        resolveRegistryLogin({ registryHost: 'ghcr.io', username: 'ci', tokenStdin: true }, io)
       ).rejects.toThrow(/No token received on stdin/);
     });
   });
@@ -73,7 +75,7 @@ describe('resolveRegistryLogin', () => {
       expect(inputs).toEqual({
         registryHost: 'prompted-host',
         username: 'prompted-user',
-        token: 'prompted-token',
+        token: 'prompted-token'
       });
       expect(io.readStdin).not.toHaveBeenCalled();
     });
@@ -83,7 +85,11 @@ describe('resolveRegistryLogin', () => {
 
       const inputs = await resolveRegistryLogin({ registryHost: 'ghcr.io', username: 'alice' }, io);
 
-      expect(inputs).toEqual({ registryHost: 'ghcr.io', username: 'alice', token: 'prompted-token' });
+      expect(inputs).toEqual({
+        registryHost: 'ghcr.io',
+        username: 'alice',
+        token: 'prompted-token'
+      });
       expect(io.promptHost).not.toHaveBeenCalled();
       expect(io.promptUsername).not.toHaveBeenCalled();
       expect(io.promptToken).toHaveBeenCalledTimes(1);
@@ -92,9 +98,9 @@ describe('resolveRegistryLogin', () => {
     it('throws when the prompted token is empty', async () => {
       const io = makePrompts({ promptToken: jest.fn(async () => '   ') });
 
-      await expect(resolveRegistryLogin({ registryHost: 'ghcr.io', username: 'alice' }, io)).rejects.toThrow(
-        /all required/,
-      );
+      await expect(
+        resolveRegistryLogin({ registryHost: 'ghcr.io', username: 'alice' }, io)
+      ).rejects.toThrow(/all required/);
     });
   });
 });

@@ -2,7 +2,7 @@ import { Application, ApplicationInstance } from '../../domain/entities/types';
 import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   MY_APPLICATIONS_QUERY,
-  APPLICATION_INSTANCES_BY_APP_QUERY,
+  APPLICATION_INSTANCES_BY_APP_QUERY
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
@@ -25,7 +25,7 @@ export async function listApplicationsUseCase(): Promise<AppRow[]> {
   const appsData = await gqlRequest<{ myApplications: Application[] }>(
     MY_APPLICATIONS_QUERY,
     undefined,
-    token,
+    token
   );
   const apps = appsData.myApplications;
   if (!apps.length) return [];
@@ -34,11 +34,9 @@ export async function listApplicationsUseCase(): Promise<AppRow[]> {
 
   await Promise.all(
     apps.map(async (app) => {
-      const instData = await gqlRequest<{ applicationInstancesByApplication: ApplicationInstance[] }>(
-        APPLICATION_INSTANCES_BY_APP_QUERY,
-        { applicationId: app.id },
-        token,
-      );
+      const instData = await gqlRequest<{
+        applicationInstancesByApplication: ApplicationInstance[];
+      }>(APPLICATION_INSTANCES_BY_APP_QUERY, { applicationId: app.id }, token);
       // Stable-instance model: apps keep ONE instance. Historical dead
       // instances may still come back from older data, so collapse to a single
       // row per app: prefer the newest live instance, falling back to the
@@ -54,10 +52,10 @@ export async function listApplicationsUseCase(): Promise<AppRow[]> {
           appName: app.name,
           image: app.dockerImage,
           status: picked.status,
-          address: app.address ?? app.publicUrl ?? picked.address ?? '-',
+          address: app.address ?? app.publicUrl ?? picked.address ?? '-'
         });
       }
-    }),
+    })
   );
 
   return rows;

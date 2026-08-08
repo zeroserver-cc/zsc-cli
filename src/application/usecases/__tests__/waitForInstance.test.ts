@@ -2,7 +2,7 @@ import { waitForInstance } from '../waitForInstance';
 import { gqlRequest } from '../../../infrastructure/graphql/client';
 import {
   APPLICATION_INSTANCE_QUERY,
-  DEPLOYMENTS_QUERY,
+  DEPLOYMENTS_QUERY
 } from '../../../infrastructure/graphql/queries';
 
 jest.mock('../../../infrastructure/graphql/client');
@@ -13,7 +13,13 @@ const instance = (status: string) =>
   ({ id: 'inst-1', applicationId: 'app-1', status, createdAt: '2026-07-31T00:00:00Z' }) as any;
 
 const deployment = (status: string, overrides: Record<string, unknown> = {}) =>
-  ({ id: `dep-${status}`, image: 'ghcr.io/x/app:1', status, createdAt: '2026-07-31T00:00:01Z', ...overrides }) as any;
+  ({
+    id: `dep-${status}`,
+    image: 'ghcr.io/x/app:1',
+    status,
+    createdAt: '2026-07-31T00:00:01Z',
+    ...overrides
+  }) as any;
 
 /**
  * The pre-loop fetch consumes the first entry of `deploymentHistory`; each
@@ -34,7 +40,8 @@ function mockBackend(instanceStatus: string, deploymentHistory: any[][]) {
   });
 }
 
-const deploymentQueryCalls = () => mockGql.mock.calls.filter((c) => c[0] === DEPLOYMENTS_QUERY).length;
+const deploymentQueryCalls = () =>
+  mockGql.mock.calls.filter((c) => c[0] === DEPLOYMENTS_QUERY).length;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -51,7 +58,7 @@ it('does not declare success on redeploy while the new deployment is still PENDI
   // for the deployment record instead of trusting the instance status.
   mockBackend('RUNNING', [
     [deployment('PENDING')],
-    [deployment('FAILED', { error: 'manifest unknown: image not found' })],
+    [deployment('FAILED', { error: 'manifest unknown: image not found' })]
   ]);
 
   const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
@@ -67,7 +74,7 @@ it('does not declare success on redeploy while the new deployment is still PENDI
 it('reports success when the deployment reaches SUCCESS', async () => {
   mockBackend('RUNNING', [
     [deployment('PENDING')],
-    [deployment('SUCCESS', { finishedAt: '2026-07-31T00:01:00Z' })],
+    [deployment('SUCCESS', { finishedAt: '2026-07-31T00:01:00Z' })]
   ]);
 
   const resultPromise = waitForInstance(instance('PENDING'), 'app-1', 'a-token');
@@ -84,8 +91,12 @@ it('reports a rolled back deployment as a terminal outcome', async () => {
     [deployment('PENDING')],
     [
       deployment('ROLLED_BACK', { id: 'dep-rb', rollbackOf: 'dep-failed' }),
-      deployment('FAILED', { id: 'dep-failed', error: 'container failed to start', createdAt: '2026-07-31T00:00:00Z' }),
-    ],
+      deployment('FAILED', {
+        id: 'dep-failed',
+        error: 'container failed to start',
+        createdAt: '2026-07-31T00:00:00Z'
+      })
+    ]
   ]);
 
   const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
@@ -127,7 +138,7 @@ it('falls back to instance-only polling when the deployments query fails', async
   expect(result.deployments).toBeUndefined();
   expect(result.instance.status).toBe('RUNNING');
   const warnings = onProgress.mock.calls.filter((c) =>
-    String(c[0]).includes('deployment history unavailable'),
+    String(c[0]).includes('deployment history unavailable')
   );
   expect(warnings).toHaveLength(1);
 });

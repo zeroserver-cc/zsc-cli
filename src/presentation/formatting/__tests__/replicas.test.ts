@@ -1,7 +1,13 @@
 import { replicaSummary } from '../replicas';
-import { ManagedDatabaseReplica, ManagedDatabaseReplicaStatus } from '../../../domain/entities/types';
+import {
+  ManagedDatabaseReplica,
+  ManagedDatabaseReplicaStatus
+} from '../../../domain/entities/types';
 
-function replica(status: ManagedDatabaseReplicaStatus, role: 'PRIMARY' | 'REPLICA' = 'REPLICA'): ManagedDatabaseReplica {
+function replica(
+  status: ManagedDatabaseReplicaStatus,
+  role: 'PRIMARY' | 'REPLICA' = 'REPLICA'
+): ManagedDatabaseReplica {
   return { id: `rep-${status}-${role}`, role, status, machineId: 'machine-1' };
 }
 
@@ -19,13 +25,15 @@ describe('replicaSummary', () => {
   });
 
   it('summarizes streaming replicas', () => {
-    expect(replicaSummary([replica('STREAMING', 'PRIMARY'), replica('STREAMING')])).toBe('1 streaming');
+    expect(replicaSummary([replica('STREAMING', 'PRIMARY'), replica('STREAMING')])).toBe(
+      '1 streaming'
+    );
   });
 
   it('counts only read replicas, not the primary', () => {
-    expect(replicaSummary([replica('STREAMING', 'PRIMARY'), replica('STREAMING'), replica('STREAMING')])).toBe(
-      '2 streaming',
-    );
+    expect(
+      replicaSummary([replica('STREAMING', 'PRIMARY'), replica('STREAMING'), replica('STREAMING')])
+    ).toBe('2 streaming');
   });
 
   it('surfaces a failed replica over the other statuses', () => {

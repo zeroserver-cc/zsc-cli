@@ -14,7 +14,7 @@ const machine = {
   status: 'ONLINE',
   sharedVCpu: 2,
   sharedMemoryMb: 4096,
-  sharedStorageMb: 51200,
+  sharedStorageMb: 51200
 };
 
 beforeEach(() => {
@@ -28,30 +28,40 @@ it('sends the mutation with the node id and the provided limits', async () => {
   const result = await configureMachineResourcesUseCase('m-1', {
     sharedVCpu: 2,
     sharedMemoryMb: 4096,
-    sharedStorageMb: 51200,
+    sharedStorageMb: 51200
   });
 
   expect(mockGql).toHaveBeenCalledWith(
     UPDATE_MACHINE_RESOURCE_LIMITS_MUTATION,
     { id: 'm-1', sharedVCpu: 2, sharedMemoryMb: 4096, sharedStorageMb: 51200 },
-    'a-token',
+    'a-token'
   );
   expect(result).toEqual(machine);
 });
 
 it('forwards null values so the backend clears those limits', async () => {
   mockGql.mockResolvedValue({
-    updateMachineResourceLimits: { ...machine, sharedVCpu: null, sharedMemoryMb: null, sharedStorageMb: null },
+    updateMachineResourceLimits: {
+      ...machine,
+      sharedVCpu: null,
+      sharedMemoryMb: null,
+      sharedStorageMb: null
+    }
   } as any);
 
   await configureMachineResourcesUseCase('m-1', {
     sharedVCpu: null,
     sharedMemoryMb: null,
-    sharedStorageMb: null,
+    sharedStorageMb: null
   });
 
   const variables = mockGql.mock.calls[0][1] as Record<string, unknown>;
-  expect(variables).toEqual({ id: 'm-1', sharedVCpu: null, sharedMemoryMb: null, sharedStorageMb: null });
+  expect(variables).toEqual({
+    id: 'm-1',
+    sharedVCpu: null,
+    sharedMemoryMb: null,
+    sharedStorageMb: null
+  });
 });
 
 it('omits undefined fields so untouched limits stay unchanged', async () => {
@@ -68,6 +78,8 @@ it('omits undefined fields so untouched limits stay unchanged', async () => {
 it('requires a login token', async () => {
   (getConfigValue as jest.Mock).mockReturnValue(undefined);
 
-  await expect(configureMachineResourcesUseCase('m-1', { sharedVCpu: 2 })).rejects.toThrow(/Not logged in/);
+  await expect(configureMachineResourcesUseCase('m-1', { sharedVCpu: 2 })).rejects.toThrow(
+    /Not logged in/
+  );
   expect(mockGql).not.toHaveBeenCalled();
 });

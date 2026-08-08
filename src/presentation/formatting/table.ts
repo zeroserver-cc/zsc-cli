@@ -14,7 +14,7 @@ const STATUS_COLORS: Record<string, (s: string) => string> = {
   STOPPED: chalk.gray,
   STOPPING: chalk.gray,
   ERROR: chalk.red,
-  FAILED: chalk.red,
+  FAILED: chalk.red
 };
 
 function colorStatus(status: string): string {
@@ -30,7 +30,7 @@ export function printAppTable(rows: AppRow[]): void {
 
   const table = new Table({
     head: ['Instance ID', 'App', 'Image', 'Status', 'Address'].map((h) => chalk.bold(h)),
-    style: { head: [], border: [] },
+    style: { head: [], border: [] }
   });
 
   for (const row of rows) {
@@ -39,7 +39,7 @@ export function printAppTable(rows: AppRow[]): void {
       row.appName,
       chalk.cyan(row.image),
       colorStatus(row.status),
-      row.address !== '-' ? chalk.underline(row.address) : chalk.gray('-'),
+      row.address !== '-' ? chalk.underline(row.address) : chalk.gray('-')
     ]);
   }
 
@@ -47,12 +47,12 @@ export function printAppTable(rows: AppRow[]): void {
 }
 
 const MACHINE_STATUS_COLORS: Record<string, (s: string) => string> = {
-  ONLINE:      chalk.green,
-  IDLE:        chalk.cyan,
-  BUSY:        chalk.yellow,
-  OVERLOADED:  chalk.red,
+  ONLINE: chalk.green,
+  IDLE: chalk.cyan,
+  BUSY: chalk.yellow,
+  OVERLOADED: chalk.red,
   REGISTERING: chalk.yellow,
-  OFFLINE:     chalk.gray,
+  OFFLINE: chalk.gray
 };
 
 function colorMachineStatus(status: string): string {
@@ -67,8 +67,10 @@ export function printMachineTable(rows: MachineRow[]): void {
   }
 
   const table = new Table({
-    head: ['Node ID', 'Name', 'Status', 'CPU', 'Memory', 'OS', 'Agent', 'Shared', 'Last Seen'].map((h) => chalk.bold(h)),
-    style: { head: [], border: [] },
+    head: ['Node ID', 'Name', 'Status', 'CPU', 'Memory', 'OS', 'Agent', 'Shared', 'Last Seen'].map(
+      (h) => chalk.bold(h)
+    ),
+    style: { head: [], border: [] }
   });
 
   for (const row of rows) {
@@ -81,7 +83,7 @@ export function printMachineTable(rows: MachineRow[]): void {
       chalk.dim(row.os),
       chalk.dim(row.agentVersion),
       row.shared === '—' ? chalk.gray(row.shared) : row.shared,
-      row.lastSeen,
+      row.lastSeen
     ]);
   }
 
@@ -95,9 +97,15 @@ export function printMachineDetail({ machine, instances }: MachineDetail): void 
 
   if (machine.specs) {
     const { cpu, memory, storage, os } = machine.specs;
-    console.log(`${chalk.bold('CPU:')}    ${cpu.cores} cores – ${cpu.model}${cpu.frequency ? ` @ ${cpu.frequency}` : ''}`);
-    console.log(`${chalk.bold('Memory:')} ${Math.round(memory.available / 1024)}/${Math.round(memory.total / 1024)} GB available`);
-    console.log(`${chalk.bold('Disk:')}   ${Math.round(storage.available / 1024)}/${Math.round(storage.total / 1024)} GB available`);
+    console.log(
+      `${chalk.bold('CPU:')}    ${cpu.cores} cores – ${cpu.model}${cpu.frequency ? ` @ ${cpu.frequency}` : ''}`
+    );
+    console.log(
+      `${chalk.bold('Memory:')} ${Math.round(memory.available / 1024)}/${Math.round(memory.total / 1024)} GB available`
+    );
+    console.log(
+      `${chalk.bold('Disk:')}   ${Math.round(storage.available / 1024)}/${Math.round(storage.total / 1024)} GB available`
+    );
     console.log(`${chalk.bold('OS:')}     ${os.name} ${os.version} (${os.architecture})`);
   }
 
@@ -126,7 +134,7 @@ export function printMachineDetail({ machine, instances }: MachineDetail): void 
   console.log(chalk.bold('Running applications:'));
   const table = new Table({
     head: ['Instance ID', 'App', 'Image', 'Status', 'Address'].map((h) => chalk.bold(h)),
-    style: { head: [], border: [] },
+    style: { head: [], border: [] }
   });
 
   for (const inst of instances) {
@@ -135,7 +143,7 @@ export function printMachineDetail({ machine, instances }: MachineDetail): void 
       inst.application?.name ?? '-',
       chalk.cyan(inst.application?.dockerImage ?? '-'),
       colorStatus(inst.status),
-      inst.address ? chalk.underline(inst.address) : chalk.gray('-'),
+      inst.address ? chalk.underline(inst.address) : chalk.gray('-')
     ]);
   }
 
@@ -146,7 +154,7 @@ const DEPLOYMENT_STATUS_COLORS: Record<string, (s: string) => string> = {
   SUCCESS: chalk.green,
   FAILED: chalk.red,
   ROLLED_BACK: chalk.yellow,
-  PENDING: chalk.gray,
+  PENDING: chalk.gray
 };
 
 function colorDeploymentStatus(status: string): string {
@@ -190,7 +198,7 @@ export function printDeploymentsTable(deployments: Deployment[]): void {
 
   const table = new Table({
     head: ['Status', 'Image', 'Duration', 'Created', 'Error'].map((h) => chalk.bold(h)),
-    style: { head: [], border: [] },
+    style: { head: [], border: [] }
   });
 
   for (const deployment of deployments) {
@@ -199,7 +207,7 @@ export function printDeploymentsTable(deployments: Deployment[]): void {
       chalk.cyan(shortImage(deployment.image)),
       formatDeploymentDuration(deployment.createdAt, deployment.finishedAt),
       shortCreatedAt(deployment.createdAt),
-      deployment.error ? chalk.red(truncateError(deployment.error)) : chalk.gray('—'),
+      deployment.error ? chalk.red(truncateError(deployment.error)) : chalk.gray('—')
     ]);
   }
 

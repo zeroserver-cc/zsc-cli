@@ -4,7 +4,7 @@ import { getConfigArray, getConfigValue } from '../../../infrastructure/config/s
 jest.mock('../../../infrastructure/config/store', () => ({
   ...jest.requireActual('../../../infrastructure/config/store'),
   getConfigValue: jest.fn(),
-  getConfigArray: jest.fn(),
+  getConfigArray: jest.fn()
 }));
 
 const mockedGetConfigValue = getConfigValue as jest.MockedFunction<typeof getConfigValue>;
@@ -59,7 +59,7 @@ describe('requireRole', () => {
     expect(() => requireRole(['provider', 'admin'])).toThrow('process.exit');
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('This command requires provider or admin role'),
+      expect.stringContaining('This command requires provider or admin role')
     );
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Your role: developer.'));
   });
@@ -82,6 +82,8 @@ describe('requireRole', () => {
     mockSession(['developer', 'provider'], 'developer');
 
     expect(() => requireRole(['admin'])).toThrow('process.exit');
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('Your roles: developer, provider.'));
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Your roles: developer, provider.')
+    );
   });
 });

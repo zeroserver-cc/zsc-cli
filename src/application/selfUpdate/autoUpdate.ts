@@ -42,9 +42,13 @@ export async function maybeAutoUpdate(): Promise<void> {
     process.stderr.write(`A new zs version (${tag}) is available — updating…\n`);
     const result = await selfUpdate(VERSION, process.execPath);
     if (result.updated) {
-      process.stderr.write(`Updated zs ${result.fromVersion} → ${result.toVersion}. Takes effect on your next command.\n`);
+      process.stderr.write(
+        `Updated zs ${result.fromVersion} → ${result.toVersion}. Takes effect on your next command.\n`
+      );
     } else if (result.reason === 'permission') {
-      process.stderr.write(`Update available but ${process.execPath} isn't writable. Run: sudo zs upgrade\n`);
+      process.stderr.write(
+        `Update available but ${process.execPath} isn't writable. Run: sudo zs upgrade\n`
+      );
     }
     // Any other failure stays silent — the current command must not be disrupted.
   } catch {

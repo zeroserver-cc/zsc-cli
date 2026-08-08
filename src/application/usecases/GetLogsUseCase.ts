@@ -10,7 +10,7 @@ export async function getLogsUseCase(instanceId: string): Promise<string> {
   const data = await gqlRequest<{ applicationInstance: ApplicationInstance }>(
     APPLICATION_INSTANCE_QUERY,
     { id: instanceId },
-    token,
+    token
   );
 
   if (!data.applicationInstance) throw new Error(`Instance "${instanceId}" not found.`);

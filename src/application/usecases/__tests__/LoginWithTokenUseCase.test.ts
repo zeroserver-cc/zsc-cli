@@ -1,13 +1,13 @@
 import { loginWithTokenUseCase } from '../LoginWithTokenUseCase';
 import { gqlRequest } from '../../../infrastructure/graphql/client';
-import { setConfigValue, deleteConfigValue, getConfigValue } from '../../../infrastructure/config/store';
+import { setConfigValue, deleteConfigValue } from '../../../infrastructure/config/store';
 
 jest.mock('../../../infrastructure/graphql/client');
 jest.mock('../../../infrastructure/config/store', () => ({
   ...jest.requireActual('../../../infrastructure/config/store'),
   setConfigValue: jest.fn(),
   deleteConfigValue: jest.fn(),
-  getConfigValue: jest.fn(),
+  getConfigValue: jest.fn()
 }));
 
 const mockedGqlRequest = gqlRequest as jest.MockedFunction<typeof gqlRequest>;
@@ -20,7 +20,13 @@ afterEach(() => {
 describe('loginWithTokenUseCase', () => {
   it('validates token via Me query and stores session', async () => {
     mockedGqlRequest.mockResolvedValueOnce({
-      me: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer', roles: ['developer', 'provider'] },
+      me: {
+        id: 'u1',
+        username: 'dev',
+        email: 'dev@zsc.cloud',
+        role: 'developer',
+        roles: ['developer', 'provider']
+      }
     });
 
     const result = await loginWithTokenUseCase('access-token-123', 'refresh-token-456');
@@ -30,7 +36,7 @@ describe('loginWithTokenUseCase', () => {
     expect(mockedGqlRequest).toHaveBeenCalledWith(
       expect.stringContaining('me'),
       undefined,
-      'access-token-123',
+      'access-token-123'
     );
     expect(mockedSetConfigValue).toHaveBeenCalledWith('accessToken', 'access-token-123');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('token', 'access-token-123');
@@ -42,7 +48,13 @@ describe('loginWithTokenUseCase', () => {
 
   it('works without refresh token', async () => {
     mockedGqlRequest.mockResolvedValueOnce({
-      me: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer', roles: ['developer'] },
+      me: {
+        id: 'u1',
+        username: 'dev',
+        email: 'dev@zsc.cloud',
+        role: 'developer',
+        roles: ['developer']
+      }
     });
 
     const result = await loginWithTokenUseCase('access-token-123');

@@ -13,7 +13,7 @@ describe('loadManifestFile', () => {
     const dir = tmpDir();
     fs.writeFileSync(
       path.join(dir, 'zs.yaml'),
-      'app: demo\nservices:\n  - name: web\n    image: nginx\n    exposed: true\n',
+      'app: demo\nservices:\n  - name: web\n    image: nginx\n    exposed: true\n'
     );
     const m = loadManifestFile(dir);
     expect(m.app).toBe('demo');
@@ -22,7 +22,10 @@ describe('loadManifestFile', () => {
 
   it('also accepts zs.yml', () => {
     const dir = tmpDir();
-    fs.writeFileSync(path.join(dir, 'zs.yml'), 'app: demo\nservices:\n  - name: web\n    image: nginx\n');
+    fs.writeFileSync(
+      path.join(dir, 'zs.yml'),
+      'app: demo\nservices:\n  - name: web\n    image: nginx\n'
+    );
     expect(loadManifestFile(dir).app).toBe('demo');
   });
 
@@ -37,7 +40,7 @@ describe('loadManifestFile', () => {
     fs.writeFileSync(path.join(dir, '.env'), 'FOO=from-file\nBAR=file\n');
     fs.writeFileSync(
       path.join(dir, 'zs.yaml'),
-      'app: demo\nservices:\n  - name: api\n    image: nginx\n    envFile: .env\n    env:\n      - BAR=yaml\n',
+      'app: demo\nservices:\n  - name: api\n    image: nginx\n    envFile: .env\n    env:\n      - BAR=yaml\n'
     );
 
     const m = loadManifestFile(dir);
@@ -50,13 +53,15 @@ describe('loadManifestFile', () => {
     const dir = tmpDir();
     fs.writeFileSync(
       path.join(dir, 'zs.yaml'),
-      "app: demo\nservices:\n  - name: api\n    image: nginx\n    envFile: .env.local\n    env:\n      - A=1\n",
+      'app: demo\nservices:\n  - name: api\n    image: nginx\n    envFile: .env.local\n    env:\n      - A=1\n'
     );
 
     const warnings: string[] = [];
     const m = loadManifestFile(dir, (w) => warnings.push(w));
 
     expect(m.services[0].env).toEqual(['A=1']);
-    expect(warnings).toEqual(["zs.yaml: envFile '.env.local' not found for service 'api'; skipping"]);
+    expect(warnings).toEqual([
+      "zs.yaml: envFile '.env.local' not found for service 'api'; skipping"
+    ]);
   });
 });

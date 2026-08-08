@@ -1,6 +1,9 @@
 import { ApplicationInstance, Deployment } from '../../domain/entities/types';
 import { gqlRequest } from '../../infrastructure/graphql/client';
-import { APPLICATION_INSTANCE_QUERY, DEPLOYMENTS_QUERY } from '../../infrastructure/graphql/queries';
+import {
+  APPLICATION_INSTANCE_QUERY,
+  DEPLOYMENTS_QUERY
+} from '../../infrastructure/graphql/queries';
 
 const TERMINAL_STATUSES = new Set(['RUNNING', 'ERROR', 'FAILED', 'STOPPED']);
 const INSTANCE_FAILURE_STATUSES = new Set(['ERROR', 'FAILED', 'STOPPED']);
@@ -32,7 +35,7 @@ export async function waitForInstance(
   initial: ApplicationInstance,
   applicationId: string,
   token: string,
-  onProgress?: (status: string) => void,
+  onProgress?: (status: string) => void
 ): Promise<WaitResult> {
   let instance = initial;
   let warnedUnavailable = false;
@@ -63,9 +66,9 @@ export async function waitForInstance(
       gqlRequest<{ applicationInstance: ApplicationInstance }>(
         APPLICATION_INSTANCE_QUERY,
         { id: instance.id },
-        token,
+        token
       ),
-      fetchHistory(),
+      fetchHistory()
     ]);
     instance = pollData.applicationInstance ?? instance;
     if (latest) {
@@ -79,7 +82,7 @@ export async function waitForInstance(
     instance,
     deployment,
     deployments: history,
-    timedOut: polls >= MAX_POLLS && !isDone(instance, deployment),
+    timedOut: polls >= MAX_POLLS && !isDone(instance, deployment)
   };
 }
 
@@ -108,7 +111,7 @@ async function fetchDeploymentHistory(applicationId: string, token: string): Pro
   const data = await gqlRequest<{ deployments: Deployment[] }>(
     DEPLOYMENTS_QUERY,
     { applicationId, limit: 5 },
-    token,
+    token
   );
   return data.deployments;
 }

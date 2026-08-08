@@ -14,7 +14,7 @@ export async function restoreVolumesUseCase(applicationId: string): Promise<Rest
   const data = await gqlRequest<{ restoreApplicationVolumes: RestoreVolumesResult }>(
     RESTORE_APPLICATION_VOLUMES_MUTATION,
     { applicationId },
-    token,
+    token
   );
 
   return data.restoreApplicationVolumes;

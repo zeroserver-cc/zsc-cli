@@ -15,6 +15,6 @@ export function manifestToCreateInput(manifest: AppManifest): CreateApplicationI
   return {
     name: manifest.app,
     services: manifest.services,
-    config: {},
+    config: {}
   };
 }

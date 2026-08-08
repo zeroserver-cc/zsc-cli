@@ -13,7 +13,10 @@ export const MANIFEST_FILENAMES = ['zs.yaml', 'zs.yml'];
  * through `onWarning` and never fail the load.
  * Throws ManifestError with a clear message when no manifest is present.
  */
-export function loadManifestFile(dir: string = process.cwd(), onWarning?: (message: string) => void): AppManifest {
+export function loadManifestFile(
+  dir: string = process.cwd(),
+  onWarning?: (message: string) => void
+): AppManifest {
   for (const name of MANIFEST_FILENAMES) {
     const filePath = path.join(dir, name);
     if (fs.existsSync(filePath)) {
@@ -24,6 +27,6 @@ export function loadManifestFile(dir: string = process.cwd(), onWarning?: (messa
     }
   }
   throw new ManifestError(
-    `No zs.yaml found in ${dir}. Create one (see the deploy guide) or run "zs deploy <image>" for a single container.`,
+    `No zs.yaml found in ${dir}. Create one (see the deploy guide) or run "zs deploy <image>" for a single container.`
   );
 }

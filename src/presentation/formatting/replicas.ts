@@ -8,7 +8,9 @@ import { ManagedDatabaseReplica } from '../../domain/entities/types';
  * stands out in the table.
  */
 export function replicaSummary(replicas: ManagedDatabaseReplica[]): string {
-  const readReplicas = replicas.filter((replica) => replica.role === 'REPLICA' && replica.status !== 'DELETED');
+  const readReplicas = replicas.filter(
+    (replica) => replica.role === 'REPLICA' && replica.status !== 'DELETED'
+  );
   if (readReplicas.length === 0) return chalk.gray('0');
 
   const count = String(readReplicas.length);

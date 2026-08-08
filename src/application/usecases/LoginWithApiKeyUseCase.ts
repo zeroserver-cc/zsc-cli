@@ -11,7 +11,7 @@ export async function loginWithApiKeyUseCase(apiKey: string): Promise<ApiKeyLogi
   const key = apiKey.trim();
   if (!key.startsWith('zsk_')) {
     throw new Error(
-      'Invalid API key format. ZeroServer API keys start with "zsk_". Generate one in the portal.',
+      'Invalid API key format. ZeroServer API keys start with "zsk_". Generate one in the portal.'
     );
   }
 

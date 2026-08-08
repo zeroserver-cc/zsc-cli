@@ -1,13 +1,13 @@
 import {
   getActiveAccountUseCase,
   listAccountsUseCase,
-  switchAccountUseCase,
+  switchAccountUseCase
 } from '../AccountUseCase';
 import { gqlRequest } from '../../../infrastructure/graphql/client';
 import {
   deleteConfigValue,
   getConfigValue,
-  setConfigValue,
+  setConfigValue
 } from '../../../infrastructure/config/store';
 import { Account, AuthPayload } from '../../../domain/entities/types';
 
@@ -16,7 +16,7 @@ jest.mock('../../../infrastructure/config/store', () => ({
   ...jest.requireActual('../../../infrastructure/config/store'),
   getConfigValue: jest.fn(),
   setConfigValue: jest.fn(),
-  deleteConfigValue: jest.fn(),
+  deleteConfigValue: jest.fn()
 }));
 
 const mockedGqlRequest = gqlRequest as jest.MockedFunction<typeof gqlRequest>;
@@ -41,9 +41,9 @@ function switchPayload(activeAccountId: string | null): { switchAccount: AuthPay
         email: 'dev@zsc.cloud',
         role: 'developer',
         roles: ['developer'],
-        activeAccountId,
-      },
-    },
+        activeAccountId
+      }
+    }
   };
 }
 
@@ -72,7 +72,7 @@ describe('switchAccountUseCase', () => {
     expect(result.username).toBe('acme');
     expect(result.teamRole).toBe('member');
     expect(mockedGqlRequest).toHaveBeenNthCalledWith(2, expect.stringContaining('switchAccount'), {
-      accountId: 'bbbb-2222',
+      accountId: 'bbbb-2222'
     });
     expect(mockedSetConfigValue).toHaveBeenCalledWith('accessToken', 'token-b');
     expect(mockedSetConfigValue).toHaveBeenCalledWith('refreshToken', 'refresh-b');
@@ -90,7 +90,7 @@ describe('switchAccountUseCase', () => {
 
     expect(result.username).toBe('acme');
     expect(mockedGqlRequest).toHaveBeenNthCalledWith(2, expect.stringContaining('switchAccount'), {
-      accountId: 'bbbb-2222',
+      accountId: 'bbbb-2222'
     });
   });
 
@@ -98,8 +98,8 @@ describe('switchAccountUseCase', () => {
     mockedGqlRequest.mockResolvedValueOnce({
       myAccounts: [
         { id: 'abcd-1', username: 'one', teamRole: 'member' },
-        { id: 'abcd-2', username: 'two', teamRole: 'viewer' },
-      ],
+        { id: 'abcd-2', username: 'two', teamRole: 'viewer' }
+      ]
     });
 
     await expect(switchAccountUseCase('abcd')).rejects.toThrow('Ambiguous');
@@ -142,10 +142,13 @@ describe('getActiveAccountUseCase', () => {
 
   it('resolves the stored active account', async () => {
     mockedGetConfigValue.mockImplementation((key) =>
-      key === 'activeAccountId' ? 'bbbb-2222' : undefined,
+      key === 'activeAccountId' ? 'bbbb-2222' : undefined
     );
     mockedGqlRequest.mockResolvedValueOnce({ myAccounts: accounts });
 
-    await expect(getActiveAccountUseCase()).resolves.toEqual({ username: 'acme', teamRole: 'member' });
+    await expect(getActiveAccountUseCase()).resolves.toEqual({
+      username: 'acme',
+      teamRole: 'member'
+    });
   });
 });

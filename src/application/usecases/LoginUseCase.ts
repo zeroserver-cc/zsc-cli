@@ -22,14 +22,13 @@ export class InvalidTwoFactorCodeError extends Error {
 export async function loginUseCase(
   email: string,
   password: string,
-  totpCode?: string,
+  totpCode?: string
 ): Promise<AuthPayload> {
   let data: { login: AuthPayload };
   try {
-    data = await gqlRequest<{ login: AuthPayload }>(
-      LOGIN_MUTATION,
-      { input: { email, password, ...(totpCode ? { totpCode } : {}) } },
-    );
+    data = await gqlRequest<{ login: AuthPayload }>(LOGIN_MUTATION, {
+      input: { email, password, ...(totpCode ? { totpCode } : {}) }
+    });
   } catch (err) {
     // Map the backend's fixed 2FA messages to typed errors so the presentation
     // layer can drive the prompt/retry flow without string matching.

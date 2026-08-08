@@ -14,7 +14,7 @@ export interface MachineResourceLimitsInput {
 
 export async function configureMachineResourcesUseCase(
   id: string,
-  limits: MachineResourceLimitsInput,
+  limits: MachineResourceLimitsInput
 ): Promise<Machine> {
   const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
@@ -22,7 +22,7 @@ export async function configureMachineResourcesUseCase(
   const data = await gqlRequest<{ updateMachineResourceLimits: Machine }>(
     UPDATE_MACHINE_RESOURCE_LIMITS_MUTATION,
     { id, ...limits },
-    token,
+    token
   );
   return data.updateMachineResourceLimits;
 }

@@ -30,7 +30,7 @@ export function elevateAndRun(args: string[]): Promise<number> {
   return new Promise((resolve) => {
     const child = spawn('sudo', [process.execPath, ...args], {
       stdio: 'inherit',
-      detached: false,
+      detached: false
     });
 
     child.on('exit', (code, signal) => {

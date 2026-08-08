@@ -1,5 +1,10 @@
 import { parse } from 'yaml';
-import { AppManifest, ManifestAIRequirements, ManifestPlacement, ManifestService } from '../../domain/entities/types';
+import {
+  AppManifest,
+  ManifestAIRequirements,
+  ManifestPlacement,
+  ManifestService
+} from '../../domain/entities/types';
 
 export class ManifestError extends Error {
   constructor(message: string) {
@@ -22,7 +27,9 @@ export function parseManifest(content: string): AppManifest {
   }
 
   if (!isRecord(raw)) {
-    throw new ManifestError('zs.yaml is empty or not a mapping. See the reference for the expected shape.');
+    throw new ManifestError(
+      'zs.yaml is empty or not a mapping. See the reference for the expected shape.'
+    );
   }
 
   const app = raw.app;
@@ -38,7 +45,9 @@ export function parseManifest(content: string): AppManifest {
 
   const exposedCount = services.filter((s) => s.exposed).length;
   if (exposedCount > 1) {
-    throw new ManifestError('zs.yaml: only one service can be "exposed" in the MVP (one public URL per app).');
+    throw new ManifestError(
+      'zs.yaml: only one service can be "exposed" in the MVP (one public URL per app).'
+    );
   }
 
   validateNamedVolumes(services);
@@ -53,7 +62,7 @@ export function parseManifest(content: string): AppManifest {
 function validateDatabase(raw: unknown): string {
   if (typeof raw !== 'string' || raw.trim() === '') {
     throw new ManifestError(
-      'zs.yaml: "database" must be a non-empty string (the name of a managed database; create one with "zs db create").',
+      'zs.yaml: "database" must be a non-empty string (the name of a managed database; create one with "zs db create").'
     );
   }
   return raw;
@@ -61,7 +70,9 @@ function validateDatabase(raw: unknown): string {
 
 function validateAIRequirements(raw: unknown): ManifestAIRequirements {
   if (!isRecord(raw)) {
-    throw new ManifestError('zs.yaml: "ai" must be a mapping with boolean flags (gpu, llm, video, audio, image).');
+    throw new ManifestError(
+      'zs.yaml: "ai" must be a mapping with boolean flags (gpu, llm, video, audio, image).'
+    );
   }
 
   const allowed = ['gpu', 'llm', 'video', 'audio', 'image'];
@@ -82,7 +93,7 @@ function validateAIRequirements(raw: unknown): ManifestAIRequirements {
 function validatePlacement(raw: unknown): ManifestPlacement {
   if (!isRecord(raw)) {
     throw new ManifestError(
-      'zs.yaml: "placement" must be a mapping with "country" and/or "region" (e.g. placement: { country: BR, region: RS }).',
+      'zs.yaml: "placement" must be a mapping with "country" and/or "region" (e.g. placement: { country: BR, region: RS }).'
     );
   }
 
@@ -90,14 +101,18 @@ function validatePlacement(raw: unknown): ManifestPlacement {
 
   if (raw.country !== undefined) {
     if (typeof raw.country !== 'string' || !/^[a-zA-Z]{2}$/.test(raw.country.trim())) {
-      throw new ManifestError('zs.yaml: "placement.country" must be a 2-letter ISO 3166-1 alpha-2 code (e.g. "BR").');
+      throw new ManifestError(
+        'zs.yaml: "placement.country" must be a 2-letter ISO 3166-1 alpha-2 code (e.g. "BR").'
+      );
     }
     result.country = raw.country;
   }
 
   if (raw.region !== undefined) {
     if (typeof raw.region !== 'string' || raw.region.trim() === '') {
-      throw new ManifestError('zs.yaml: "placement.region" must be a non-empty string (e.g. "RS").');
+      throw new ManifestError(
+        'zs.yaml: "placement.region" must be a non-empty string (e.g. "RS").'
+      );
     }
     result.region = raw.region;
   }
@@ -108,7 +123,9 @@ function validatePlacement(raw: unknown): ManifestPlacement {
 function validateService(svc: unknown, index: number): ManifestService {
   const where = `services[${index}]`;
   if (!isRecord(svc)) {
-    throw new ManifestError(`zs.yaml: ${where} must be a mapping with at least "name" and "image".`);
+    throw new ManifestError(
+      `zs.yaml: ${where} must be a mapping with at least "name" and "image".`
+    );
   }
 
   if (typeof svc.name !== 'string' || svc.name.trim() === '') {
@@ -117,7 +134,9 @@ function validateService(svc: unknown, index: number): ManifestService {
   const name = svc.name;
 
   if (typeof svc.image !== 'string' || svc.image.trim() === '') {
-    throw new ManifestError(`zs.yaml: ${where} ("${name}") needs an "image" (a registry image; the ZS does not build from source in the MVP).`);
+    throw new ManifestError(
+      `zs.yaml: ${where} ("${name}") needs an "image" (a registry image; the ZS does not build from source in the MVP).`
+    );
   }
 
   const service: ManifestService = { name, image: svc.image };
@@ -125,9 +144,12 @@ function validateService(svc: unknown, index: number): ManifestService {
   if (svc.env !== undefined) service.env = toStringArray(svc.env, `${where}.env`);
   if (svc.envFile !== undefined) service.envFile = toEnvFile(svc.envFile, `${where}.envFile`);
   if (svc.ports !== undefined) service.ports = toStringArray(svc.ports, `${where}.ports`);
-  if (svc.volumes !== undefined) service.volumes = toVolumeStringArray(svc.volumes, `${where}.volumes`);
-  if (svc.dependsOn !== undefined) service.dependsOn = toStringArray(svc.dependsOn, `${where}.dependsOn`);
-  if (svc.command !== undefined) service.command = toStrictStringArray(svc.command, `${where}.command`);
+  if (svc.volumes !== undefined)
+    service.volumes = toVolumeStringArray(svc.volumes, `${where}.volumes`);
+  if (svc.dependsOn !== undefined)
+    service.dependsOn = toStringArray(svc.dependsOn, `${where}.dependsOn`);
+  if (svc.command !== undefined)
+    service.command = toStrictStringArray(svc.command, `${where}.command`);
   if (svc.exposed !== undefined) {
     if (typeof svc.exposed !== 'boolean') {
       throw new ManifestError(`zs.yaml: ${where}.exposed must be true or false.`);
@@ -153,14 +175,19 @@ function toEnvFile(value: unknown, where: string): string | string[] {
     }
     return value.map((item, i) => {
       if (typeof item === 'string' && item.trim() !== '') return item;
-      throw new ManifestError(`zs.yaml: ${where}[${i}] must be a non-empty string (path to a .env file).`);
+      throw new ManifestError(
+        `zs.yaml: ${where}[${i}] must be a non-empty string (path to a .env file).`
+      );
     });
   }
-  throw new ManifestError(`zs.yaml: ${where} must be a string or a list of strings (paths to .env files).`);
+  throw new ManifestError(
+    `zs.yaml: ${where} must be a string or a list of strings (paths to .env files).`
+  );
 }
 
 // ports may be written as numbers (e.g. "- 3000"); the backend expects strings.
-function toStringArray(value: unknown, where: string): string[] {  if (!Array.isArray(value)) {
+function toStringArray(value: unknown, where: string): string[] {
+  if (!Array.isArray(value)) {
     throw new ManifestError(`zs.yaml: ${where} must be a list.`);
   }
   return value.map((item, i) => {
@@ -189,7 +216,7 @@ function validateNamedVolumes(services: ManifestService[]): void {
       const parts = volumeString.split(':');
       if (parts.length < 2) {
         throw new ManifestError(
-          `zs.yaml: invalid volume "${volumeString}" in service "${service.name}". Expected "name:/container/path" or "/host/path:/container/path".`,
+          `zs.yaml: invalid volume "${volumeString}" in service "${service.name}". Expected "name:/container/path" or "/host/path:/container/path".`
         );
       }
 
@@ -198,13 +225,13 @@ function validateNamedVolumes(services: ManifestService[]): void {
 
       if (!mountPath.startsWith('/')) {
         throw new ManifestError(
-          `zs.yaml: volume "${volumeString}" in service "${service.name}" must use an absolute container path.`,
+          `zs.yaml: volume "${volumeString}" in service "${service.name}" must use an absolute container path.`
         );
       }
 
       if (seenNames.has(name)) {
         throw new ManifestError(
-          `zs.yaml: duplicate named volume "${name}". Volume names must be unique within an app.`,
+          `zs.yaml: duplicate named volume "${name}". Volume names must be unique within an app.`
         );
       }
       seenNames.add(name);
@@ -220,7 +247,7 @@ function toVolumeStringArray(value: unknown, where: string): string[] {
     if (typeof item === 'string') return item;
     throw new ManifestError(
       `zs.yaml: ${where}[${i}] must be a string (e.g. "data:/var/lib/data" or "/host:/container:ro"). ` +
-        'Unquoted YAML values with a colon become objects; wrap the volume in quotes.',
+        'Unquoted YAML values with a colon become objects; wrap the volume in quotes.'
     );
   });
 }

@@ -9,7 +9,11 @@ export function readStdin(): Promise<string> {
     // With nothing piped, stdin is a TTY and reading would block forever waiting
     // for EOF. Fail fast so a non-interactive caller never hangs.
     if (stdin.isTTY) {
-      reject(new Error('Expected a token on stdin, but stdin is a TTY. Pipe it: `printf %s "$TOKEN" | zs …`.'));
+      reject(
+        new Error(
+          'Expected a token on stdin, but stdin is a TTY. Pipe it: `printf %s "$TOKEN" | zs …`.'
+        )
+      );
       return;
     }
 
@@ -43,10 +47,12 @@ export function readStdin(): Promise<string> {
 // Reads a single line with terminal echo (for non-secret input like email/host).
 export function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => rl.question(question, (answer) => {
-    rl.close();
-    resolve(answer.trim());
-  }));
+  return new Promise((resolve) =>
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    })
+  );
 }
 
 // Reads a secret with echo suppressed (raw mode), so tokens/passwords never
@@ -83,11 +89,13 @@ export function promptPassword(question: string): Promise<string> {
           process.stdout.write('\n');
           resolve(secret);
           return;
-        } else if (char === '\u0003') { // Ctrl+C
+        } else if (char === '\u0003') {
+          // Ctrl+C
           cleanup();
           process.stdout.write('\n');
           process.exit(130);
-        } else if (char === '\u007f' || char === '\b') { // Backspace / Delete
+        } else if (char === '\u007f' || char === '\b') {
+          // Backspace / Delete
           secret = secret.slice(0, -1);
         } else {
           secret += char;

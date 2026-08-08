@@ -11,11 +11,11 @@ import { AuthPayload } from '../../../domain/entities/types';
 // login lands in the resolved profile's session file.
 jest.mock('os', () => ({
   ...jest.requireActual('os'),
-  homedir: jest.fn(),
+  homedir: jest.fn()
 }));
 jest.mock('../../../infrastructure/graphql/client', () => ({
   ...jest.requireActual('../../../infrastructure/graphql/client'),
-  gqlRequest: jest.fn(),
+  gqlRequest: jest.fn()
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -27,7 +27,13 @@ const payload: AuthPayload = {
   accessToken: 'token-a',
   refreshToken: 'refresh-a',
   expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-  user: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer', roles: ['developer'] },
+  user: {
+    id: 'u1',
+    username: 'dev',
+    email: 'dev@zsc.cloud',
+    role: 'developer',
+    roles: ['developer']
+  }
 };
 
 let home: string;
@@ -59,7 +65,7 @@ describe('loginUseCase with session profiles', () => {
     await loginUseCase('dev@zsc.cloud', 'secret');
 
     const session = JSON.parse(
-      readFileSync(join(configDirPath(), 'sessions', 'cliente-x.json'), 'utf-8'),
+      readFileSync(join(configDirPath(), 'sessions', 'cliente-x.json'), 'utf-8')
     ) as Record<string, unknown>;
     expect(session.accessToken).toBe('token-a');
     expect(session.refreshToken).toBe('refresh-a');

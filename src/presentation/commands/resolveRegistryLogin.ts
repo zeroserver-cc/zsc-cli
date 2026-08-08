@@ -32,13 +32,15 @@ export interface RegistryLoginInputs {
  */
 export async function resolveRegistryLogin(
   opts: RegistryLoginOptions,
-  io: RegistryLoginPrompts,
+  io: RegistryLoginPrompts
 ): Promise<RegistryLoginInputs> {
   if (opts.tokenStdin) {
     const registryHost = opts.registryHost?.trim();
     const username = opts.username?.trim();
     if (!registryHost) {
-      throw new Error('Registry host is required with --token-stdin (pass it as an argument, e.g. "ghcr.io").');
+      throw new Error(
+        'Registry host is required with --token-stdin (pass it as an argument, e.g. "ghcr.io").'
+      );
     }
     if (!username) {
       throw new Error('--username is required with --token-stdin.');
@@ -46,7 +48,7 @@ export async function resolveRegistryLogin(
     const token = (await io.readStdin()).trim();
     if (!token) {
       throw new Error(
-        'No token received on stdin. Pipe it, e.g. `printf %s "$TOKEN" | zs registry login ghcr.io -u user --token-stdin`.',
+        'No token received on stdin. Pipe it, e.g. `printf %s "$TOKEN" | zs registry login ghcr.io -u user --token-stdin`.'
       );
     }
     return { registryHost, username, token };

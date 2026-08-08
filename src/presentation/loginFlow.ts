@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import {
   InvalidTwoFactorCodeError,
   loginUseCase,
-  TwoFactorRequiredError,
+  TwoFactorRequiredError
 } from '../application/usecases/LoginUseCase';
 import { AuthPayload } from '../domain/entities/types';
 import { prompt } from './io/prompt';
@@ -17,7 +17,7 @@ const MAX_OTP_ATTEMPTS = 3;
 export async function loginWithTwoFactor(
   email: string,
   password: string,
-  otp?: string,
+  otp?: string
 ): Promise<AuthPayload> {
   let totpCode = otp;
   let attempts = 0;
@@ -37,7 +37,9 @@ export async function loginWithTwoFactor(
       // readline's question() never resolves on a TTY-less stdin (CI,
       // /dev/null): fail fast instead of hanging forever.
       if (!process.stdin.isTTY) {
-        throw new Error('2FA code required. In non-interactive environments, pass it with --otp <code>.');
+        throw new Error(
+          '2FA code required. In non-interactive environments, pass it with --otp <code>.'
+        );
       }
 
       const answer = (await prompt('2FA code: ')).trim();

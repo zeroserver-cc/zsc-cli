@@ -26,7 +26,8 @@ const BIN_NAME = 'zs';
 
 /** Mirrors install.sh's OS/arch cases. Returns null for a target with no built binary. */
 function assetName(): string | null {
-  const plat = process.platform === 'linux' ? 'linux' : process.platform === 'darwin' ? 'macos' : null;
+  const plat =
+    process.platform === 'linux' ? 'linux' : process.platform === 'darwin' ? 'macos' : null;
   const arch = process.arch === 'x64' ? 'x64' : process.arch === 'arm64' ? 'arm64' : null;
   if (!plat || !arch) return null;
   if (plat === 'macos' && arch === 'x64') return null; // only macos-arm64 is built
@@ -38,7 +39,10 @@ function assetName(): string | null {
  * sha256, and atomically swaps the running binary. Never throws — any failure
  * returns a result so the caller keeps running the current version.
  */
-export async function selfUpdate(currentVersion: string, execPath: string): Promise<SelfUpdateResult> {
+export async function selfUpdate(
+  currentVersion: string,
+  execPath: string
+): Promise<SelfUpdateResult> {
   const asset = assetName();
   if (!asset) return { updated: false, fromVersion: currentVersion, reason: 'unsupported-arch' };
 
@@ -46,12 +50,16 @@ export async function selfUpdate(currentVersion: string, execPath: string): Prom
   try {
     const res = await axios.get(`https://api.github.com/repos/${REPO}/releases/latest`, {
       timeout: 15000,
-      headers: { Accept: 'application/vnd.github+json' },
+      headers: { Accept: 'application/vnd.github+json' }
     });
     latestTag = res.data?.tag_name;
   } catch (err) {
     const status = axios.isAxiosError(err) ? err.response?.status : undefined;
-    return { updated: false, fromVersion: currentVersion, reason: status === 403 ? 'rate-limited' : 'error' };
+    return {
+      updated: false,
+      fromVersion: currentVersion,
+      reason: status === 403 ? 'rate-limited' : 'error'
+    };
   }
 
   if (!latestTag || !isNewerVersion(latestTag, currentVersion)) {
@@ -67,7 +75,8 @@ export async function selfUpdate(currentVersion: string, execPath: string): Prom
     const expected = await fetchChecksum(`${base}/${asset}.sha256`);
     if (expected) {
       const actual = await sha256File(tmp);
-      if (actual !== expected) throw new Error(`checksum mismatch (expected ${expected}, got ${actual})`);
+      if (actual !== expected)
+        throw new Error(`checksum mismatch (expected ${expected}, got ${actual})`);
     }
 
     await chmod(tmp, 0o755);
@@ -87,7 +96,7 @@ export async function latestNewerTag(currentVersion: string): Promise<string | n
   try {
     const res = await axios.get(`https://api.github.com/repos/${REPO}/releases/latest`, {
       timeout: 8000,
-      headers: { Accept: 'application/vnd.github+json' },
+      headers: { Accept: 'application/vnd.github+json' }
     });
     const tag = res.data?.tag_name;
     return tag && isNewerVersion(tag, currentVersion) ? tag : null;

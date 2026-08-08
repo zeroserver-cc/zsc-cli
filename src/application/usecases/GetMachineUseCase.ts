@@ -17,14 +17,14 @@ export async function getMachineUseCase(id: string): Promise<MachineDetail> {
     gqlRequest<{ applicationInstancesByMachine: MachineDetail['instances'] }>(
       INSTANCES_BY_MACHINE_QUERY,
       { machineId: id },
-      token,
-    ),
+      token
+    )
   ]);
 
   if (!machineData.machine) throw new Error(`Node "${id}" not found.`);
 
   return {
     machine: machineData.machine,
-    instances: instancesData.applicationInstancesByMachine,
+    instances: instancesData.applicationInstancesByMachine
   };
 }

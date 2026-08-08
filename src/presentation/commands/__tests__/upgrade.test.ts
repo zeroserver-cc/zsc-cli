@@ -56,7 +56,7 @@ describe('registerUpgradeCommand', () => {
       updated: true,
       fromVersion: '0.3.4',
       toVersion: '0.3.5',
-      reason: 'updated',
+      reason: 'updated'
     } as SelfUpdateResult);
 
     await runUpgrade();
@@ -69,7 +69,7 @@ describe('registerUpgradeCommand', () => {
     mockedSelfUpdate.mockResolvedValue({
       updated: false,
       fromVersion: '0.3.4',
-      reason: 'up-to-date',
+      reason: 'up-to-date'
     } as SelfUpdateResult);
 
     await runUpgrade();
@@ -82,7 +82,7 @@ describe('registerUpgradeCommand', () => {
       updated: false,
       fromVersion: '0.3.4',
       toVersion: '0.3.5',
-      reason: 'permission',
+      reason: 'permission'
     } as SelfUpdateResult);
 
     await runUpgrade();
@@ -98,7 +98,7 @@ describe('registerUpgradeCommand', () => {
       updated: false,
       fromVersion: '0.3.4',
       toVersion: '0.3.5',
-      reason: 'permission',
+      reason: 'permission'
     } as SelfUpdateResult);
 
     await runUpgrade();
@@ -114,7 +114,7 @@ describe('registerUpgradeCommand', () => {
       updated: false,
       fromVersion: '0.3.4',
       toVersion: '0.3.5',
-      reason: 'permission',
+      reason: 'permission'
     } as SelfUpdateResult);
 
     await runUpgrade();
@@ -128,7 +128,7 @@ describe('registerUpgradeCommand', () => {
     mockedSelfUpdate.mockResolvedValue({
       updated: false,
       fromVersion: '0.3.4',
-      reason: 'unsupported-arch',
+      reason: 'unsupported-arch'
     } as SelfUpdateResult);
 
     await runUpgrade();

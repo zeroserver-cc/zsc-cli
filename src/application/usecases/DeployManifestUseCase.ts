@@ -1,10 +1,15 @@
-import { Application, ApplicationInstance, AppManifest, ManifestPlacement } from '../../domain/entities/types';
+import {
+  Application,
+  ApplicationInstance,
+  AppManifest,
+  ManifestPlacement
+} from '../../domain/entities/types';
 import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
   MY_APPLICATIONS_QUERY,
-  UPDATE_APPLICATION_MUTATION,
+  UPDATE_APPLICATION_MUTATION
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { loadManifestFile } from '../manifest/loadManifestFile';
@@ -36,7 +41,7 @@ export interface ManifestDeployOptions {
 export async function deployManifestUseCase(
   dir: string = process.cwd(),
   onProgress?: (status: string) => void,
-  options: ManifestDeployOptions = {},
+  options: ManifestDeployOptions = {}
 ): Promise<ManifestDeployResult> {
   const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
@@ -49,7 +54,11 @@ export async function deployManifestUseCase(
   const appName = manifest.app;
 
   let applicationId: string;
-  const mine = await gqlRequest<{ myApplications: Application[] }>(MY_APPLICATIONS_QUERY, {}, token);
+  const mine = await gqlRequest<{ myApplications: Application[] }>(
+    MY_APPLICATIONS_QUERY,
+    {},
+    token
+  );
   const existing = mine.myApplications.find((a) => a.name === appName)?.id;
   if (existing) {
     applicationId = existing;
@@ -59,13 +68,13 @@ export async function deployManifestUseCase(
     await gqlRequest<{ updateApplication: Application }>(
       UPDATE_APPLICATION_MUTATION,
       { id: applicationId, input: { name: manifest.app, services: manifest.services } },
-      token,
+      token
     );
   } else {
     const appData = await gqlRequest<{ createApplication: Application }>(
       CREATE_APPLICATION_MUTATION,
       { input: manifestToCreateInput(manifest) },
-      token,
+      token
     );
     applicationId = appData.createApplication.id;
   }
@@ -79,7 +88,7 @@ export async function deployManifestUseCase(
         requiresLlm: manifest.ai.llm,
         requiresVideo: manifest.ai.video,
         requiresAudio: manifest.ai.audio,
-        requiresImage: manifest.ai.image,
+        requiresImage: manifest.ai.image
       }
     : {};
   // Soft geographic preference (ZSC-194): CLI flags win over the zs.yaml
@@ -87,18 +96,32 @@ export async function deployManifestUseCase(
   // when nothing matches.
   const placement = normalizePlacement({
     country: options.placement?.country ?? manifest.placement?.country,
-    region: options.placement?.region ?? manifest.placement?.region,
+    region: options.placement?.region ?? manifest.placement?.region
   });
   // Managed database attach (Fase 2): the manifest names the database; the name
   // is resolved to an id at deploy time. When the manifest has no "database"
   // the field is omitted entirely, so the backend keeps any persisted attach.
-  const databaseId = manifest.database ? (await resolveDatabaseUseCase(manifest.database)).id : undefined;
+  const databaseId = manifest.database
+    ? (await resolveDatabaseUseCase(manifest.database)).id
+    : undefined;
   const deployData = await gqlRequest<{ deployApplication: ApplicationInstance }>(
     DEPLOY_APPLICATION_MUTATION,
-    { input: { applicationId, ...aiRequirements, ...toDeployPlacementInput(placement), ...(databaseId && { databaseId }) } },
-    token,
+    {
+      input: {
+        applicationId,
+        ...aiRequirements,
+        ...toDeployPlacementInput(placement),
+        ...(databaseId && { databaseId })
+      }
+    },
+    token
   );
 
-  const result = await waitForInstance(deployData.deployApplication, applicationId, token, onProgress);
+  const result = await waitForInstance(
+    deployData.deployApplication,
+    applicationId,
+    token,
+    onProgress
+  );
   return { ...result, manifest, warnings, ...(placement && { placement }) };
 }

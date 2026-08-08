@@ -4,7 +4,7 @@ import { join } from 'path';
 
 jest.mock('os', () => ({
   ...jest.requireActual('os'),
-  homedir: jest.fn(),
+  homedir: jest.fn()
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -15,7 +15,7 @@ import {
   DEFAULT_PROFILE,
   describeProfileSource,
   resolveActiveProfile,
-  setProfileFlag,
+  setProfileFlag
 } from '../profile';
 
 let home: string;
@@ -126,7 +126,7 @@ describe('profile name validation', () => {
     'rejects %s',
     (name) => {
       expect(() => assertValidProfileName(name)).toThrow(/Invalid profile name/);
-    },
+    }
   );
 
   it('rejects names that would overflow the filesystem filename limit', () => {

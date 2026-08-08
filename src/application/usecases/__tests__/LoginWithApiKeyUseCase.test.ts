@@ -6,7 +6,7 @@ jest.mock('../../../infrastructure/graphql/client');
 jest.mock('../../../infrastructure/config/store', () => ({
   ...jest.requireActual('../../../infrastructure/config/store'),
   setConfigValue: jest.fn(),
-  deleteConfigValue: jest.fn(),
+  deleteConfigValue: jest.fn()
 }));
 
 const mockedGqlRequest = gqlRequest as jest.MockedFunction<typeof gqlRequest>;
@@ -20,7 +20,7 @@ const me = {
   username: 'ci-bot',
   email: 'ci@zsc.cloud',
   role: 'developer' as const,
-  roles: ['developer' as const],
+  roles: ['developer' as const]
 };
 
 afterEach(() => {
@@ -34,7 +34,11 @@ describe('loginWithApiKeyUseCase', () => {
     const result = await loginWithApiKeyUseCase(API_KEY);
 
     expect(result.user).toEqual(me);
-    expect(mockedGqlRequest).toHaveBeenCalledWith(expect.stringContaining('me'), undefined, API_KEY);
+    expect(mockedGqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('me'),
+      undefined,
+      API_KEY
+    );
     expect(mockedSetConfigValue).toHaveBeenCalledWith('accessToken', API_KEY);
     expect(mockedSetConfigValue).toHaveBeenCalledWith('token', API_KEY);
     expect(mockedSetConfigValue).toHaveBeenCalledWith('authType', 'apikey');

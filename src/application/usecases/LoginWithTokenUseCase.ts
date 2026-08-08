@@ -11,13 +11,9 @@ export interface TokenLoginResult {
 
 export async function loginWithTokenUseCase(
   accessToken: string,
-  refreshToken?: string,
+  refreshToken?: string
 ): Promise<TokenLoginResult> {
-  const data = await gqlRequest<{ me: User }>(
-    ME_QUERY,
-    undefined,
-    accessToken,
-  );
+  const data = await gqlRequest<{ me: User }>(ME_QUERY, undefined, accessToken);
 
   setConfigValue('accessToken', accessToken);
   setConfigValue('token', accessToken);
@@ -36,6 +32,6 @@ export async function loginWithTokenUseCase(
   return {
     accessToken,
     refreshToken,
-    user: data.me,
+    user: data.me
   };
 }

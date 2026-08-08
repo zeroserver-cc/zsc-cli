@@ -7,7 +7,7 @@ import { getMachineUseCase } from '../../application/usecases/GetMachineUseCase'
 import { claimMachineUseCase } from '../../application/usecases/ClaimMachineUseCase';
 import {
   configureMachineResourcesUseCase,
-  MachineResourceLimitsInput,
+  MachineResourceLimitsInput
 } from '../../application/usecases/ConfigureMachineResourcesUseCase';
 import { printMachineTable, printMachineDetail } from '../formatting/table';
 import { formatSharedLimits } from '../formatting/sharedLimits';
@@ -29,15 +29,15 @@ function parseLimit(raw: string | undefined, flag: string, integer: boolean): nu
   if (raw === undefined) return undefined;
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0 || (integer && !Number.isInteger(value))) {
-    fail(`${flag} must be a ${integer ? 'positive integer' : 'number greater than 0'} (got "${raw}").`);
+    fail(
+      `${flag} must be a ${integer ? 'positive integer' : 'number greater than 0'} (got "${raw}").`
+    );
   }
   return value;
 }
 
 export function registerNodeCommands(program: Command): void {
-  const node = program
-    .command('node')
-    .description('Manage provider nodes');
+  const node = program.command('node').description('Manage provider nodes');
 
   node
     .command('list')
@@ -100,7 +100,9 @@ export function registerNodeCommands(program: Command): void {
       requireRole(['provider', 'admin']);
 
       const hasLimitFlag =
-        options.vcpu !== undefined || options.memoryMb !== undefined || options.storageMb !== undefined;
+        options.vcpu !== undefined ||
+        options.memoryMb !== undefined ||
+        options.storageMb !== undefined;
       if (options.clear && hasLimitFlag) {
         fail('--clear cannot be combined with --vcpu, --memory-mb or --storage-mb.');
       }
@@ -113,7 +115,7 @@ export function registerNodeCommands(program: Command): void {
         : {
             sharedVCpu: parseLimit(options.vcpu, '--vcpu', false),
             sharedMemoryMb: parseLimit(options.memoryMb, '--memory-mb', true),
-            sharedStorageMb: parseLimit(options.storageMb, '--storage-mb', true),
+            sharedStorageMb: parseLimit(options.storageMb, '--storage-mb', true)
           };
 
       const spinner = ora('Updating node limits…').start();

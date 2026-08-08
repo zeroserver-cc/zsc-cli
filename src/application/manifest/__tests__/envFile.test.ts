@@ -17,7 +17,7 @@ describe('parseEnvFile', () => {
     const { vars, malformedLines } = parseEnvFile('# comment\n\nFOO=bar\n   \nBAZ=qux\n');
     expect(vars).toEqual([
       ['FOO', 'bar'],
-      ['BAZ', 'qux'],
+      ['BAZ', 'qux']
     ]);
     expect(malformedLines).toEqual([]);
   });
@@ -32,7 +32,7 @@ describe('parseEnvFile', () => {
     expect(vars).toEqual([
       ['A', 'hello world'],
       ['B', 'single'],
-      ['C', 'no-quotes'],
+      ['C', 'no-quotes']
     ]);
   });
 
@@ -42,7 +42,9 @@ describe('parseEnvFile', () => {
   });
 
   it('reports lines without KEY=VALUE as malformed (including export lines)', () => {
-    const { vars, malformedLines } = parseEnvFile('GOOD=1\nno-equals-here\nexport EXPORTED=2\n=novalue\n');
+    const { vars, malformedLines } = parseEnvFile(
+      'GOOD=1\nno-equals-here\nexport EXPORTED=2\n=novalue\n'
+    );
     expect(vars).toEqual([['GOOD', '1']]);
     expect(malformedLines).toEqual([2, 3, 4]);
   });
@@ -83,10 +85,15 @@ describe('applyEnvFiles', () => {
     const dir = tmpDir();
     fs.writeFileSync(path.join(dir, '.env'), 'A=1\n');
 
-    const { services, warnings } = applyEnvFiles([service({ envFile: ['.env', '.env.local'] })], dir);
+    const { services, warnings } = applyEnvFiles(
+      [service({ envFile: ['.env', '.env.local'] })],
+      dir
+    );
 
     expect(services[0].env).toEqual(['A=1']);
-    expect(warnings).toEqual(["zs.yaml: envFile '.env.local' not found for service 'api'; skipping"]);
+    expect(warnings).toEqual([
+      "zs.yaml: envFile '.env.local' not found for service 'api'; skipping"
+    ]);
   });
 
   it('warns about malformed lines and still loads the valid ones', () => {
@@ -96,7 +103,9 @@ describe('applyEnvFiles', () => {
     const { services, warnings } = applyEnvFiles([service({ envFile: '.env' })], dir);
 
     expect(services[0].env).toEqual(['GOOD=1']);
-    expect(warnings).toEqual(["zs.yaml: envFile '.env' for service 'api': line 2 ignored (expected KEY=VALUE)"]);
+    expect(warnings).toEqual([
+      "zs.yaml: envFile '.env' for service 'api': line 2 ignored (expected KEY=VALUE)"
+    ]);
   });
 
   it('resolves relative paths from the manifest directory, not the cwd', () => {

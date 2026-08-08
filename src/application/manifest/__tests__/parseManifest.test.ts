@@ -69,7 +69,9 @@ services:
   });
 
   it('throws when app is missing', () => {
-    expect(() => parseManifest('services:\n  - name: a\n    image: b')).toThrow(/"app" is required/);
+    expect(() => parseManifest('services:\n  - name: a\n    image: b')).toThrow(
+      /"app" is required/
+    );
   });
 
   it('throws when services is empty', () => {
@@ -95,7 +97,7 @@ services:
   - name: b
     image: nginx
     exposed: true
-`),
+`)
     ).toThrow(/only one service can be "exposed"/);
   });
 
@@ -112,7 +114,7 @@ services:
     image: postgres
     volumes:
       - "data:relative/path"
-`),
+`)
     ).toThrow(/absolute container path/);
   });
 
@@ -129,7 +131,7 @@ services:
     image: b
     volumes:
       - data:/data
-`),
+`)
     ).toThrow(/duplicate named volume "data"/);
   });
 
@@ -171,7 +173,7 @@ services:
   - name: web
     image: nginx
     command: yarn worker:prod
-`),
+`)
     ).toThrow(/services\[0\]\.command must be a list of strings/);
   });
 
@@ -184,7 +186,7 @@ services:
     image: nginx
     command:
       - 8080
-`),
+`)
     ).toThrow(/services\[0\]\.command\[0\] must be a string/);
   });
 
@@ -220,7 +222,7 @@ ai:
 services:
   - name: web
     image: nginx
-`),
+`)
     ).toThrow(/"ai.gpu" must be true or false/);
   });
 
@@ -244,8 +246,12 @@ services:
   - name: web
     image: nginx
 `;
-    expect(parseManifest(`app: a\nplacement:\n  country: BR\n${base}`).placement).toEqual({ country: 'BR' });
-    expect(parseManifest(`app: a\nplacement:\n  region: RS\n${base}`).placement).toEqual({ region: 'RS' });
+    expect(parseManifest(`app: a\nplacement:\n  country: BR\n${base}`).placement).toEqual({
+      country: 'BR'
+    });
+    expect(parseManifest(`app: a\nplacement:\n  region: RS\n${base}`).placement).toEqual({
+      region: 'RS'
+    });
   });
 
   it('omits placement when not declared', () => {
@@ -261,7 +267,7 @@ placement: BR
 services:
   - name: web
     image: nginx
-`),
+`)
     ).toThrow(/"placement" must be a mapping/);
   });
 
@@ -274,7 +280,7 @@ placement:
 services:
   - name: web
     image: nginx
-`),
+`)
     ).toThrow(/"placement.country" must be a 2-letter/);
 
     expect(() =>
@@ -285,7 +291,7 @@ placement:
 services:
   - name: web
     image: nginx
-`),
+`)
     ).toThrow(/"placement.country" must be a 2-letter/);
   });
 
@@ -298,7 +304,7 @@ placement:
 services:
   - name: web
     image: nginx
-`),
+`)
     ).toThrow(/"placement.region" must be a non-empty string/);
 
     expect(() =>
@@ -309,7 +315,7 @@ placement:
 services:
   - name: web
     image: nginx
-`),
+`)
     ).toThrow(/"placement.region" must be a non-empty string/);
   });
 
@@ -341,7 +347,7 @@ services:
   - name: api
     image: nginx
     envFile: 42
-`),
+`)
     ).toThrow(/services\[0\]\.envFile must be a string or a list of strings/);
 
     expect(() =>
@@ -352,7 +358,7 @@ services:
     image: nginx
     envFile:
       path: .env
-`),
+`)
     ).toThrow(/services\[0\]\.envFile must be a string or a list of strings/);
 
     expect(() =>
@@ -362,7 +368,7 @@ services:
   - name: api
     image: nginx
     envFile: [.env, 42]
-`),
+`)
     ).toThrow(/services\[0\]\.envFile\[1\] must be a non-empty string/);
 
     expect(() =>
@@ -372,7 +378,7 @@ services:
   - name: api
     image: nginx
     envFile: []
-`),
+`)
     ).toThrow(/services\[0\]\.envFile must list at least one/);
   });
 
@@ -405,7 +411,7 @@ database: 42
 services:
   - name: api
     image: nginx
-`),
+`)
     ).toThrow(/"database" must be a non-empty string/);
 
     expect(() =>
@@ -415,7 +421,7 @@ database: ""
 services:
   - name: api
     image: nginx
-`),
+`)
     ).toThrow(/"database" must be a non-empty string/);
   });
 });

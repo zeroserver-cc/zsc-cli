@@ -1,13 +1,17 @@
 import { Command } from 'commander';
 import { registerSessionCommands } from '../session';
-import { listSessionProfiles, profileHasSession, setConfigValue } from '../../../infrastructure/config/store';
+import {
+  listSessionProfiles,
+  profileHasSession,
+  setConfigValue
+} from '../../../infrastructure/config/store';
 import { resolveActiveProfile } from '../../../infrastructure/config/profile';
 
 jest.mock('../../../infrastructure/config/store');
 // Keep the real validators (profile names gate file writes); mock only resolution.
 jest.mock('../../../infrastructure/config/profile', () => ({
   ...jest.requireActual('../../../infrastructure/config/profile'),
-  resolveActiveProfile: jest.fn(),
+  resolveActiveProfile: jest.fn()
 }));
 
 const mockedList = listSessionProfiles as jest.MockedFunction<typeof listSessionProfiles>;
@@ -52,7 +56,7 @@ describe('zs session list', () => {
     mockedResolve.mockReturnValue({ name: 'work', source: 'zs.toml' });
     mockedList.mockReturnValue([
       { name: 'cliente-x', username: 'devx', email: 'x@zsc.cloud', hasSession: true },
-      { name: 'work', username: 'dev', email: 'dev@zsc.cloud', hasSession: true },
+      { name: 'work', username: 'dev', email: 'dev@zsc.cloud', hasSession: true }
     ]);
 
     await run('list');
@@ -67,7 +71,7 @@ describe('zs session list', () => {
   it('shows the active profile even when it has no session file yet', async () => {
     mockedResolve.mockReturnValue({ name: 'new-profile', source: 'env' });
     mockedList.mockReturnValue([
-      { name: 'default', username: 'dev', email: 'dev@zsc.cloud', hasSession: true },
+      { name: 'default', username: 'dev', email: 'dev@zsc.cloud', hasSession: true }
     ]);
 
     await run('list');
@@ -110,6 +114,9 @@ describe('zs session use', () => {
     await expect(run('use', '../escape')).rejects.toThrow('process.exit(1)');
 
     expect(mockedSetConfigValue).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(expect.anything(), expect.stringContaining('Invalid profile name'));
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.stringContaining('Invalid profile name')
+    );
   });
 });
