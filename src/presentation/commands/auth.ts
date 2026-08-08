@@ -30,20 +30,32 @@ export function registerAuthCommands(program: Command): void {
         const profileNote = chalk.gray(`Session stored in profile "${profile.name}".`);
 
         if (opts.apiKey) {
-          const apiKey = opts.tokenStdin ? (await readStdin()).trim() : await promptPassword('API key: ');
+          const apiKey = opts.tokenStdin
+            ? (await readStdin()).trim()
+            : await promptPassword('API key: ');
           const result = await loginWithApiKeyUseCase(apiKey);
-          console.log(chalk.green('✓'), `Logged in as ${chalk.bold(result.user.username)} (${result.user.role}) via API key`);
+          console.log(
+            chalk.green('✓'),
+            `Logged in as ${chalk.bold(result.user.username)} (${result.user.role}) via API key`
+          );
           console.log(profileNote);
           return;
         }
 
         if (opts.token) {
           const result = await loginWithTokenUseCase(opts.token, opts.refreshToken);
-          console.log(chalk.green('✓'), `Logged in as ${chalk.bold(result.user.username)} (${result.user.role})`);
+          console.log(
+            chalk.green('✓'),
+            `Logged in as ${chalk.bold(result.user.username)} (${result.user.role})`
+          );
           if (opts.refreshToken) {
             console.log(chalk.gray('Refresh token stored for automatic revalidation.'));
           } else {
-            console.log(chalk.yellow('No refresh token provided; session will not be renewable once it expires.'));
+            console.log(
+              chalk.yellow(
+                'No refresh token provided; session will not be renewable once it expires.'
+              )
+            );
           }
           console.log(profileNote);
           return;
@@ -53,7 +65,10 @@ export function registerAuthCommands(program: Command): void {
         const password: string = opts.password ?? (await promptPassword('Password: '));
 
         const payload = await loginWithTwoFactor(email, password, opts.otp);
-        console.log(chalk.green('✓'), `Logged in as ${chalk.bold(payload.user.username)} (${payload.user.role})`);
+        console.log(
+          chalk.green('✓'),
+          `Logged in as ${chalk.bold(payload.user.username)} (${payload.user.role})`
+        );
         console.log(chalk.gray(`Token expires: ${payload.expiresAt}`));
         console.log(profileNote);
       } catch (err) {
@@ -90,7 +105,9 @@ export function registerAuthCommands(program: Command): void {
           .join(', ');
         const authSuffix = getConfigValue('authType') === 'apikey' ? chalk.gray(' (api key)') : '';
         console.log(`${chalk.bold(user.username)} <${user.email}> [${rolesLabel}]${authSuffix}`);
-        console.log(`Profile: ${profile.name} ${chalk.gray(`(${describeProfileSource(profile.source)})`)}`);
+        console.log(
+          `Profile: ${profile.name} ${chalk.gray(`(${describeProfileSource(profile.source)})`)}`
+        );
         console.log(formatAccountLine(await getActiveAccountUseCase()));
       } catch (err) {
         handleError(err);

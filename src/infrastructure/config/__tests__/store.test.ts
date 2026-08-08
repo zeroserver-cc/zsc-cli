@@ -1,11 +1,20 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, existsSync, readdirSync } from 'fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+  existsSync,
+  readdirSync
+} from 'fs';
 import { spawn } from 'child_process';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
 jest.mock('os', () => ({
   ...jest.requireActual('os'),
-  homedir: jest.fn(),
+  homedir: jest.fn()
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -18,7 +27,7 @@ import {
   listSessionProfiles,
   profileHasSession,
   resetStoreStateForTests,
-  setConfigValue,
+  setConfigValue
 } from '../store';
 import { setProfileFlag } from '../profile';
 
@@ -71,7 +80,7 @@ describe('legacy session migration', () => {
       role: 'developer',
       roles: ['developer'],
       authType: 'jwt',
-      lastUpdateCheck: '2026-01-01T00:00:00.000Z',
+      lastUpdateCheck: '2026-01-01T00:00:00.000Z'
     });
 
     // The legacy login keeps working after the move.
@@ -117,7 +126,7 @@ describe('legacy session migration', () => {
       backendUrl: 'https://api.zeroserver.cc',
       accessToken: 'AT',
       refreshToken: 'RT',
-      role: 'developer',
+      role: 'developer'
     });
 
     const tsNodeRegister = require.resolve('ts-node/register/transpile-only');
@@ -129,7 +138,7 @@ describe('legacy session migration', () => {
         `require(${JSON.stringify(tsNodeRegister)});\n` +
         `const store = require(${JSON.stringify(storeModule)});\n` +
         `store.getConfigValue('accessToken');\n` +
-        `store.setConfigValue('username', 'dev');\n`,
+        `store.setConfigValue('username', 'dev');\n`
     );
 
     const repoRoot = join(__dirname, '..', '..', '..');
@@ -138,7 +147,7 @@ describe('legacy session migration', () => {
         const child = spawn('node', [workerPath], { cwd: repoRoot, stdio: 'inherit' });
         child.on('error', rejectPromise);
         child.on('exit', (code) =>
-          code === 0 ? resolvePromise() : rejectPromise(new Error(`worker exited with ${code}`)),
+          code === 0 ? resolvePromise() : rejectPromise(new Error(`worker exited with ${code}`))
         );
       });
 
@@ -208,7 +217,9 @@ describe('profile routing', () => {
 describe('file permissions and atomic writes', () => {
   it('re-tightens a session file that was left world-readable', () => {
     mkdirSync(join(configDirPath(), 'sessions'), { recursive: true });
-    writeFileSync(sessionFilePath('default'), JSON.stringify({ accessToken: 't' }), { mode: 0o644 });
+    writeFileSync(sessionFilePath('default'), JSON.stringify({ accessToken: 't' }), {
+      mode: 0o644
+    });
 
     setConfigValue('refreshToken', 'r');
 
@@ -228,7 +239,9 @@ describe('file permissions and atomic writes', () => {
     setConfigValue('accessToken', 't');
     setConfigValue('refreshToken', 'r');
 
-    const leftovers = readdirSync(join(configDirPath(), 'sessions')).filter((f) => f.endsWith('.tmp'));
+    const leftovers = readdirSync(join(configDirPath(), 'sessions')).filter((f) =>
+      f.endsWith('.tmp')
+    );
     expect(leftovers).toEqual([]);
     expect(readJson(sessionFilePath('default'))).toEqual({ accessToken: 't', refreshToken: 'r' });
   });
@@ -239,7 +252,7 @@ describe('profile listing', () => {
     mkdirSync(join(configDirPath(), 'sessions'), { recursive: true });
     writeFileSync(
       sessionFilePath('work'),
-      JSON.stringify({ accessToken: 't', username: 'dev', email: 'dev@zsc.cloud' }),
+      JSON.stringify({ accessToken: 't', username: 'dev', email: 'dev@zsc.cloud' })
     );
     writeFileSync(sessionFilePath('cliente-x'), JSON.stringify({ accessToken: 't2' }));
     writeFileSync(sessionFilePath('empty'), JSON.stringify({ username: 'ghost' }));
@@ -247,7 +260,7 @@ describe('profile listing', () => {
     expect(listSessionProfiles()).toEqual([
       { name: 'cliente-x', username: undefined, email: undefined, hasSession: true },
       { name: 'empty', username: 'ghost', email: undefined, hasSession: false },
-      { name: 'work', username: 'dev', email: 'dev@zsc.cloud', hasSession: true },
+      { name: 'work', username: 'dev', email: 'dev@zsc.cloud', hasSession: true }
     ]);
   });
 

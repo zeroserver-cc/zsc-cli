@@ -3,12 +3,12 @@ import chalk from 'chalk';
 import {
   listSessionProfiles,
   profileHasSession,
-  setConfigValue,
+  setConfigValue
 } from '../../infrastructure/config/store';
 import {
   assertValidProfileName,
   describeProfileSource,
-  resolveActiveProfile,
+  resolveActiveProfile
 } from '../../infrastructure/config/profile';
 import { handleError } from '../formatting/errors';
 
@@ -21,7 +21,9 @@ function formatIdentity(username?: string, email?: string): string {
 }
 
 export function registerSessionCommands(program: Command): void {
-  const session = program.command('session').description('Manage session profiles (multiple logins)');
+  const session = program
+    .command('session')
+    .description('Manage session profiles (multiple logins)');
 
   session
     .command('list')
@@ -44,7 +46,9 @@ export function registerSessionCommands(program: Command): void {
           const identity = profile.hasSession
             ? formatIdentity(profile.username, profile.email)
             : chalk.gray('(no session)');
-          const source = isActive ? chalk.gray(` (active — ${describeProfileSource(active.source)})`) : '';
+          const source = isActive
+            ? chalk.gray(` (active — ${describeProfileSource(active.source)})`)
+            : '';
           console.log(`${marker} ${profile.name}: ${identity}${source}`);
         }
       } catch (err) {
@@ -61,7 +65,11 @@ export function registerSessionCommands(program: Command): void {
         setConfigValue('activeProfile', name);
         console.log(chalk.green('✓'), `Active profile set to "${name}".`);
         if (!profileHasSession(name)) {
-          console.log(chalk.gray(`Profile "${name}" has no session yet; you will be asked to log in on the next command.`));
+          console.log(
+            chalk.gray(
+              `Profile "${name}" has no session yet; you will be asked to log in on the next command.`
+            )
+          );
         }
       } catch (err) {
         handleError(err);

@@ -29,7 +29,7 @@ export function registerVolumeCommand(program: Command): void {
         }
 
         const table = new Table({
-          head: ['Name', 'Service', 'Mount Path', 'Node', 'Last Snapshot'],
+          head: ['Name', 'Service', 'Mount Path', 'Node', 'Last Snapshot']
         });
         for (const row of rows) {
           table.push([row.name, row.serviceName, row.mountPath, row.nodeId, row.lastSnapshot]);

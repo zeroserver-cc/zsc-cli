@@ -5,13 +5,18 @@ import { getConfigValue } from '../../../infrastructure/config/store';
 jest.mock('../../../infrastructure/graphql/client');
 jest.mock('../../../infrastructure/config/store', () => ({
   ...jest.requireActual('../../../infrastructure/config/store'),
-  getConfigValue: jest.fn(),
+  getConfigValue: jest.fn()
 }));
 
 const mockedGqlRequest = gqlRequest as jest.MockedFunction<typeof gqlRequest>;
 const mockedGetConfigValue = getConfigValue as jest.MockedFunction<typeof getConfigValue>;
 
-const app = { id: 'app-1', name: 'api', dockerImage: 'img:latest', createdAt: '2026-07-01T00:00:00Z' };
+const app = {
+  id: 'app-1',
+  name: 'api',
+  dockerImage: 'img:latest',
+  createdAt: '2026-07-01T00:00:00Z'
+};
 
 function instance(id: string, status: string, createdAt: string) {
   return { id, applicationId: 'app-1', status, createdAt };
@@ -24,9 +29,9 @@ beforeEach(() => {
 
 describe('listApplicationsUseCase (stable-instance model)', () => {
   it('shows the single instance of each app', async () => {
-    mockedGqlRequest
-      .mockResolvedValueOnce({ myApplications: [app] })
-      .mockResolvedValueOnce({ applicationInstancesByApplication: [instance('i-1', 'RUNNING', '2026-07-27T10:00:00Z')] });
+    mockedGqlRequest.mockResolvedValueOnce({ myApplications: [app] }).mockResolvedValueOnce({
+      applicationInstancesByApplication: [instance('i-1', 'RUNNING', '2026-07-27T10:00:00Z')]
+    });
 
     const rows = await listApplicationsUseCase();
 
@@ -35,15 +40,13 @@ describe('listApplicationsUseCase (stable-instance model)', () => {
   });
 
   it('collapses historical dead instances to the newest live one', async () => {
-    mockedGqlRequest
-      .mockResolvedValueOnce({ myApplications: [app] })
-      .mockResolvedValueOnce({
-        applicationInstancesByApplication: [
-          instance('i-old-dead', 'STOPPED', '2026-07-20T10:00:00Z'),
-          instance('i-mid-dead', 'ERROR', '2026-07-25T10:00:00Z'),
-          instance('i-live', 'RUNNING', '2026-07-27T10:00:00Z'),
-        ],
-      });
+    mockedGqlRequest.mockResolvedValueOnce({ myApplications: [app] }).mockResolvedValueOnce({
+      applicationInstancesByApplication: [
+        instance('i-old-dead', 'STOPPED', '2026-07-20T10:00:00Z'),
+        instance('i-mid-dead', 'ERROR', '2026-07-25T10:00:00Z'),
+        instance('i-live', 'RUNNING', '2026-07-27T10:00:00Z')
+      ]
+    });
 
     const rows = await listApplicationsUseCase();
 
@@ -52,14 +55,12 @@ describe('listApplicationsUseCase (stable-instance model)', () => {
   });
 
   it('keeps the newest row when every instance is dead (stopped app stays visible)', async () => {
-    mockedGqlRequest
-      .mockResolvedValueOnce({ myApplications: [app] })
-      .mockResolvedValueOnce({
-        applicationInstancesByApplication: [
-          instance('i-old', 'STOPPED', '2026-07-20T10:00:00Z'),
-          instance('i-new', 'STOPPED', '2026-07-27T10:00:00Z'),
-        ],
-      });
+    mockedGqlRequest.mockResolvedValueOnce({ myApplications: [app] }).mockResolvedValueOnce({
+      applicationInstancesByApplication: [
+        instance('i-old', 'STOPPED', '2026-07-20T10:00:00Z'),
+        instance('i-new', 'STOPPED', '2026-07-27T10:00:00Z')
+      ]
+    });
 
     const rows = await listApplicationsUseCase();
 

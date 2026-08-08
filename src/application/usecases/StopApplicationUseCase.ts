@@ -10,7 +10,7 @@ export async function stopApplicationUseCase(instanceId: string): Promise<Applic
   const data = await gqlRequest<{ stopApplication: ApplicationInstance }>(
     STOP_APPLICATION_MUTATION,
     { instanceId },
-    token,
+    token
   );
   return data.stopApplication;
 }

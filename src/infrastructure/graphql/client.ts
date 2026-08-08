@@ -1,10 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import {
-  getBackendUrl,
-  getConfigValue,
-  setConfigValue,
-  deleteConfigValue,
-} from '../config/store';
+import { getBackendUrl, getConfigValue, setConfigValue, deleteConfigValue } from '../config/store';
 import { REFRESH_TOKEN_MUTATION } from './queries';
 
 interface GraphQLResponse<T> {
@@ -13,7 +8,10 @@ interface GraphQLResponse<T> {
 }
 
 export class GraphQLError extends Error {
-  constructor(message: string, public readonly errors?: unknown[]) {
+  constructor(
+    message: string,
+    public readonly errors?: unknown[]
+  ) {
     super(message);
     this.name = 'GraphQLError';
   }
@@ -46,7 +44,7 @@ async function rawGqlRequest<T>(
   url: string,
   query: string,
   variables?: Record<string, unknown>,
-  token?: string,
+  token?: string
 ): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -54,7 +52,7 @@ async function rawGqlRequest<T>(
   const response = await axios.post<GraphQLResponse<T>>(
     url,
     { query, variables },
-    { headers, timeout: 15_000 },
+    { headers, timeout: 15_000 }
   );
 
   const { data, errors } = response.data;
@@ -72,7 +70,12 @@ interface RefreshResponse {
   };
 }
 
-function storeSession(accessToken: string, refreshToken: string, role: string, roles?: string[]): void {
+function storeSession(
+  accessToken: string,
+  refreshToken: string,
+  role: string,
+  roles?: string[]
+): void {
   setConfigValue('accessToken', accessToken);
   setConfigValue('refreshToken', refreshToken);
   setConfigValue('token', accessToken);
@@ -96,11 +99,9 @@ function clearSession(): void {
 
 async function performRefresh(url: string, refreshToken: string): Promise<string | null> {
   try {
-    const data = await rawGqlRequest<RefreshResponse>(
-      url,
-      REFRESH_TOKEN_MUTATION,
-      { refreshToken },
-    );
+    const data = await rawGqlRequest<RefreshResponse>(url, REFRESH_TOKEN_MUTATION, {
+      refreshToken
+    });
     const result = data.refreshToken;
     storeSession(result.accessToken, result.refreshToken, result.user.role, result.user.roles);
     return result.accessToken;
@@ -121,7 +122,7 @@ export async function refreshCurrentSession(): Promise<string | null> {
 function handleAxiosError(backendUrl: string, err: AxiosError): never {
   if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
     throw new GraphQLError(
-      `Cannot reach backend at ${backendUrl}. Check "zs config get backend-url" or if the server is running.`,
+      `Cannot reach backend at ${backendUrl}. Check "zs config get backend-url" or if the server is running.`
     );
   }
   if (err.code === 'ETIMEDOUT') {
@@ -136,7 +137,7 @@ function handleAxiosError(backendUrl: string, err: AxiosError): never {
 export async function gqlRequest<T>(
   query: string,
   variables?: Record<string, unknown>,
-  token?: string,
+  token?: string
 ): Promise<T> {
   const backendUrl = getBackendUrl();
   const url = `${backendUrl}/graphql`;
@@ -160,7 +161,7 @@ export async function gqlRequest<T>(
     if (getConfigValue('authType') === 'apikey') {
       if (isDeadApiKeyError(error)) {
         console.error(
-          'API key is invalid, expired, or revoked. Generate a new one in the portal and run "zs login --api-key" again.',
+          'API key is invalid, expired, or revoked. Generate a new one in the portal and run "zs login --api-key" again.'
         );
         process.exit(1);
       }

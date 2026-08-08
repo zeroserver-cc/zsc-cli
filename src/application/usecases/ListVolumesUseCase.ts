@@ -18,7 +18,7 @@ export async function listVolumesUseCase(applicationId: string): Promise<VolumeR
   const data = await gqlRequest<{ applicationVolumes: ApplicationVolume[] }>(
     APPLICATION_VOLUMES_QUERY,
     { applicationId },
-    token,
+    token
   );
 
   return data.applicationVolumes.map((volume) => ({
@@ -28,6 +28,6 @@ export async function listVolumesUseCase(applicationId: string): Promise<VolumeR
     nodeId: volume.nodeId ?? '-',
     lastSnapshot: volume.lastSnapshotAt
       ? `${new Date(volume.lastSnapshotAt).toLocaleString()} (${volume.lastSnapshotKey ?? 'unknown'})`
-      : '-',
+      : '-'
   }));
 }

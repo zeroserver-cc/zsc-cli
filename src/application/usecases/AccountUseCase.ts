@@ -4,7 +4,7 @@ import { MY_ACCOUNTS_QUERY, SWITCH_ACCOUNT_MUTATION } from '../../infrastructure
 import {
   deleteConfigValue,
   getConfigValue,
-  setConfigValue,
+  setConfigValue
 } from '../../infrastructure/config/store';
 
 export async function listAccountsUseCase(): Promise<Account[]> {
@@ -24,7 +24,7 @@ export async function switchAccountUseCase(target: string): Promise<SwitchAccoun
   // their owner and cannot act as another account.
   if (getConfigValue('authType') === 'apikey') {
     throw new Error(
-      'Account switching is not available for API key sessions. Log in with "zs login" (email/password) to switch accounts.',
+      'Account switching is not available for API key sessions. Log in with "zs login" (email/password) to switch accounts.'
     );
   }
 
@@ -37,15 +37,19 @@ export async function switchAccountUseCase(target: string): Promise<SwitchAccoun
     if (byIdPrefix.length === 1) {
       match = byIdPrefix[0];
     } else if (byIdPrefix.length > 1) {
-      throw new Error(`Ambiguous account id prefix "${target}" (${byIdPrefix.length} matches). Use a longer prefix.`);
+      throw new Error(
+        `Ambiguous account id prefix "${target}" (${byIdPrefix.length} matches). Use a longer prefix.`
+      );
     }
   }
   if (!match) {
-    throw new Error(`Unknown account "${target}". Run "zs account list" to see the accounts you belong to.`);
+    throw new Error(
+      `Unknown account "${target}". Run "zs account list" to see the accounts you belong to.`
+    );
   }
 
   const data = await gqlRequest<{ switchAccount: AuthPayload }>(SWITCH_ACCOUNT_MUTATION, {
-    accountId: match.id,
+    accountId: match.id
   });
   const payload = data.switchAccount;
 

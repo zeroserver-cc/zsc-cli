@@ -5,7 +5,7 @@ import {
   MY_CUSTOM_DOMAINS_QUERY,
   ADD_CUSTOM_DOMAIN_MUTATION,
   VERIFY_CUSTOM_DOMAIN_MUTATION,
-  REMOVE_CUSTOM_DOMAIN_MUTATION,
+  REMOVE_CUSTOM_DOMAIN_MUTATION
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
@@ -26,7 +26,11 @@ function normalizeDomainInput(domain: string): string {
 // resolve the name to the id the API wants. Shared by the domain, deployments
 // and any other app-scoped use cases.
 export async function resolveApplicationByName(name: string, token: string): Promise<Application> {
-  const data = await gqlRequest<{ myApplications: Application[] }>(MY_APPLICATIONS_QUERY, undefined, token);
+  const data = await gqlRequest<{ myApplications: Application[] }>(
+    MY_APPLICATIONS_QUERY,
+    undefined,
+    token
+  );
   const app = data.myApplications.find((a) => a.name === name);
   if (!app) {
     const names = data.myApplications.map((a) => a.name).join(', ') || '(none)';
@@ -41,7 +45,7 @@ export async function domainAddUseCase(domain: string, appName: string): Promise
   const data = await gqlRequest<{ addCustomDomain: CustomDomain }>(
     ADD_CUSTOM_DOMAIN_MUTATION,
     { applicationId: app.id, domain: normalizeDomainInput(domain) },
-    token,
+    token
   );
   return data.addCustomDomain;
 }
@@ -52,17 +56,23 @@ export async function domainListUseCase(appName?: string): Promise<CustomDomain[
   const data = await gqlRequest<{ myCustomDomains: CustomDomain[] }>(
     MY_CUSTOM_DOMAINS_QUERY,
     { applicationId },
-    token,
+    token
   );
   return data.myCustomDomains;
 }
 
 async function findByDomainName(domain: string, token: string): Promise<CustomDomain> {
   const wanted = normalizeDomainInput(domain);
-  const data = await gqlRequest<{ myCustomDomains: CustomDomain[] }>(MY_CUSTOM_DOMAINS_QUERY, {}, token);
+  const data = await gqlRequest<{ myCustomDomains: CustomDomain[] }>(
+    MY_CUSTOM_DOMAINS_QUERY,
+    {},
+    token
+  );
   const record = data.myCustomDomains.find((d) => normalizeDomainInput(d.domain) === wanted);
   if (!record) {
-    throw new Error(`Domain "${wanted}" not found. Add it with "zs domain add ${wanted} --app <name>".`);
+    throw new Error(
+      `Domain "${wanted}" not found. Add it with "zs domain add ${wanted} --app <name>".`
+    );
   }
   return record;
 }
@@ -73,7 +83,7 @@ export async function domainVerifyUseCase(domain: string): Promise<CustomDomain>
   const data = await gqlRequest<{ verifyCustomDomain: CustomDomain }>(
     VERIFY_CUSTOM_DOMAIN_MUTATION,
     { id: record.id },
-    token,
+    token
   );
   return data.verifyCustomDomain;
 }
@@ -84,7 +94,7 @@ export async function domainRemoveUseCase(domain: string): Promise<boolean> {
   const data = await gqlRequest<{ removeCustomDomain: boolean }>(
     REMOVE_CUSTOM_DOMAIN_MUTATION,
     { id: record.id },
-    token,
+    token
   );
   return data.removeCustomDomain;
 }

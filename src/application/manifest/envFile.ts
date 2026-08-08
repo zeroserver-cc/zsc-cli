@@ -72,13 +72,17 @@ export function applyEnvFiles(services: ManifestService[], manifestDir: string):
     for (const file of files) {
       const filePath = path.resolve(manifestDir, file);
       if (!fs.existsSync(filePath)) {
-        warnings.push(`zs.yaml: envFile '${file}' not found for service '${service.name}'; skipping`);
+        warnings.push(
+          `zs.yaml: envFile '${file}' not found for service '${service.name}'; skipping`
+        );
         continue;
       }
 
       const { vars, malformedLines } = parseEnvFile(fs.readFileSync(filePath, 'utf-8'));
       for (const line of malformedLines) {
-        warnings.push(`zs.yaml: envFile '${file}' for service '${service.name}': line ${line} ignored (expected KEY=VALUE)`);
+        warnings.push(
+          `zs.yaml: envFile '${file}' for service '${service.name}': line ${line} ignored (expected KEY=VALUE)`
+        );
       }
       for (const [key, value] of vars) {
         envByKey.set(key, `${key}=${value}`);

@@ -34,7 +34,6 @@ export async function listMachinesUseCase(): Promise<MachineRow[]> {
     os: m.specs ? `${m.specs.os.name} ${m.specs.os.version}` : '-',
     agentVersion: m.agentVersion || '-',
     lastSeen: m.lastHeartbeat ? formatDate(m.lastHeartbeat) : 'never',
-    shared: formatSharedLimits(m),
+    shared: formatSharedLimits(m)
   }));
 }
-

@@ -7,7 +7,7 @@ import {
   deleteDatabaseUseCase,
   getConnectionStringUseCase,
   listDatabasesUseCase,
-  restoreDatabaseUseCase,
+  restoreDatabaseUseCase
 } from '../../application/usecases/ManagedDatabaseUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
 import { ManagedDatabaseEngine, ManagedDatabaseStatus } from '../../domain/entities/types';
@@ -57,21 +57,25 @@ export function registerDatabaseCommands(program: Command): void {
     .option(
       '--replicas <count>',
       'Read replicas on other nodes for automatic failover (0-2; backend default is 1; 0 = single-node, no HA)',
-      parseReplicas,
+      parseReplicas
     )
     .action(async (opts: { engine: ManagedDatabaseEngine; name: string; replicas?: number }) => {
       requireRole(['developer', 'admin']);
-      const spinner = ora(`Creating ${opts.engine.toLowerCase()} database ${chalk.cyan(opts.name)}…`).start();
+      const spinner = ora(
+        `Creating ${opts.engine.toLowerCase()} database ${chalk.cyan(opts.name)}…`
+      ).start();
       try {
         const database = await createDatabaseUseCase(opts.name, opts.engine, opts.replicas);
-        spinner.succeed(`Database ${chalk.bold(database.name)} created (status ${statusLabel(database.status)}).`);
+        spinner.succeed(
+          `Database ${chalk.bold(database.name)} created (status ${statusLabel(database.status)}).`
+        );
         console.log(`ID:      ${chalk.bold(database.id)}`);
         console.log(`Replicas: ${replicaSummary(database.replicas)}`);
         console.log(
           chalk.gray(
             `Attach an app by adding "database: ${database.name}" to its zs.yaml and redeploying, ` +
-              `or read the credentials with "zs db connection ${database.name}".`,
-          ),
+              `or read the credentials with "zs db connection ${database.name}".`
+          )
         );
       } catch (err) {
         spinner.fail('Failed to create the database.');
@@ -89,11 +93,15 @@ export function registerDatabaseCommands(program: Command): void {
         const databases = await listDatabasesUseCase();
         spinner.stop();
         if (databases.length === 0) {
-          console.log(chalk.yellow('No managed databases. Create one with "zs db create --engine postgres --name <name>".'));
+          console.log(
+            chalk.yellow(
+              'No managed databases. Create one with "zs db create --engine postgres --name <name>".'
+            )
+          );
           return;
         }
         const table = new Table({
-          head: ['Name', 'Engine', 'Status', 'Replicas', 'Node', 'Last Dump'],
+          head: ['Name', 'Engine', 'Status', 'Replicas', 'Node', 'Last Dump']
         });
         for (const database of databases) {
           table.push([
@@ -102,7 +110,7 @@ export function registerDatabaseCommands(program: Command): void {
             statusLabel(database.status),
             replicaSummary(database.replicas),
             database.machineId ?? '-',
-            database.lastDumpAt ? new Date(database.lastDumpAt).toLocaleString() : '-',
+            database.lastDumpAt ? new Date(database.lastDumpAt).toLocaleString() : '-'
           ]);
         }
         console.log(table.toString());
@@ -121,16 +129,26 @@ export function registerDatabaseCommands(program: Command): void {
         const { database, url } = await getConnectionStringUseCase(target);
         spinner.stop();
         console.log(url);
-        console.log(chalk.yellow('This URL contains credentials. Treat it as a secret: do not commit it or share it.'));
         console.log(
-          chalk.gray(`Apps attached via "database: ${database.name}" in zs.yaml receive it automatically as DATABASE_URL.`),
+          chalk.yellow(
+            'This URL contains credentials. Treat it as a secret: do not commit it or share it.'
+          )
         );
-        if (database.replicas.some((replica) => replica.role === 'REPLICA' && replica.status === 'STREAMING')) {
+        console.log(
+          chalk.gray(
+            `Apps attached via "database: ${database.name}" in zs.yaml receive it automatically as DATABASE_URL.`
+          )
+        );
+        if (
+          database.replicas.some(
+            (replica) => replica.role === 'REPLICA' && replica.status === 'STREAMING'
+          )
+        ) {
           console.log(
             chalk.gray(
               'This database has a streaming read replica: attached apps also receive DATABASE_READ_URL, ' +
-                'pointing at the replica when one shares the app node (it falls back to the primary otherwise).',
-            ),
+                'pointing at the replica when one shares the app node (it falls back to the primary otherwise).'
+            )
           );
         }
       } catch (err) {
@@ -149,7 +167,7 @@ export function registerDatabaseCommands(program: Command): void {
       try {
         if (!opts.yes) {
           const answer = await prompt(
-            `Delete database ${target}? This is destructive: a final dump is taken and the container is torn down. [y/N] `,
+            `Delete database ${target}? This is destructive: a final dump is taken and the container is torn down. [y/N] `
           );
           if (answer.trim().toLowerCase() !== 'y') {
             console.log('Aborted.');
@@ -180,7 +198,7 @@ export function registerDatabaseCommands(program: Command): void {
       try {
         if (!opts.yes) {
           const answer = await prompt(
-            `Restore database ${target} from the latest dump? Current data will be overwritten. [y/N] `,
+            `Restore database ${target} from the latest dump? Current data will be overwritten. [y/N] `
           );
           if (answer.trim().toLowerCase() !== 'y') {
             console.log('Aborted.');

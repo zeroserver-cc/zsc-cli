@@ -24,17 +24,22 @@ export async function ensureSession(commandName: string): Promise<void> {
 
   const envToken = process.env.ZS_ACCESS_TOKEN?.trim();
   if (envToken) {
-    const result = await loginWithTokenUseCase(envToken, process.env.ZS_REFRESH_TOKEN?.trim() || undefined);
+    const result = await loginWithTokenUseCase(
+      envToken,
+      process.env.ZS_REFRESH_TOKEN?.trim() || undefined
+    );
     console.error(
       chalk.green('✓'),
-      `Authenticated as ${chalk.bold(result.user.username)} via ZS_ACCESS_TOKEN (profile "${profile.name}").`,
+      `Authenticated as ${chalk.bold(result.user.username)} via ZS_ACCESS_TOKEN (profile "${profile.name}").`
     );
     return;
   }
 
   if (!process.stdin.isTTY) {
     console.error(
-      chalk.red(`Profile "${profile.name}" has no session. Run "zs login --profile ${profile.name}" first.`),
+      chalk.red(
+        `Profile "${profile.name}" has no session. Run "zs login --profile ${profile.name}" first.`
+      )
     );
     process.exit(1);
   }
@@ -45,6 +50,6 @@ export async function ensureSession(commandName: string): Promise<void> {
   const payload = await loginWithTwoFactor(email, password);
   console.error(
     chalk.green('✓'),
-    `Logged in as ${chalk.bold(payload.user.username)} (${payload.user.role}) — session stored in profile "${profile.name}".`,
+    `Logged in as ${chalk.bold(payload.user.username)} (${payload.user.role}) — session stored in profile "${profile.name}".`
   );
 }

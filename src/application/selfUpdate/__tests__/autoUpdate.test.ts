@@ -72,7 +72,12 @@ describe('maybeAutoUpdate', () => {
 
   it('downloads when a newer release exists', async () => {
     mockedLatest.mockResolvedValue('v0.1.4');
-    mockedSelf.mockResolvedValue({ updated: true, fromVersion: '0.1.3', toVersion: 'v0.1.4', reason: 'updated' });
+    mockedSelf.mockResolvedValue({
+      updated: true,
+      fromVersion: '0.1.3',
+      toVersion: 'v0.1.4',
+      reason: 'updated'
+    });
     await maybeAutoUpdate();
     expect(mockedSelf).toHaveBeenCalledTimes(1);
   });

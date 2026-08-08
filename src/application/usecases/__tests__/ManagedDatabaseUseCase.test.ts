@@ -4,7 +4,7 @@ import {
   getConnectionStringUseCase,
   listDatabasesUseCase,
   resolveDatabaseUseCase,
-  restoreDatabaseUseCase,
+  restoreDatabaseUseCase
 } from '../ManagedDatabaseUseCase';
 import { gqlRequest } from '../../../infrastructure/graphql/client';
 import { getConfigValue } from '../../../infrastructure/config/store';
@@ -13,7 +13,7 @@ import {
   DELETE_MANAGED_DATABASE_MUTATION,
   MANAGED_DATABASE_CONNECTION_STRING_QUERY,
   MY_DATABASES_QUERY,
-  RESTORE_MANAGED_DATABASE_MUTATION,
+  RESTORE_MANAGED_DATABASE_MUTATION
 } from '../../../infrastructure/graphql/queries';
 import { ManagedDatabase } from '../../../domain/entities/types';
 
@@ -33,7 +33,7 @@ const db = (overrides: Partial<ManagedDatabase>): ManagedDatabase => ({
   replicas: [],
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
-  ...overrides,
+  ...overrides
 });
 
 beforeEach(() => {
@@ -71,7 +71,7 @@ describe('resolveDatabaseUseCase', () => {
 
   it('resolves a unique id prefix', async () => {
     mockGql.mockResolvedValue({
-      myDatabases: [db({ id: 'abc-111' }), db({ id: 'def-222', name: 'other' })],
+      myDatabases: [db({ id: 'abc-111' }), db({ id: 'def-222', name: 'other' })]
     } as any);
 
     const result = await resolveDatabaseUseCase('def-');
@@ -81,25 +81,29 @@ describe('resolveDatabaseUseCase', () => {
 
   it('fails on an ambiguous id prefix', async () => {
     mockGql.mockResolvedValue({
-      myDatabases: [db({ id: 'abc-111' }), db({ id: 'abc-222', name: 'other' })],
+      myDatabases: [db({ id: 'abc-111' }), db({ id: 'abc-222', name: 'other' })]
     } as any);
 
-    await expect(resolveDatabaseUseCase('abc')).rejects.toThrow(/Ambiguous database id prefix "abc" \(2 matches\)/);
+    await expect(resolveDatabaseUseCase('abc')).rejects.toThrow(
+      /Ambiguous database id prefix "abc" \(2 matches\)/
+    );
   });
 
   it('fails on an ambiguous name', async () => {
     mockGql.mockResolvedValue({
-      myDatabases: [db({}), db({ id: 'db-2' })],
+      myDatabases: [db({}), db({ id: 'db-2' })]
     } as any);
 
-    await expect(resolveDatabaseUseCase('app-db')).rejects.toThrow(/Ambiguous database name "app-db" \(2 matches\)/);
+    await expect(resolveDatabaseUseCase('app-db')).rejects.toThrow(
+      /Ambiguous database name "app-db" \(2 matches\)/
+    );
   });
 
   it('fails when nothing matches', async () => {
     mockGql.mockResolvedValue({ myDatabases: [db({})] } as any);
 
     await expect(resolveDatabaseUseCase('nope')).rejects.toThrow(
-      'Unknown database "nope". Run "zs db list" to see your managed databases.',
+      'Unknown database "nope". Run "zs db list" to see your managed databases.'
     );
   });
 });
@@ -113,7 +117,7 @@ describe('createDatabaseUseCase', () => {
     expect(mockGql).toHaveBeenCalledWith(
       CREATE_MANAGED_DATABASE_MUTATION,
       { input: { name: 'app-db', engine: 'POSTGRES' } },
-      'a-token',
+      'a-token'
     );
     expect(result.status).toBe('PENDING');
   });
@@ -126,7 +130,7 @@ describe('createDatabaseUseCase', () => {
     expect(mockGql).toHaveBeenCalledWith(
       CREATE_MANAGED_DATABASE_MUTATION,
       { input: { name: 'app-db', engine: 'POSTGRES', replicas: 2 } },
-      'a-token',
+      'a-token'
     );
   });
 
@@ -138,7 +142,7 @@ describe('createDatabaseUseCase', () => {
     expect(mockGql).toHaveBeenCalledWith(
       CREATE_MANAGED_DATABASE_MUTATION,
       { input: { name: 'app-db', engine: 'MYSQL', replicas: 0 } },
-      'a-token',
+      'a-token'
     );
   });
 
@@ -164,7 +168,9 @@ describe('getConnectionStringUseCase', () => {
 
     const result = await getConnectionStringUseCase('app-db');
 
-    const connCall = mockGql.mock.calls.find((c) => c[0] === MANAGED_DATABASE_CONNECTION_STRING_QUERY)!;
+    const connCall = mockGql.mock.calls.find(
+      (c) => c[0] === MANAGED_DATABASE_CONNECTION_STRING_QUERY
+    )!;
     expect(connCall[1]).toEqual({ id: 'db-1' });
     expect(result.url).toBe('postgres://u:p@host:5432/app');
     expect(result.database.name).toBe('app-db');
@@ -174,7 +180,9 @@ describe('getConnectionStringUseCase', () => {
     mockGql.mockResolvedValue({ myDatabases: [] } as any);
 
     await expect(getConnectionStringUseCase('nope')).rejects.toThrow(/Unknown database "nope"/);
-    expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(MANAGED_DATABASE_CONNECTION_STRING_QUERY);
+    expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(
+      MANAGED_DATABASE_CONNECTION_STRING_QUERY
+    );
   });
 });
 
@@ -199,7 +207,8 @@ describe('restoreDatabaseUseCase', () => {
   it('resolves the target and restores by id', async () => {
     mockGql.mockImplementation(async (query: string) => {
       if (query === MY_DATABASES_QUERY) return { myDatabases: [db({})] } as any;
-      if (query === RESTORE_MANAGED_DATABASE_MUTATION) return { restoreManagedDatabase: true } as any;
+      if (query === RESTORE_MANAGED_DATABASE_MUTATION)
+        return { restoreManagedDatabase: true } as any;
       throw new Error(`unexpected query: ${query}`);
     });
 

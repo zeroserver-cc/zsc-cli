@@ -10,7 +10,7 @@ export async function claimMachineUseCase(token: string): Promise<Machine> {
   const data = await gqlRequest<{ claimMachine: Machine }>(
     CLAIM_MACHINE_MUTATION,
     { token },
-    authToken,
+    authToken
   );
   return data.claimMachine;
 }

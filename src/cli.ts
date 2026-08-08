@@ -26,4 +26,3 @@ const skipAutoUpdate =
   }
   program.parse(process.argv);
 })();
-

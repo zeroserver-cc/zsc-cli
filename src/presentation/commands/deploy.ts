@@ -1,7 +1,11 @@
 import { Command, InvalidArgumentError } from 'commander';
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
-import { deployApplicationUseCase, DeployResult, deriveAppName } from '../../application/usecases/DeployApplicationUseCase';
+import {
+  deployApplicationUseCase,
+  DeployResult,
+  deriveAppName
+} from '../../application/usecases/DeployApplicationUseCase';
 import { deployManifestUseCase } from '../../application/usecases/DeployManifestUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
 import { loadManifestFile } from '../../application/manifest/loadManifestFile';
@@ -22,13 +26,29 @@ export function registerDeployCommand(program: Command): void {
   program
     .command('deploy [image]')
     .description('Deploy an app: with no image, reads zs.yaml; with an image, a single container')
-    .option('-n, --name <name>', 'Application name (single-image; defaults to image name or zs.yaml app name)')
-    .option('--app-id <id>', 'Deploy to a specific application id (skips lookup/create; pin after the first deploy)')
+    .option(
+      '-n, --name <name>',
+      'Application name (single-image; defaults to image name or zs.yaml app name)'
+    )
+    .option(
+      '--app-id <id>',
+      'Deploy to a specific application id (skips lookup/create; pin after the first deploy)'
+    )
     .option('-p, --port <port>', 'Container port to expose (single-image)', parseInt)
     .option('-e, --env <KEY=VALUE>', 'Environment variable, repeatable (single-image)', collect, [])
-    .option('--country <cc>', 'Preferred node country, ISO 3166-1 alpha-2 (e.g. BR); overrides zs.yaml placement.country', parseCountry)
-    .option('--region <rc>', 'Preferred node region/state code (e.g. RS); overrides zs.yaml placement.region', parseRegion)
-    .addHelpText('after', `
+    .option(
+      '--country <cc>',
+      'Preferred node country, ISO 3166-1 alpha-2 (e.g. BR); overrides zs.yaml placement.country',
+      parseCountry
+    )
+    .option(
+      '--region <rc>',
+      'Preferred node region/state code (e.g. RS); overrides zs.yaml placement.region',
+      parseRegion
+    )
+    .addHelpText(
+      'after',
+      `
 Placement (soft preference):
   The deploy asks for a node in the given country/region; when no node matches,
   the backend falls back to any eligible node. In zs.yaml mode the preference is
@@ -45,7 +65,8 @@ Examples:
     services:
       - name: api
         image: ghcr.io/me/api:1.0
-        exposed: true`)
+        exposed: true`
+    )
     .action(async (image: string | undefined, opts: DeployOptions) => {
       requireRole(['developer', 'admin']);
 
@@ -62,10 +83,25 @@ async function runSingleImage(image: string, opts: DeployOptions): Promise<void>
   try {
     const name = opts.name ?? manifestAppName(process.cwd()) ?? deriveAppName(image);
     const result = await deployApplicationUseCase(
-      { image, name, appId: opts.appId, port: opts.port, env: opts.env, country: opts.country, region: opts.region },
-      (status) => { spinner.text = `Status: ${chalk.yellow(status)}…`; },
+      {
+        image,
+        name,
+        appId: opts.appId,
+        port: opts.port,
+        env: opts.env,
+        country: opts.country,
+        region: opts.region
+      },
+      (status) => {
+        spinner.text = `Status: ${chalk.yellow(status)}…`;
+      }
     );
-    reportResult(spinner, result, name, normalizePlacement({ country: opts.country, region: opts.region }));
+    reportResult(
+      spinner,
+      result,
+      name,
+      normalizePlacement({ country: opts.country, region: opts.region })
+    );
   } catch (err) {
     spinner.fail('Deploy failed.');
     handleError(err);
@@ -85,8 +121,10 @@ async function runManifest(opts: DeployOptions): Promise<void> {
   try {
     const result = await deployManifestUseCase(
       process.cwd(),
-      (status) => { spinner.text = `Status: ${chalk.yellow(status)}…`; },
-      { placement: { country: opts.country, region: opts.region } },
+      (status) => {
+        spinner.text = `Status: ${chalk.yellow(status)}…`;
+      },
+      { placement: { country: opts.country, region: opts.region } }
     );
     reportResult(spinner, result, result.manifest.app, result.placement);
     // Warnings (e.g. missing envFile) also flashed on the spinner during the
@@ -100,12 +138,19 @@ async function runManifest(opts: DeployOptions): Promise<void> {
   }
 }
 
-export function reportResult(spinner: Ora, { instance, deployment, deployments, timedOut }: DeployResult, appName?: string, placement?: ManifestPlacement): void {
+export function reportResult(
+  spinner: Ora,
+  { instance, deployment, deployments, timedOut }: DeployResult,
+  appName?: string,
+  placement?: ManifestPlacement
+): void {
   if (timedOut) {
     spinner.warn(chalk.yellow('Deploy timed out waiting for a terminal status.'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
     console.log(`Last status: ${instance.status}`);
-    console.log(chalk.gray(`Check "zs deployments ${appName ?? '<app-name>'}" and "zs list" for updates.`));
+    console.log(
+      chalk.gray(`Check "zs deployments ${appName ?? '<app-name>'}" and "zs list" for updates.`)
+    );
     return;
   }
 
@@ -117,12 +162,20 @@ export function reportResult(spinner: Ora, { instance, deployment, deployments, 
     if (deployment.error) {
       console.log(`Error:       ${chalk.red(deployment.error)}`);
     }
-    console.log(chalk.gray(`Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`));
+    console.log(
+      chalk.gray(
+        `Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`
+      )
+    );
     return;
   }
 
   if (deployment?.status === 'ROLLED_BACK') {
-    spinner.fail(chalk.red(`Deploy failed${appName ? `: ${appName}` : '.'} The previous image was restored (rollback).`));
+    spinner.fail(
+      chalk.red(
+        `Deploy failed${appName ? `: ${appName}` : '.'} The previous image was restored (rollback).`
+      )
+    );
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
     // The rollback deployment carries no error itself; the root cause lives on
     // the original FAILED deployment it points to via rollbackOf.
@@ -131,19 +184,26 @@ export function reportResult(spinner: Ora, { instance, deployment, deployments, 
     if (reason) {
       console.log(`Error:       ${chalk.red(reason)}`);
     }
-    console.log(chalk.gray(`Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`));
+    console.log(
+      chalk.gray(
+        `Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`
+      )
+    );
     return;
   }
 
   if (deployment?.status === 'SUCCESS' || instance.status === 'RUNNING') {
     spinner.succeed(chalk.green(appName ? `Deploy successful: ${appName}` : 'Deploy successful!'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
-    const appAddress = instance.application?.address ?? instance.application?.publicUrl ?? instance.address;
+    const appAddress =
+      instance.application?.address ?? instance.application?.publicUrl ?? instance.address;
     if (appAddress) {
       console.log(`Address:     ${chalk.underline.cyan(appAddress)}`);
     }
     if (placement) {
-      console.log(`Placement:   ${chalk.cyan(formatPlacement(placement))} ${chalk.gray('(preferred)')}`);
+      console.log(
+        `Placement:   ${chalk.cyan(formatPlacement(placement))} ${chalk.gray('(preferred)')}`
+      );
     }
   } else {
     spinner.fail(chalk.red(`Deploy ended with status: ${instance.status}`));

@@ -3,7 +3,7 @@ import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   MY_REGISTRY_CREDENTIALS_QUERY,
   UPSERT_REGISTRY_CREDENTIAL_MUTATION,
-  DELETE_REGISTRY_CREDENTIAL_MUTATION,
+  DELETE_REGISTRY_CREDENTIAL_MUTATION
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
@@ -27,7 +27,7 @@ export async function registryLoginUseCase(input: RegistryLoginInput): Promise<R
   const data = await gqlRequest<{ upsertRegistryCredential: RegistryCredential }>(
     UPSERT_REGISTRY_CREDENTIAL_MUTATION,
     { input },
-    authToken,
+    authToken
   );
   return data.upsertRegistryCredential;
 }
@@ -37,7 +37,7 @@ export async function registryListUseCase(): Promise<RegistryCredential[]> {
   const data = await gqlRequest<{ myRegistryCredentials: RegistryCredential[] }>(
     MY_REGISTRY_CREDENTIALS_QUERY,
     undefined,
-    authToken,
+    authToken
   );
   return data.myRegistryCredentials;
 }
@@ -47,7 +47,7 @@ export async function registryLogoutUseCase(registryHost: string): Promise<boole
   const data = await gqlRequest<{ deleteRegistryCredential: boolean }>(
     DELETE_REGISTRY_CREDENTIAL_MUTATION,
     { registryHost },
-    authToken,
+    authToken
   );
   return data.deleteRegistryCredential;
 }

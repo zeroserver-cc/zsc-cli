@@ -3,12 +3,14 @@ import { spawn } from 'child_process';
 
 jest.mock('child_process', () => ({
   execSync: jest.fn(),
-  spawn: jest.fn(),
+  spawn: jest.fn()
 }));
 
 describe('elevate', () => {
   const mockedSpawn = spawn as jest.MockedFunction<typeof spawn>;
-  const mockedExecSync = jest.requireMock('child_process').execSync as jest.MockedFunction<typeof import('child_process').execSync>;
+  const mockedExecSync = jest.requireMock('child_process').execSync as jest.MockedFunction<
+    typeof import('child_process').execSync
+  >;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -56,7 +58,9 @@ describe('elevate', () => {
 
     it('returns false when sudo is not available', () => {
       Object.defineProperty(process, 'platform', { value: 'linux' });
-      mockedExecSync.mockImplementation(() => { throw new Error('not found'); });
+      mockedExecSync.mockImplementation(() => {
+        throw new Error('not found');
+      });
       expect(canElevate()).toBe(false);
     });
   });
@@ -70,7 +74,7 @@ describe('elevate', () => {
 
       expect(mockedSpawn).toHaveBeenCalledWith('sudo', [process.execPath, 'upgrade'], {
         stdio: 'inherit',
-        detached: false,
+        detached: false
       });
 
       // simulate clean exit with code 0

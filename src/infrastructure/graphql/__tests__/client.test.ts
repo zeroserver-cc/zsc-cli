@@ -1,10 +1,6 @@
 import axios from 'axios';
 import { gqlRequest, GraphQLError, refreshCurrentSession } from '../client';
-import {
-  getConfigValue,
-  setConfigValue,
-  deleteConfigValue,
-} from '../../config/store';
+import { getConfigValue, setConfigValue, deleteConfigValue } from '../../config/store';
 
 jest.mock('axios');
 jest.mock('../../config/store', () => ({
@@ -12,7 +8,7 @@ jest.mock('../../config/store', () => ({
   getConfigValue: jest.fn(),
   setConfigValue: jest.fn(),
   deleteConfigValue: jest.fn(),
-  getBackendUrl: jest.fn(() => 'https://api.zeroserver.cc'),
+  getBackendUrl: jest.fn(() => 'https://api.zeroserver.cc')
 }));
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
@@ -35,7 +31,7 @@ describe('gqlRequest', () => {
 
   it('returns data on success using stored access token', async () => {
     mockedGetConfigValue.mockImplementation((key) =>
-      key === 'accessToken' ? 'token-a' : undefined,
+      key === 'accessToken' ? 'token-a' : undefined
     );
     mockedAxios.post.mockResolvedValueOnce({ data: { data: { me: { id: '1' } } } });
 
@@ -61,10 +57,10 @@ describe('gqlRequest', () => {
               accessToken: 'token-b',
               refreshToken: 'refresh-b',
               expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-              user: { role: 'developer', roles: ['developer', 'provider'] },
-            },
-          },
-        },
+              user: { role: 'developer', roles: ['developer', 'provider'] }
+            }
+          }
+        }
       })
       .mockResolvedValueOnce({ data: { data: { me: { id: '1' } } } });
 
@@ -133,7 +129,7 @@ describe('gqlRequest', () => {
       expect(mockedDeleteConfigValue).not.toHaveBeenCalled();
       expect(mockedSetConfigValue).not.toHaveBeenCalled();
       expect(errorSpy).toHaveBeenCalledWith(
-        'API key is invalid, expired, or revoked. Generate a new one in the portal and run "zs login --api-key" again.',
+        'API key is invalid, expired, or revoked. Generate a new one in the portal and run "zs login --api-key" again.'
       );
       expect(exitSpy).toHaveBeenCalledWith(1);
     } finally {
@@ -153,7 +149,9 @@ describe('gqlRequest', () => {
     }) as never);
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-    mockedAxios.post.mockResolvedValueOnce({ data: { errors: [{ message: 'Authentication required' }] } });
+    mockedAxios.post.mockResolvedValueOnce({
+      data: { errors: [{ message: 'Authentication required' }] }
+    });
 
     try {
       await expect(gqlRequest('query { me { id } }')).rejects.toThrow('process.exit(1)');
@@ -179,7 +177,7 @@ describe('gqlRequest', () => {
     }) as never);
 
     mockedAxios.post.mockResolvedValueOnce({
-      data: { errors: [{ message: 'Access denied: insufficient permissions' }] },
+      data: { errors: [{ message: 'Access denied: insufficient permissions' }] }
     });
 
     try {
@@ -207,7 +205,10 @@ describe('gqlRequest', () => {
     }) as never);
     (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(true);
 
-    mockedAxios.post.mockRejectedValueOnce({ code: 'ECONNREFUSED', message: 'connect ECONNREFUSED' });
+    mockedAxios.post.mockRejectedValueOnce({
+      code: 'ECONNREFUSED',
+      message: 'connect ECONNREFUSED'
+    });
 
     try {
       await expect(gqlRequest('query { me { id } }')).rejects.toThrow('Cannot reach backend');
@@ -236,7 +237,7 @@ describe('refreshCurrentSession', () => {
 
   it('refreshes and stores the new session', async () => {
     mockedGetConfigValue.mockImplementation((key) =>
-      key === 'refreshToken' ? 'refresh-a' : undefined,
+      key === 'refreshToken' ? 'refresh-a' : undefined
     );
     mockedAxios.post.mockResolvedValueOnce({
       data: {
@@ -245,10 +246,10 @@ describe('refreshCurrentSession', () => {
             accessToken: 'token-b',
             refreshToken: 'refresh-b',
             expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-            user: { role: 'developer', roles: ['developer'] },
-          },
-        },
-      },
+            user: { role: 'developer', roles: ['developer'] }
+          }
+        }
+      }
     });
 
     const result = await refreshCurrentSession();
@@ -261,7 +262,7 @@ describe('refreshCurrentSession', () => {
 
   it('does not overwrite stored roles when the refresh response omits the field', async () => {
     mockedGetConfigValue.mockImplementation((key) =>
-      key === 'refreshToken' ? 'refresh-a' : undefined,
+      key === 'refreshToken' ? 'refresh-a' : undefined
     );
     mockedAxios.post.mockResolvedValueOnce({
       data: {
@@ -270,10 +271,10 @@ describe('refreshCurrentSession', () => {
             accessToken: 'token-b',
             refreshToken: 'refresh-b',
             expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-            user: { role: 'developer' },
-          },
-        },
-      },
+            user: { role: 'developer' }
+          }
+        }
+      }
     });
 
     const result = await refreshCurrentSession();

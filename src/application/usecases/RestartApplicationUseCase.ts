@@ -10,7 +10,7 @@ export async function restartApplicationUseCase(instanceId: string): Promise<App
   const data = await gqlRequest<{ restartApplication: ApplicationInstance }>(
     RESTART_APPLICATION_MUTATION,
     { instanceId },
-    token,
+    token
   );
   return data.restartApplication;
 }

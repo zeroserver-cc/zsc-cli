@@ -3,7 +3,7 @@ import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
-  MY_APPLICATIONS_QUERY,
+  MY_APPLICATIONS_QUERY
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { toDeployPlacementInput } from '../placement';
@@ -13,7 +13,7 @@ export type DeployResult = WaitResult;
 
 export async function deployApplicationUseCase(
   input: DeployInput,
-  onProgress?: (status: string) => void,
+  onProgress?: (status: string) => void
 ): Promise<DeployResult> {
   const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
@@ -30,7 +30,11 @@ export async function deployApplicationUseCase(
   if (input.appId) {
     applicationId = input.appId;
   } else {
-    const mine = await gqlRequest<{ myApplications: Application[] }>(MY_APPLICATIONS_QUERY, {}, token);
+    const mine = await gqlRequest<{ myApplications: Application[] }>(
+      MY_APPLICATIONS_QUERY,
+      {},
+      token
+    );
     const existing = mine.myApplications.find((a) => a.name === appName)?.id;
     if (existing) {
       applicationId = existing;
@@ -38,7 +42,7 @@ export async function deployApplicationUseCase(
       const appData = await gqlRequest<{ createApplication: Application }>(
         CREATE_APPLICATION_MUTATION,
         { input: { name: appName, dockerImage: input.image, config: {} } },
-        token,
+        token
       );
       applicationId = appData.createApplication.id;
     }
@@ -60,10 +64,10 @@ export async function deployApplicationUseCase(
         ...(ports && { ports }),
         // Soft geographic preference (ZSC-194): the backend falls back to any
         // eligible node when nothing matches the requested country/region.
-        ...toDeployPlacementInput({ country: input.country, region: input.region }),
-      },
+        ...toDeployPlacementInput({ country: input.country, region: input.region })
+      }
     },
-    token,
+    token
   );
 
   return waitForInstance(deployData.deployApplication, applicationId, token, onProgress);

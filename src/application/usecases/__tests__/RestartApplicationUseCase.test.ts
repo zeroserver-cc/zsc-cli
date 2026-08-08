@@ -18,13 +18,19 @@ it('sends the restart mutation with the instance id and returns the instance', a
 
   const result = await restartApplicationUseCase('inst-1');
 
-  expect(mockGql).toHaveBeenCalledWith(RESTART_APPLICATION_MUTATION, { instanceId: 'inst-1' }, 'a-token');
+  expect(mockGql).toHaveBeenCalledWith(
+    RESTART_APPLICATION_MUTATION,
+    { instanceId: 'inst-1' },
+    'a-token'
+  );
   expect(result).toEqual({ id: 'inst-1', status: 'RUNNING' });
 });
 
 it('fails early when there is no session token', async () => {
   (getConfigValue as jest.Mock).mockReturnValue(undefined);
 
-  await expect(restartApplicationUseCase('inst-1')).rejects.toThrow('Not logged in. Run "zs login" first.');
+  await expect(restartApplicationUseCase('inst-1')).rejects.toThrow(
+    'Not logged in. Run "zs login" first.'
+  );
   expect(mockGql).not.toHaveBeenCalled();
 });

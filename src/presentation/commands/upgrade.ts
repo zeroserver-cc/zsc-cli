@@ -10,7 +10,9 @@ export function registerUpgradeCommand(program: Command): void {
     .description('Update zs to the latest published version')
     .action(async () => {
       if (!isPackagedBinary()) {
-        console.error('`zs upgrade` only applies to the installed binary (reinstall via install.sh in dev).');
+        console.error(
+          '`zs upgrade` only applies to the installed binary (reinstall via install.sh in dev).'
+        );
         process.exitCode = 1;
         return;
       }
@@ -27,12 +29,16 @@ export function registerUpgradeCommand(program: Command): void {
           // If we are not root and sudo is available, re-run the same command
           // elevated so the user does not have to type `sudo zs upgrade` manually.
           if (isRoot()) {
-            console.error(`Can't write ${process.execPath} even though this process is running as root.`);
+            console.error(
+              `Can't write ${process.execPath} even though this process is running as root.`
+            );
             process.exitCode = 1;
             break;
           }
           if (!canElevate()) {
-            console.error(`Can't write ${process.execPath}. Run as root or install sudo, then try again.`);
+            console.error(
+              `Can't write ${process.execPath}. Run as root or install sudo, then try again.`
+            );
             process.exitCode = 1;
             break;
           }

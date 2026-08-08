@@ -6,7 +6,10 @@ import { resolveApplicationByName } from './DomainUseCase';
 
 const DEFAULT_LIMIT = 20;
 
-export async function listDeploymentsUseCase(appName: string, limit = DEFAULT_LIMIT): Promise<Deployment[]> {
+export async function listDeploymentsUseCase(
+  appName: string,
+  limit = DEFAULT_LIMIT
+): Promise<Deployment[]> {
   const token = getConfigValue('accessToken');
   if (!token) throw new Error('Not logged in. Run "zs login" first.');
 
@@ -14,7 +17,7 @@ export async function listDeploymentsUseCase(appName: string, limit = DEFAULT_LI
   const data = await gqlRequest<{ deployments: Deployment[] }>(
     DEPLOYMENTS_QUERY,
     { applicationId: app.id, limit },
-    token,
+    token
   );
   return data.deployments;
 }

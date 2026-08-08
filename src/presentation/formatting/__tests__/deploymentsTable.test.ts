@@ -8,7 +8,7 @@ function deployment(partial: Partial<Deployment>): Deployment {
     status: 'SUCCESS',
     createdAt: '2026-07-27T10:00:00.000Z',
     finishedAt: '2026-07-27T10:00:42.000Z',
-    ...partial,
+    ...partial
   };
 }
 
@@ -38,7 +38,7 @@ describe('printDeploymentsTable', () => {
       deployment({ status: 'SUCCESS' }),
       deployment({ id: 'dep-2', status: 'FAILED', error: 'image not found' }),
       deployment({ id: 'dep-3', status: 'ROLLED_BACK' }),
-      deployment({ id: 'dep-4', status: 'PENDING', finishedAt: null }),
+      deployment({ id: 'dep-4', status: 'PENDING', finishedAt: null })
     ]);
     const text = output();
 
@@ -58,9 +58,7 @@ describe('printDeploymentsTable', () => {
   });
 
   it('strips the registry prefix from long image refs', () => {
-    printDeploymentsTable([
-      deployment({ image: 'ghcr.io/zeroserver-cc/demo-apps/api:v1.2.3' }),
-    ]);
+    printDeploymentsTable([deployment({ image: 'ghcr.io/zeroserver-cc/demo-apps/api:v1.2.3' })]);
 
     const text = output();
     expect(text).toContain('api:v1.2.3');
@@ -83,9 +81,7 @@ describe('printDeploymentsTable', () => {
   });
 
   it('formats durations above a minute as minutes and seconds', () => {
-    printDeploymentsTable([
-      deployment({ finishedAt: '2026-07-27T10:03:12.000Z' }),
-    ]);
+    printDeploymentsTable([deployment({ finishedAt: '2026-07-27T10:03:12.000Z' })]);
 
     expect(output()).toContain('3m12s');
   });

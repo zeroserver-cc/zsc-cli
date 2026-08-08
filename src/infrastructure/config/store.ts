@@ -1,4 +1,12 @@
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync
+} from 'fs';
 import { basename, join } from 'path';
 import { configDir, configPath, sessionPath, sessionsDir } from './paths';
 import { DEFAULT_PROFILE, resolveActiveProfile } from './profile';
@@ -43,7 +51,7 @@ const SESSION_KEYS: readonly (keyof ConfigData)[] = [
   'authType',
   'activeAccountId',
   'username',
-  'email',
+  'email'
 ];
 
 function readJsonFile(path: string): Record<string, unknown> {
@@ -51,7 +59,9 @@ function readJsonFile(path: string): Record<string, unknown> {
     if (existsSync(path)) {
       return JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>;
     }
-  } catch {}
+  } catch {
+    // Unreadable or malformed file: treat as empty config.
+  }
   return {};
 }
 
@@ -62,7 +72,9 @@ function writeJsonFile(path: string, data: Record<string, unknown>): void {
   // permissions by hand. Best-effort so a read-only dir fails on the write below.
   try {
     chmodSync(dir, 0o700);
-  } catch {}
+  } catch {
+    // Best-effort: a read-only dir surfaces on the write below.
+  }
   // Write to a temp file and rename atomically: a concurrent reader must never
   // see a half-written file. A partial JSON parses as {} in readJsonFile and the
   // next read-modify-write would clobber the real contents — observed in a race
@@ -75,7 +87,9 @@ function writeJsonFile(path: string, data: Record<string, unknown>): void {
   // otherwise stay world-readable forever).
   try {
     chmodSync(path, 0o600);
-  } catch {}
+  } catch {
+    // Best-effort: exotic filesystems may not support chmod.
+  }
 }
 
 // Sessions used to live inside config.json itself. On first access after the
@@ -186,7 +200,7 @@ function toProfileInfo(name: string, data: Record<string, unknown>): SessionProf
     name,
     username: typeof data.username === 'string' ? data.username : undefined,
     email: typeof data.email === 'string' ? data.email : undefined,
-    hasSession: Boolean(accessToken || refreshToken),
+    hasSession: Boolean(accessToken || refreshToken)
   };
 }
 

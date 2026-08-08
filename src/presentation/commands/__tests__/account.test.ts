@@ -3,19 +3,23 @@ import { registerAccountCommands } from '../account';
 import {
   getActiveAccountUseCase,
   listAccountsUseCase,
-  switchAccountUseCase,
+  switchAccountUseCase
 } from '../../../application/usecases/AccountUseCase';
 import { getConfigValue } from '../../../infrastructure/config/store';
 
 jest.mock('../../../application/usecases/AccountUseCase');
 jest.mock('../../../infrastructure/config/store', () => ({
   ...jest.requireActual('../../../infrastructure/config/store'),
-  getConfigValue: jest.fn(),
+  getConfigValue: jest.fn()
 }));
 
 const mockedListAccounts = listAccountsUseCase as jest.MockedFunction<typeof listAccountsUseCase>;
-const mockedSwitchAccount = switchAccountUseCase as jest.MockedFunction<typeof switchAccountUseCase>;
-const mockedGetActive = getActiveAccountUseCase as jest.MockedFunction<typeof getActiveAccountUseCase>;
+const mockedSwitchAccount = switchAccountUseCase as jest.MockedFunction<
+  typeof switchAccountUseCase
+>;
+const mockedGetActive = getActiveAccountUseCase as jest.MockedFunction<
+  typeof getActiveAccountUseCase
+>;
 const mockedGetConfigValue = getConfigValue as jest.MockedFunction<typeof getConfigValue>;
 
 const ownAccount = { id: 'aaaa-1111', username: 'dev', teamRole: null };
@@ -81,7 +85,7 @@ describe('zs account', () => {
   it('list marks the stored active account', async () => {
     mockedListAccounts.mockResolvedValueOnce([ownAccount, teamAccount]);
     mockedGetConfigValue.mockImplementation((key) =>
-      key === 'activeAccountId' ? 'bbbb-2222' : undefined,
+      key === 'activeAccountId' ? 'bbbb-2222' : undefined
     );
 
     await run('account', 'list');
@@ -93,7 +97,7 @@ describe('zs account', () => {
     mockedSwitchAccount.mockResolvedValueOnce({
       username: 'acme',
       teamRole: 'member',
-      user: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer' },
+      user: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer' }
     });
 
     await run('account', 'switch', 'acme');

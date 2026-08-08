@@ -1,20 +1,16 @@
-import {
-  InvalidTwoFactorCodeError,
-  loginUseCase,
-  TwoFactorRequiredError,
-} from '../LoginUseCase';
+import { InvalidTwoFactorCodeError, loginUseCase, TwoFactorRequiredError } from '../LoginUseCase';
 import { gqlRequest, GraphQLError } from '../../../infrastructure/graphql/client';
 import { deleteConfigValue } from '../../../infrastructure/config/store';
 import { AuthPayload } from '../../../domain/entities/types';
 
 jest.mock('../../../infrastructure/graphql/client', () => ({
   ...jest.requireActual('../../../infrastructure/graphql/client'),
-  gqlRequest: jest.fn(),
+  gqlRequest: jest.fn()
 }));
 jest.mock('../../../infrastructure/config/store', () => ({
   ...jest.requireActual('../../../infrastructure/config/store'),
   setConfigValue: jest.fn(),
-  deleteConfigValue: jest.fn(),
+  deleteConfigValue: jest.fn()
 }));
 
 const mockedGqlRequest = gqlRequest as jest.MockedFunction<typeof gqlRequest>;
@@ -24,7 +20,13 @@ const payload: AuthPayload = {
   accessToken: 'token-a',
   refreshToken: 'refresh-a',
   expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-  user: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer', roles: ['developer'] },
+  user: {
+    id: 'u1',
+    username: 'dev',
+    email: 'dev@zsc.cloud',
+    role: 'developer',
+    roles: ['developer']
+  }
 };
 
 afterEach(() => {
@@ -39,7 +41,7 @@ describe('loginUseCase with 2FA', () => {
 
     expect(result).toEqual(payload);
     expect(mockedGqlRequest).toHaveBeenCalledWith(expect.anything(), {
-      input: { email: 'dev@zsc.cloud', password: 'secret' },
+      input: { email: 'dev@zsc.cloud', password: 'secret' }
     });
     // Fresh sessions always start acting as the own account.
     expect(deleteConfigValue).toHaveBeenCalledWith('activeAccountId');
@@ -51,7 +53,7 @@ describe('loginUseCase with 2FA', () => {
     await loginUseCase('dev@zsc.cloud', 'secret', '123456');
 
     expect(mockedGqlRequest).toHaveBeenCalledWith(expect.anything(), {
-      input: { email: 'dev@zsc.cloud', password: 'secret', totpCode: '123456' },
+      input: { email: 'dev@zsc.cloud', password: 'secret', totpCode: '123456' }
     });
   });
 
@@ -61,27 +63,27 @@ describe('loginUseCase with 2FA', () => {
     await loginUseCase('dev@zsc.cloud', 'secret', 'abcd-efgh');
 
     expect(mockedGqlRequest).toHaveBeenCalledWith(expect.anything(), {
-      input: { email: 'dev@zsc.cloud', password: 'secret', totpCode: 'abcd-efgh' },
+      input: { email: 'dev@zsc.cloud', password: 'secret', totpCode: 'abcd-efgh' }
     });
   });
 
   it('throws TwoFactorRequiredError when the backend asks for a code', async () => {
     mockedGqlRequest.mockRejectedValueOnce(
-      new GraphQLError('2FA code required', [{ message: '2FA code required' }]),
+      new GraphQLError('2FA code required', [{ message: '2FA code required' }])
     );
 
     await expect(loginUseCase('dev@zsc.cloud', 'secret')).rejects.toBeInstanceOf(
-      TwoFactorRequiredError,
+      TwoFactorRequiredError
     );
   });
 
   it('throws InvalidTwoFactorCodeError when the backend rejects the code', async () => {
     mockedGqlRequest.mockRejectedValueOnce(
-      new GraphQLError('Invalid 2FA code', [{ message: 'Invalid 2FA code' }]),
+      new GraphQLError('Invalid 2FA code', [{ message: 'Invalid 2FA code' }])
     );
 
     await expect(loginUseCase('dev@zsc.cloud', 'secret', '000000')).rejects.toBeInstanceOf(
-      InvalidTwoFactorCodeError,
+      InvalidTwoFactorCodeError
     );
   });
 

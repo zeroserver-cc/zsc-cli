@@ -5,7 +5,7 @@ import {
   ActiveAccount,
   getActiveAccountUseCase,
   listAccountsUseCase,
-  switchAccountUseCase,
+  switchAccountUseCase
 } from '../../application/usecases/AccountUseCase';
 import { handleError } from '../formatting/errors';
 import { getConfigValue } from '../../infrastructure/config/store';
@@ -36,7 +36,7 @@ export function registerAccountCommands(program: Command): void {
         const activeAccountId = getConfigValue('activeAccountId');
         const table = new Table({
           head: ['', 'Username', 'ID', 'Role'].map((h) => chalk.bold(h)),
-          style: { head: [], border: [] },
+          style: { head: [], border: [] }
         });
         for (const row of accounts) {
           // Without a stored activeAccountId the session acts as the own
@@ -46,7 +46,7 @@ export function registerAccountCommands(program: Command): void {
             isActive ? chalk.green('*') : '',
             isActive ? chalk.bold(row.username) : row.username,
             chalk.dim(row.id),
-            row.teamRole ?? 'owner',
+            row.teamRole ?? 'owner'
           ]);
         }
         console.log(table.toString());

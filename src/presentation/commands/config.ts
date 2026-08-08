@@ -6,7 +6,7 @@ const ALLOWED_KEYS = ['backend-url'] as const;
 type AllowedKey = (typeof ALLOWED_KEYS)[number];
 
 const KEY_MAP: Record<AllowedKey, 'backendUrl'> = {
-  'backend-url': 'backendUrl',
+  'backend-url': 'backendUrl'
 };
 
 export function registerConfigCommands(program: Command): void {

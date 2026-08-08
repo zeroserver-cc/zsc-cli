@@ -10,7 +10,7 @@ export async function removeApplicationUseCase(instanceId: string): Promise<Appl
   const data = await gqlRequest<{ removeApplication: ApplicationInstance }>(
     REMOVE_APPLICATION_MUTATION,
     { instanceId },
-    token,
+    token
   );
   return data.removeApplication;
 }

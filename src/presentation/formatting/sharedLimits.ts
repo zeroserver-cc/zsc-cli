@@ -10,7 +10,7 @@ export function formatSharedLimits(machine: SharedLimitsLike): string {
   const parts = [
     machine.sharedVCpu != null ? `${machine.sharedVCpu} vCPU` : null,
     machine.sharedMemoryMb != null ? `${machine.sharedMemoryMb} MB` : null,
-    machine.sharedStorageMb != null ? `${machine.sharedStorageMb} MB` : null,
+    machine.sharedStorageMb != null ? `${machine.sharedStorageMb} MB` : null
   ].filter((part): part is string => part !== null);
   return parts.length ? parts.join(' / ') : '—';
 }

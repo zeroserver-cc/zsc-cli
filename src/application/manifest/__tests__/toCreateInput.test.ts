@@ -7,8 +7,14 @@ describe('manifestToCreateInput', () => {
       app: 'zsc-app-demo',
       services: [
         { name: 'db', image: 'postgres:16-alpine', volumes: ['pgdata:/var/lib/postgresql/data'] },
-        { name: 'api', image: 'ghcr.io/x/api:1.0', ports: ['3000'], dependsOn: ['db'], exposed: true },
-      ],
+        {
+          name: 'api',
+          image: 'ghcr.io/x/api:1.0',
+          ports: ['3000'],
+          dependsOn: ['db'],
+          exposed: true
+        }
+      ]
     };
 
     const input = manifestToCreateInput(manifest);
@@ -22,14 +28,16 @@ describe('manifestToCreateInput', () => {
       image: 'ghcr.io/x/api:1.0',
       ports: ['3000'],
       dependsOn: ['db'],
-      exposed: true,
+      exposed: true
     });
   });
 
   it('passes a service command through to createApplication', () => {
     const manifest: AppManifest = {
       app: 'twenty',
-      services: [{ name: 'worker', image: 'twentycrm/twenty:latest', command: ['yarn', 'worker:prod'] }],
+      services: [
+        { name: 'worker', image: 'twentycrm/twenty:latest', command: ['yarn', 'worker:prod'] }
+      ]
     };
 
     const input = manifestToCreateInput(manifest);

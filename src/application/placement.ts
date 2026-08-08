@@ -24,6 +24,6 @@ export function toDeployPlacementInput(pref?: ManifestPlacement): {
   if (!normalized) return {};
   return {
     ...(normalized.country && { preferredCountry: normalized.country }),
-    ...(normalized.region && { preferredRegion: normalized.region }),
+    ...(normalized.region && { preferredRegion: normalized.region })
   };
 }

@@ -3,7 +3,7 @@ import { registerAuthCommands } from '../auth';
 import {
   InvalidTwoFactorCodeError,
   loginUseCase,
-  TwoFactorRequiredError,
+  TwoFactorRequiredError
 } from '../../../application/usecases/LoginUseCase';
 import { prompt, promptPassword, readStdin } from '../../io/prompt';
 import { loginWithApiKeyUseCase } from '../../../application/usecases/LoginWithApiKeyUseCase';
@@ -12,7 +12,7 @@ import { AuthPayload } from '../../../domain/entities/types';
 jest.mock('../../../application/usecases/LoginUseCase', () => ({
   ...jest.requireActual('../../../application/usecases/LoginUseCase'),
   loginUseCase: jest.fn(),
-  logoutUseCase: jest.fn(),
+  logoutUseCase: jest.fn()
 }));
 jest.mock('../../../application/usecases/LoginWithTokenUseCase');
 jest.mock('../../../application/usecases/LoginWithApiKeyUseCase');
@@ -21,21 +21,29 @@ jest.mock('../../../infrastructure/config/store');
 jest.mock('../../io/prompt', () => ({
   prompt: jest.fn(),
   promptPassword: jest.fn(),
-  readStdin: jest.fn(),
+  readStdin: jest.fn()
 }));
 
 const mockedLoginUseCase = loginUseCase as jest.MockedFunction<typeof loginUseCase>;
 const mockedPrompt = prompt as jest.MockedFunction<typeof prompt>;
 const mockedPromptPassword = promptPassword as jest.MockedFunction<typeof promptPassword>;
 const mockedReadStdin = readStdin as jest.MockedFunction<typeof readStdin>;
-const mockedLoginWithApiKey = loginWithApiKeyUseCase as jest.MockedFunction<typeof loginWithApiKeyUseCase>;
+const mockedLoginWithApiKey = loginWithApiKeyUseCase as jest.MockedFunction<
+  typeof loginWithApiKeyUseCase
+>;
 
 const payload: AuthPayload = {
   token: 'token-a',
   accessToken: 'token-a',
   refreshToken: 'refresh-a',
   expiresAt: new Date(Date.now() + 3600_000).toISOString(),
-  user: { id: 'u1', username: 'dev', email: 'dev@zsc.cloud', role: 'developer', roles: ['developer'] },
+  user: {
+    id: 'u1',
+    username: 'dev',
+    email: 'dev@zsc.cloud',
+    role: 'developer',
+    roles: ['developer']
+  }
 };
 
 function buildProgram(): Command {
@@ -105,7 +113,7 @@ describe('zs login with 2FA', () => {
     mockedPrompt.mockResolvedValue('000000');
 
     await expect(
-      runLogin('-e', 'dev@zsc.cloud', '-p', 'secret', '--otp', '111111'),
+      runLogin('-e', 'dev@zsc.cloud', '-p', 'secret', '--otp', '111111')
     ).rejects.toThrow('process.exit(1)');
 
     // --otp + 2 prompted retries = 3 code attempts.
@@ -138,12 +146,14 @@ describe('zs login with 2FA', () => {
     Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
     mockedLoginUseCase.mockRejectedValueOnce(new TwoFactorRequiredError());
 
-    await expect(runLogin('-e', 'dev@zsc.cloud', '-p', 'secret')).rejects.toThrow('process.exit(1)');
+    await expect(runLogin('-e', 'dev@zsc.cloud', '-p', 'secret')).rejects.toThrow(
+      'process.exit(1)'
+    );
 
     expect(mockedPrompt).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledWith(
       expect.anything(),
-      expect.stringContaining('pass it with --otp <code>'),
+      expect.stringContaining('pass it with --otp <code>')
     );
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
@@ -152,7 +162,9 @@ describe('zs login with 2FA', () => {
     mockedLoginUseCase.mockRejectedValue(new TwoFactorRequiredError());
     mockedPrompt.mockResolvedValue('   ');
 
-    await expect(runLogin('-e', 'dev@zsc.cloud', '-p', 'secret')).rejects.toThrow('process.exit(1)');
+    await expect(runLogin('-e', 'dev@zsc.cloud', '-p', 'secret')).rejects.toThrow(
+      'process.exit(1)'
+    );
 
     expect(mockedPrompt).toHaveBeenCalledTimes(3);
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('2FA code cannot be empty.'));
