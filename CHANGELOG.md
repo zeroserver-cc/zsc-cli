@@ -7,6 +7,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Seguranca
+- Dependências de desenvolvimento atualizadas para fechar 5 alertas de vulnerabilidade (nenhuma afeta o binário distribuído, que só carrega dependências de produção): `js-yaml` 3.14.2 -> 3.15.x (CVE-2026-59869 alto, CVE-2026-53550 médio; DoS por merge keys em YAML), `brace-expansion` 1.1.15 -> 1.1.16+ (CVE-2026-13149 alto; DoS por expansão exponencial de `{}`), `esbuild` 0.27.7 -> 0.28.x via bump do `@yao-pkg/pkg` 6.20 -> 6.22 (GHSA-g7r4-m6w7-qqqr baixo; path traversal do dev server no Windows, servidor que o CLI não usa) e `tar` 7.5.19 -> 7.5.21+ (GHSA-r292-9mhp-454m moderado). Fixos aplicados via `pnpm.overrides` no `package.json`; `pnpm audit` passa a reportar zero vulnerabilidades.
+
 ### Alterado
 - Workflows de CI (`ci.yml` e `release.yml`) passam a cancelar runs obsoletos do mesmo ref (`concurrency` com `cancel-in-progress`, grupo por workflow+ref) e o CI deixa de disparar para mudanças apenas em arquivos Markdown (`paths-ignore: ['**.md']` no push/pull_request) e o trigger de push fica restrito à `main` (antes, pushes em branches `feature/**`/`fix/**` disparavam um run duplicado do mesmo trabalho do PR). Reduz o consumo de minutos do GitHub Actions.
 
