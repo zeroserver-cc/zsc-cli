@@ -69,6 +69,9 @@ jobs:
           name: binaries
           path: dist-bin/zs-*
           if-no-files-found: error
+          # Handoff between jobs of this run only; short retention bounds
+          # artifact storage (org quota incident, 2026-08).
+          retention-days: 1
 
   sign-macos:
     needs: build
@@ -97,6 +100,9 @@ jobs:
           path: dist-bin/zs-*
           overwrite: true
           if-no-files-found: error
+          # Handoff between jobs of this run only; short retention bounds
+          # artifact storage (org quota incident, 2026-08).
+          retention-days: 1
 
   publish:
     needs: sign-macos
