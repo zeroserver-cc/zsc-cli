@@ -7,6 +7,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Alterado
+- Os artifacts intermediários do workflow de release (handoff de binários entre jobs) agora expiram em 1 dia (`retention-days: 1`), para limitar o storage de artifacts de Actions.
+
 ### Adicionado
 - Setup de ESLint que faltava para o script `pnpm lint` (quebrava com `eslint: command not found` desde sempre): `.eslintrc.js` e `.prettierrc` no mesmo padrão do `zsc-backend` (eslint 8, `@typescript-eslint` 6, integração prettier) e step `Lint` no CI, entre build e testes. O código foi normalizado com `eslint --fix` (formatação prettier, sem mudança de comportamento) e os 5 erros reais foram corrigidos: import não usado em teste, destructure intencional coberto por `ignoreRestSiblings`/`varsIgnorePattern` e blocos `catch` vazios documentados. Restam 105 warnings de `no-explicit-any` (nível warn, mesmo padrão do backend).
 
