@@ -7,6 +7,12 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Seguranca
+- `minimatch` 9.x pinado em `^9.0.7` via `pnpm.overrides` (Dependabot alert 11, ReDoS por backtracking combinatório em GLOBSTARs não adjacentes, GHSA; dependência dev transitiva do `@typescript-eslint`, resolvia 9.0.3). A linha 3.x não é afetada pelo advisory.
+
+### Corrigido
+- `pnpm lint` dentro de um worktree aninhado (`.worktrees/<branch>`) não falha mais com "couldn't determine the plugin @typescript-eslint uniquely": o `.eslintrc.js` agora tem `root: true`, impedindo que o eslint carregue também o config do checkout pai.
+
 ### Alterado
 - Os artifacts intermediários do workflow de release (handoff de binários entre jobs) agora expiram em 1 dia (`retention-days: 1`), para limitar o storage de artifacts de Actions.
 
