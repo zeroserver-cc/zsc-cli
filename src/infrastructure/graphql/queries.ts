@@ -196,6 +196,26 @@ export const DELETE_REGISTRY_CREDENTIAL_MUTATION = `
   }
 `;
 
+export const APP_SECRETS_QUERY = `
+  query AppSecrets($applicationId: ID!) {
+    appSecrets(applicationId: $applicationId) {
+      key hint updatedAt
+    }
+  }
+`;
+
+export const UPSERT_APP_SECRET_MUTATION = `
+  mutation UpsertAppSecret($applicationId: ID!, $key: String!, $value: String!) {
+    upsertAppSecret(applicationId: $applicationId, key: $key, value: $value)
+  }
+`;
+
+export const DELETE_APP_SECRET_MUTATION = `
+  mutation DeleteAppSecret($applicationId: ID!, $key: String!) {
+    deleteAppSecret(applicationId: $applicationId, key: $key)
+  }
+`;
+
 const CUSTOM_DOMAIN_FIELDS = `
   id domain applicationId status verifiedAt createdAt updatedAt
   dnsInstructions { recordType name value }

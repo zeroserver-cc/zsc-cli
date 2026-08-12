@@ -23,18 +23,23 @@ function normalizeDomainInput(domain: string): string {
 }
 
 // Domains attach to an application, but developers think in app names —
-// resolve the name to the id the API wants. Shared by the domain, deployments
-// and any other app-scoped use cases.
-export async function resolveApplicationByName(name: string, token: string): Promise<Application> {
+// resolve the name (or id, for scripting) to the record the API wants. Shared
+// by the domain, deployments, secrets and any other app-scoped use cases.
+export async function resolveApplicationByName(
+  nameOrId: string,
+  token: string
+): Promise<Application> {
   const data = await gqlRequest<{ myApplications: Application[] }>(
     MY_APPLICATIONS_QUERY,
     undefined,
     token
   );
-  const app = data.myApplications.find((a) => a.name === name);
+  const app =
+    data.myApplications.find((a) => a.name === nameOrId) ??
+    data.myApplications.find((a) => a.id === nameOrId);
   if (!app) {
     const names = data.myApplications.map((a) => a.name).join(', ') || '(none)';
-    throw new Error(`Application "${name}" not found. Your applications: ${names}`);
+    throw new Error(`Application "${nameOrId}" not found. Your applications: ${names}`);
   }
   return app;
 }

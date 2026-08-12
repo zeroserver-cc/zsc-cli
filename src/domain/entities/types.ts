@@ -220,6 +220,14 @@ export interface RegistryCredential {
   updatedAt?: string;
 }
 
+export interface AppSecret {
+  key: string;
+  // Last 4 chars of the value, for display only. The API is write-only: the
+  // value itself is never returned. Null for very short values.
+  hint?: string | null;
+  updatedAt?: string;
+}
+
 export interface DnsInstruction {
   recordType: 'TXT' | 'CNAME' | 'A';
   name: string;

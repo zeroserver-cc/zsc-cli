@@ -31,6 +31,7 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 - `zs nodes`: inspeciona nos da malha.
 - `zs node configure`: provedor define limites de CPU/memoria/storage compartilhados do node.
 - `zs registry login/list/logout`: gerencia credenciais de registries privados.
+- `zs secrets set/list/delete/import`: gerencia secrets por aplicacao (valor write-only, via prompt oculto ou stdin; listagem mostra apenas `****hint`; import faz upsert em lote de arquivo `.env`).
 - `zs config`: gerencia configuracao local global (endpoint; o default de perfil fica em `zs session use`).
 - `zs upgrade`: auto-atualizacao do binario.
 

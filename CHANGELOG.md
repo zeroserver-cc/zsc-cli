@@ -7,6 +7,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- Novo grupo de comandos `zs secrets` para gerenciar secrets por aplicação: `set <app> <KEY>` lê o valor por prompt oculto (TTY) ou stdin, nunca como argumento posicional (histórico do shell); `list <app>` mostra apenas chave, hint mascarado (`****xxxx`) e data de atualização (a API é write-only e nunca devolve o valor); `delete <app> <KEY>` remove; `import <app> <arquivo.env>` faz upsert em lote reusando o parser de `.env` do deploy, reportando linhas malformadas sem abortar o lote. O argumento `<app>` aceita nome ou id da aplicação (o helper compartilhado `resolveApplicationByName` passou a aceitar id como fallback).
+
 ### Seguranca
 - `minimatch` 9.x pinado em `^9.0.7` via `pnpm.overrides` (Dependabot alert 11, ReDoS por backtracking combinatório em GLOBSTARs não adjacentes, GHSA; dependência dev transitiva do `@typescript-eslint`, resolvia 9.0.3). A linha 3.x não é afetada pelo advisory.
 
