@@ -152,7 +152,9 @@ zs secrets import my-app .env     # bulk upsert of KEY=VALUE lines
 
 `zs secrets import` accepts blank lines and `#` comments, strips matching
 quotes around values, and reports malformed lines without aborting the batch.
-The app argument accepts the application name or id.
+Lines with an `export ` prefix are reported as malformed (not imported), and
+inline comments are not stripped: `KEY=v # note` stores `v # note` as the
+value. The app argument accepts the application name or id.
 
 Secrets take precedence over `env` entries in `zs.yaml` on deploy. Do not keep
 passwords in the manifest: move them to `zs secrets`.

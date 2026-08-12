@@ -15,11 +15,13 @@ import { promptPassword, readStdin } from '../io/prompt';
 
 // The value comes from a hidden prompt (TTY) or from stdin (piped, for CI).
 // It is never accepted as a positional argument: argv lands in shell history
-// and process listings.
-async function readSecretValue(key: string): Promise<string> {
+// and process listings. Exported for tests.
+export async function readSecretValue(key: string): Promise<string> {
   const value = process.stdin.isTTY
     ? await promptPassword(`Value for ${key}: `)
-    : (await readStdin()).trim();
+    : // Strip only the single trailing newline a pipe like `echo "$V"` adds;
+      // any other whitespace can be significant in a secret, so no trim().
+      (await readStdin()).replace(/\r?\n$/, '');
   if (!value) throw new Error('Empty secret value; aborting.');
   return value;
 }

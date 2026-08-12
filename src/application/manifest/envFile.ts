@@ -5,7 +5,7 @@ import { ManifestService } from '../../domain/entities/types';
 const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 export interface EnvFileParseResult {
-  /** KEY=VALUE entries in file order; later duplicates of a key override earlier ones. */
+  /** KEY=VALUE entries in file order, duplicates kept as-is. Any override of a repeated key is left to the consumer (applyEnvFiles dedupes via a Map, last wins). */
   vars: [string, string][];
   /** 1-based line numbers skipped because they are not KEY=VALUE lines. */
   malformedLines: number[];
