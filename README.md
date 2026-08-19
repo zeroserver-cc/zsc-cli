@@ -146,15 +146,17 @@ zs secrets set my-app API_TOKEN
 printf %s "$API_TOKEN" | zs secrets set my-app API_TOKEN
 
 zs secrets list my-app            # keys, masked hints and last update only
-zs secrets delete my-app API_TOKEN
+zs secrets delete my-app API_TOKEN  # asks for confirmation; use -y/--yes in CI
 zs secrets import my-app .env     # bulk upsert of KEY=VALUE lines
 ```
 
-`zs secrets import` accepts blank lines and `#` comments, strips matching
-quotes around values, and reports malformed lines without aborting the batch.
-Lines with an `export ` prefix are reported as malformed (not imported), and
-inline comments are not stripped: `KEY=v # note` stores `v # note` as the
-value. The app argument accepts the application name or id.
+`zs secrets import` accepts blank lines, `#` comments and an optional `export `
+prefix (same rule as the website), strips matching quotes around values, and
+reports malformed lines without aborting the batch. Inline comments are not
+stripped: `KEY=v # note` stores `v # note` as the value. The app argument
+accepts the application name or id. After a successful import the CLI reminds
+you that the source file still holds the values in plaintext: remove it or
+keep it out of git.
 
 Secrets take precedence over `env` entries in `zs.yaml` on deploy. Do not keep
 passwords in the manifest: move them to `zs secrets`.

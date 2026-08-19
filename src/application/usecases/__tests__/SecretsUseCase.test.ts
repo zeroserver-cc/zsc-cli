@@ -95,15 +95,16 @@ it('delete returns the API result', async () => {
   expect(vars).toEqual({ applicationId: 'app-42', key: 'API_TOKEN' });
 });
 
-it('import upserts every parsed var of a .env body (comments, quotes, malformed lines)', async () => {
+it('import upserts every parsed var of a .env body (comments, quotes, export prefix, malformed lines)', async () => {
   const { vars, malformedLines } = parseEnvFile(
     '# comment\n\nGOOD=1\nnot-a-var\nQUOTED="two words"\nSINGLE=\'x\'\nexport EXPORTED=2\n'
   );
-  expect(malformedLines).toEqual([4, 7]);
+  expect(malformedLines).toEqual([4]);
   expect(vars).toEqual([
     ['GOOD', '1'],
     ['QUOTED', 'two words'],
-    ['SINGLE', 'x']
+    ['SINGLE', 'x'],
+    ['EXPORTED', '2']
   ]);
 
   mockGql.mockImplementation(async (query: string) => {
@@ -114,14 +115,15 @@ it('import upserts every parsed var of a .env body (comments, quotes, malformed 
 
   const result = await importAppSecretsUseCase('site', vars);
 
-  expect(result).toEqual({ imported: 3, failures: [] });
+  expect(result).toEqual({ imported: 4, failures: [] });
   const sent = mockGql.mock.calls
     .filter((c) => c[0] === UPSERT_APP_SECRET_MUTATION)
     .map((c) => c[1] as any);
   expect(sent).toEqual([
     { applicationId: 'app-42', key: 'GOOD', value: '1' },
     { applicationId: 'app-42', key: 'QUOTED', value: 'two words' },
-    { applicationId: 'app-42', key: 'SINGLE', value: 'x' }
+    { applicationId: 'app-42', key: 'SINGLE', value: 'x' },
+    { applicationId: 'app-42', key: 'EXPORTED', value: '2' }
   ]);
 });
 

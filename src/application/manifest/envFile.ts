@@ -2,7 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { ManifestService } from '../../domain/entities/types';
 
-const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+// Exported so other .env consumers (zs secrets set/delete/import) validate
+// keys locally with the exact same rule before any network call.
+export const KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+// Optional shell-style prefix, e.g. `export KEY=VALUE`. Kept in sync with the
+// website parser so the same .env file works on both surfaces.
+const EXPORT_PREFIX = /^export\s+/;
 
 export interface EnvFileParseResult {
   /** KEY=VALUE entries in file order, duplicates kept as-is. Any override of a repeated key is left to the consumer (applyEnvFiles dedupes via a Map, last wins). */
@@ -12,18 +18,17 @@ export interface EnvFileParseResult {
 }
 
 /**
- * Parse a .env file body. Supports KEY=VALUE lines, blank lines and '#'
- * comments; strips matching single/double quotes around values. No variable
- * expansion and no `export ` prefix support: lines without a valid KEY=VALUE
- * shape (including `export KEY=...`, whose key fails validation) are reported
- * as malformed and skipped.
+ * Parse a .env file body. Supports KEY=VALUE lines (with an optional `export `
+ * prefix), blank lines and '#' comments; strips matching single/double quotes
+ * around values. No variable expansion. Lines without a valid KEY=VALUE shape
+ * are reported as malformed and skipped.
  */
 export function parseEnvFile(content: string): EnvFileParseResult {
   const vars: [string, string][] = [];
   const malformedLines: number[] = [];
 
   content.split(/\r?\n/).forEach((rawLine, index) => {
-    const line = rawLine.trim();
+    const line = rawLine.trim().replace(EXPORT_PREFIX, '');
     if (line === '' || line.startsWith('#')) return;
 
     const eq = line.indexOf('=');

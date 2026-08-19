@@ -9,9 +9,19 @@ import {
   deleteAppSecretUseCase,
   importAppSecretsUseCase
 } from '../../application/usecases/SecretsUseCase';
-import { parseEnvFile } from '../../application/manifest/envFile';
+import { parseEnvFile, KEY_PATTERN } from '../../application/manifest/envFile';
 import { handleError } from '../formatting/errors';
-import { promptPassword, readStdin } from '../io/prompt';
+import { prompt, promptPassword, readStdin } from '../io/prompt';
+
+// Fast local validation so a typo fails before any prompt or network call,
+// with the same rule the backend and the .env parser apply.
+function requireValidSecretKey(key: string): void {
+  if (!KEY_PATTERN.test(key)) {
+    throw new Error(
+      `Invalid KEY "${key}": use letters, digits and underscores, starting with a letter or underscore.`
+    );
+  }
+}
 
 // The value comes from a hidden prompt (TTY) or from stdin (piped, for CI).
 // It is never accepted as a positional argument: argv lands in shell history
@@ -40,6 +50,7 @@ export function registerSecretsCommands(program: Command): void {
       requireRole(['developer', 'admin']);
       let spinner: ReturnType<typeof ora> | undefined;
       try {
+        requireValidSecretKey(key);
         const value = await readSecretValue(key);
         spinner = ora(`Saving secret ${chalk.cyan(key)}…`).start();
         await setAppSecretUseCase(app, key, value);
@@ -88,10 +99,22 @@ export function registerSecretsCommands(program: Command): void {
     .command('delete <app> <KEY>')
     .alias('rm')
     .description('Delete a secret of an application')
-    .action(async (app: string, key: string) => {
+    .option('-y, --yes', 'Skip the confirmation prompt')
+    .action(async (app: string, key: string, opts: { yes?: boolean }) => {
       requireRole(['developer', 'admin']);
-      const spinner = ora(`Deleting secret ${chalk.cyan(key)}…`).start();
+      let spinner: ReturnType<typeof ora> | undefined;
       try {
+        requireValidSecretKey(key);
+        if (!opts.yes) {
+          const answer = await prompt(
+            `Delete secret ${key} from ${app}? The value is gone for good. [y/N] `
+          );
+          if (answer.trim().toLowerCase() !== 'y') {
+            console.log('Aborted.');
+            return;
+          }
+        }
+        spinner = ora(`Deleting secret ${chalk.cyan(key)}…`).start();
         const removed = await deleteAppSecretUseCase(app, key);
         if (removed) {
           spinner.succeed(
@@ -101,7 +124,9 @@ export function registerSecretsCommands(program: Command): void {
           spinner.warn(`No secret ${key} found for ${app}.`);
         }
       } catch (err) {
-        spinner.fail('Failed to delete the secret.');
+        // handleError exits the process; stop the spinner first or it keeps
+        // animating over the error output.
+        spinner?.stop();
         handleError(err);
       }
     });
@@ -138,6 +163,13 @@ export function registerSecretsCommands(program: Command): void {
             console.log(chalk.red(`  ${failure.key}: ${failure.error}`));
           }
           process.exitCode = 1;
+        }
+        if (result.imported > 0) {
+          console.log(
+            chalk.yellow(
+              `Note: ${file} still holds these values in plaintext. Remove it or keep it out of git.`
+            )
+          );
         }
       } catch (err) {
         spinner?.stop();
