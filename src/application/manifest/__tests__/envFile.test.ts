@@ -41,12 +41,19 @@ describe('parseEnvFile', () => {
     expect(vars).toEqual([['URL', 'postgres://u:p@db:5432/app?ssl=$SSL_MODE']]);
   });
 
-  it('reports lines without KEY=VALUE as malformed (including export lines)', () => {
-    const { vars, malformedLines } = parseEnvFile(
-      'GOOD=1\nno-equals-here\nexport EXPORTED=2\n=novalue\n'
-    );
+  it('reports lines without KEY=VALUE as malformed', () => {
+    const { vars, malformedLines } = parseEnvFile('GOOD=1\nno-equals-here\n=novalue\n');
     expect(vars).toEqual([['GOOD', '1']]);
-    expect(malformedLines).toEqual([2, 3, 4]);
+    expect(malformedLines).toEqual([2, 3]);
+  });
+
+  it('accepts an optional export prefix, like the website parser', () => {
+    const { vars, malformedLines } = parseEnvFile('export EXPORTED=2\nexport QUOTED="a b"\n');
+    expect(vars).toEqual([
+      ['EXPORTED', '2'],
+      ['QUOTED', 'a b']
+    ]);
+    expect(malformedLines).toEqual([]);
   });
 });
 
