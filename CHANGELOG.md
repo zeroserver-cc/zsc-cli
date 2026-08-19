@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-08-19
+
 ### Adicionado
 - Novo grupo de comandos `zs secrets` para gerenciar secrets por aplicação: `set <app> <KEY>` lê o valor por prompt oculto (TTY) ou stdin, nunca como argumento posicional (histórico do shell); `list <app>` mostra apenas chave, hint mascarado (`****xxxx`) e data de atualização (a API é write-only e nunca devolve o valor); `delete <app> <KEY>` pede confirmação interativa, pulável com `-y/--yes` para CI; `import <app> <arquivo.env>` faz upsert em lote reusando o parser de `.env` do deploy, reportando linhas malformadas sem abortar o lote e, ao final, lembra que o arquivo de origem segue com os valores em plaintext (remover ou manter fora do git). `set` e `delete` validam o formato da `KEY` localmente antes de qualquer chamada de rede. O argumento `<app>` aceita nome ou id da aplicação (o helper compartilhado `resolveApplicationByName` passou a aceitar id como fallback).
 
