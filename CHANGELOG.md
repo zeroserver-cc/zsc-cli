@@ -7,6 +7,14 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- Serviço de inferência gerenciado (AIaaS, Sprint 20): novo grupo de comandos `zs ai` para developers. `zs ai models` (alias `catalog`) mostra o catálogo público de modelos (id, nome, tamanho, VRAM mínima, contexto, backends cuda/rocm/cpu e licença); `zs ai list` (alias `ls`) lista os serviços de inferência do owner (nome, modelo, status, endpoint, node); `zs ai create --model <id> [--name <nome>]` provisiona um serviço de inferência e exibe o endpoint junto do token inicial de API, com aviso de que o valor só é mostrado uma única vez; `zs ai status [nome]` detalha um serviço, incluindo os metadados dos tokens (id, label, hint, createdAt — nunca o valor), e sem argumento lista os serviços como o `zs ai list`; `zs ai token add <nome> --label <l>` emite um novo token (valor exibido uma única vez), `zs ai token list <nome>` lista labels e hints, e `zs ai token revoke <nome> <tokenId>` revoga com confirmação interativa (pulável com `-y`), aceitando prefixo único de id; `zs ai delete <nome>` remove o serviço com confirmação. Os comandos que recebem alvo resolvem por nome exato ou prefixo único de id via `myInferenceServices`, com erro claro em ambiguidade ou inexistência. A negação pela allowlist do beta fechado é traduzida em mensagem clara orientando como pedir acesso, e as operações de token avisam que o serviço reinicia brevemente para aplicar a mudança.
+
+### Alterado
+- (a entrada `zs ai` acima já reflete a semântica final: o catálogo público saiu de `zs ai list` para `zs ai models`, e `zs ai list` passou a listar os serviços do owner, seguindo a convenção do `zs db list`.)
+- `zs ai create --name` passa a validar o nome no cliente (regex DNS-safe, mesmo formato exigido pelo backend por virar parte do hostname público), falando cedo com erro claro em vez de depender da resposta do servidor.
+- `zs ai token revoke` e `zs ai delete` sem `-y` em terminal não interativo (stdin sem TTY, ex.: CI) agora falham com erro claro orientando o uso de `-y`, em vez de travar indefinidamente ou sair com código 0 sem executar nada.
+
 ## [0.12.2] - 2026-08-19
 
 ### Adicionado

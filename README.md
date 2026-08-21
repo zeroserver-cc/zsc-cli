@@ -15,6 +15,7 @@ Cliente de linha de comando da **ZeroServer Community Cloud** para Developers. P
 - [ ] `zs stop`
 - [ ] `zs restart`
 - [ ] `zs db` (managed databases: `create`, `list`, `connection`, `delete`, `restore`)
+- [ ] `zs ai` (managed inference, AIaaS closed beta: `models`/`catalog`, `list`, `create`, `status`, `token add/list/revoke`, `delete`)
 
 ## Authentication
 

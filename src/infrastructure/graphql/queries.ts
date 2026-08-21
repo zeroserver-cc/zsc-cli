@@ -305,3 +305,57 @@ export const RESTORE_MANAGED_DATABASE_MUTATION = `
     restoreManagedDatabase(id: $id)
   }
 `;
+
+const INFERENCE_SERVICE_FIELDS = `
+  id name modelId status machineId endpoint errorMessage createdAt updatedAt
+  model { id name }
+  machine { id name }
+  tokens { id label hint createdAt }
+`;
+
+export const AI_MODELS_QUERY = `
+  query AiModels {
+    aiModels {
+      id name hfRepo hfFile sizeBytes minVramMb contextTokens license supportedBackends
+    }
+  }
+`;
+
+export const MY_INFERENCE_SERVICES_QUERY = `
+  query MyInferenceServices {
+    myInferenceServices {
+      ${INFERENCE_SERVICE_FIELDS}
+    }
+  }
+`;
+
+export const CREATE_INFERENCE_SERVICE_MUTATION = `
+  mutation CreateInferenceService($input: CreateInferenceServiceInput!) {
+    createInferenceService(input: $input) {
+      service {
+        ${INFERENCE_SERVICE_FIELDS}
+      }
+      initialToken
+    }
+  }
+`;
+
+export const DELETE_INFERENCE_SERVICE_MUTATION = `
+  mutation DeleteInferenceService($id: ID!) {
+    deleteInferenceService(id: $id)
+  }
+`;
+
+export const ADD_INFERENCE_SERVICE_TOKEN_MUTATION = `
+  mutation AddInferenceServiceToken($serviceId: ID!, $label: String!) {
+    addInferenceServiceToken(serviceId: $serviceId, label: $label) {
+      token id label hint createdAt
+    }
+  }
+`;
+
+export const REVOKE_INFERENCE_SERVICE_TOKEN_MUTATION = `
+  mutation RevokeInferenceServiceToken($serviceId: ID!, $tokenId: ID!) {
+    revokeInferenceServiceToken(serviceId: $serviceId, tokenId: $tokenId)
+  }
+`;
