@@ -238,3 +238,61 @@ export interface CustomDomain {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type ManagedInferenceServiceStatus =
+  | 'PROVISIONING'
+  | 'DOWNLOADING'
+  | 'RUNNING'
+  | 'ERROR'
+  | 'DELETING'
+  | 'DELETED';
+
+/** One entry of the curated AI model catalog (AIaaS, Sprint 20). */
+export interface AiModel {
+  id: string;
+  name: string;
+  hfRepo: string;
+  hfFile: string;
+  sizeBytes: number;
+  minVramMb: number;
+  contextTokens: number;
+  license: string;
+  /** Subset of cuda|rocm|cpu the model can be served on. */
+  supportedBackends: string[];
+}
+
+/** Write-only API token metadata: the token value never appears on this type. */
+export interface InferenceServiceToken {
+  id: string;
+  label: string;
+  hint: string;
+  createdAt: string;
+}
+
+/** Platform-managed LLM inference service (llama-server on a community node). */
+export interface ManagedInferenceService {
+  id: string;
+  name: string;
+  modelId: string;
+  model?: AiModel | null;
+  status: ManagedInferenceServiceStatus;
+  machineId?: string | null;
+  machine?: Machine | null;
+  /** Stable public endpoint (https). Null until the service is RUNNING. */
+  endpoint?: string | null;
+  errorMessage?: string | null;
+  tokens: InferenceServiceToken[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** createInferenceService payload: the ONLY response that ever carries a token value. */
+export interface CreateInferenceServicePayload {
+  service: ManagedInferenceService;
+  initialToken: string;
+}
+
+/** addInferenceServiceToken payload: carries the new token value, shown once. */
+export interface AddInferenceServiceTokenPayload extends InferenceServiceToken {
+  token: string;
+}

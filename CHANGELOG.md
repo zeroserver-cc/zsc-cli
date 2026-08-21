@@ -7,6 +7,9 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- Serviço de inferência gerenciado (AIaaS, Sprint 20): novo grupo de comandos `zs ai` para developers. `zs ai list` mostra o catálogo público de modelos (id, nome, tamanho, VRAM mínima, contexto, backends cuda/rocm/cpu e licença); `zs ai create --model <id> [--name <nome>]` provisiona um serviço de inferência e exibe o endpoint junto do token inicial de API, com aviso de que o valor só é mostrado uma única vez; `zs ai status [nome]` lista os serviços do owner (nome, modelo, status, endpoint, node) ou detalha um, incluindo os metadados dos tokens (id, label, hint, createdAt — nunca o valor); `zs ai token add <nome> --label <l>` emite um novo token (valor exibido uma única vez), `zs ai token list <nome>` lista labels e hints, e `zs ai token revoke <nome> <tokenId>` revoga com confirmação interativa (pulável com `-y`), aceitando prefixo único de id; `zs ai delete <nome>` remove o serviço com confirmação. Os comandos que recebem alvo resolvem por nome exato ou prefixo único de id via `myInferenceServices`, com erro claro em ambiguidade ou inexistência. A negação pela allowlist do beta fechado é traduzida em mensagem clara orientando como pedir acesso, e as operações de token avisam que o serviço reinicia brevemente para aplicar a mudança.
+
 ### Alterado
 - Os artifacts intermediários do workflow de release (handoff de binários entre jobs) agora expiram em 1 dia (`retention-days: 1`), para limitar o storage de artifacts de Actions.
 
