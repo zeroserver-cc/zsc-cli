@@ -1,4 +1,8 @@
 module.exports = {
+  // Stop config cascading upward: inside a git worktree nested under the main
+  // checkout (.worktrees/<branch>), eslint would otherwise also load the
+  // parent's .eslintrc.js and fail with duplicate plugin resolution.
+  root: true,
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2020,

@@ -15,6 +15,20 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - `zs ai create --name` passa a validar o nome no cliente (regex DNS-safe, mesmo formato exigido pelo backend por virar parte do hostname público), falando cedo com erro claro em vez de depender da resposta do servidor.
 - `zs ai token revoke` e `zs ai delete` sem `-y` em terminal não interativo (stdin sem TTY, ex.: CI) agora falham com erro claro orientando o uso de `-y`, em vez de travar indefinidamente ou sair com código 0 sem executar nada.
 
+## [0.12.2] - 2026-08-19
+
+### Adicionado
+- Novo grupo de comandos `zs secrets` para gerenciar secrets por aplicação: `set <app> <KEY>` lê o valor por prompt oculto (TTY) ou stdin, nunca como argumento posicional (histórico do shell); `list <app>` mostra apenas chave, hint mascarado (`****xxxx`) e data de atualização (a API é write-only e nunca devolve o valor); `delete <app> <KEY>` pede confirmação interativa, pulável com `-y/--yes` para CI; `import <app> <arquivo.env>` faz upsert em lote reusando o parser de `.env` do deploy, reportando linhas malformadas sem abortar o lote e, ao final, lembra que o arquivo de origem segue com os valores em plaintext (remover ou manter fora do git). `set` e `delete` validam o formato da `KEY` localmente antes de qualquer chamada de rede. O argumento `<app>` aceita nome ou id da aplicação (o helper compartilhado `resolveApplicationByName` passou a aceitar id como fallback).
+
+### Alterado
+- O parser de `.env` (`parseEnvFile`, usado por `zs secrets import` e pelos `envFile` do `zs.yaml` no deploy) passa a aceitar o prefixo opcional `export ` (`export KEY=VALUE`), alinhando o comportamento com o parser do website. Antes essas linhas eram reportadas como malformadas.
+
+### Seguranca
+- `minimatch` 9.x pinado em `^9.0.7` via `pnpm.overrides` (Dependabot alert 11, ReDoS por backtracking combinatório em GLOBSTARs não adjacentes, GHSA; dependência dev transitiva do `@typescript-eslint`, resolvia 9.0.3). A linha 3.x não é afetada pelo advisory.
+
+### Corrigido
+- `pnpm lint` dentro de um worktree aninhado (`.worktrees/<branch>`) não falha mais com "couldn't determine the plugin @typescript-eslint uniquely": o `.eslintrc.js` agora tem `root: true`, impedindo que o eslint carregue também o config do checkout pai.
+
 ### Alterado
 - Os artifacts intermediários do workflow de release (handoff de binários entre jobs) agora expiram em 1 dia (`retention-days: 1`), para limitar o storage de artifacts de Actions.
 

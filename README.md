@@ -132,6 +132,36 @@ printf %s "$REGISTRY_TOKEN" | zs registry login ghcr.io --username "$USER" --tok
 
 This is what a deploy pipeline runs to (re)store the credential before `zs deploy`.
 
+## Application secrets
+
+Secrets (passwords, tokens, API keys) are stored per application, encrypted at
+rest, and injected into the container at start. The API is write-only: a value
+can be set but never read back, only listed as a masked hint (e.g. `****cret`).
+
+```sh
+# Interactive: prompts for the value with echo off.
+zs secrets set my-app API_TOKEN
+
+# Non-interactive (CI): pipe the value on stdin, so it never lands in
+# process arguments or shell history.
+printf %s "$API_TOKEN" | zs secrets set my-app API_TOKEN
+
+zs secrets list my-app            # keys, masked hints and last update only
+zs secrets delete my-app API_TOKEN  # asks for confirmation; use -y/--yes in CI
+zs secrets import my-app .env     # bulk upsert of KEY=VALUE lines
+```
+
+`zs secrets import` accepts blank lines, `#` comments and an optional `export `
+prefix (same rule as the website), strips matching quotes around values, and
+reports malformed lines without aborting the batch. Inline comments are not
+stripped: `KEY=v # note` stores `v # note` as the value. The app argument
+accepts the application name or id. After a successful import the CLI reminds
+you that the source file still holds the values in plaintext: remove it or
+keep it out of git.
+
+Secrets take precedence over `env` entries in `zs.yaml` on deploy. Do not keep
+passwords in the manifest: move them to `zs secrets`.
+
 ## Stack alvo
 
 TypeScript/Node, yargs/commander, axios, conf/keytar, inquirer. Distribuição via npm. Compatível com zsh/bash/sh.
