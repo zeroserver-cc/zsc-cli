@@ -51,7 +51,7 @@ export async function resolveInferenceServiceUseCase(
   if (byName.length === 1) return byName[0];
   if (byName.length > 1) {
     throw new Error(
-      `Ambiguous inference service name "${nameOrId}" (${byName.length} matches). Use the id instead (see "zs ai status").`
+      `Ambiguous inference service name "${nameOrId}" (${byName.length} matches). Use the id instead (see "zs ai list").`
     );
   }
 
@@ -64,7 +64,7 @@ export async function resolveInferenceServiceUseCase(
   }
 
   throw new Error(
-    `Unknown inference service "${nameOrId}". Run "zs ai status" to see your services.`
+    `Unknown inference service "${nameOrId}". Run "zs ai list" to see your services.`
   );
 }
 

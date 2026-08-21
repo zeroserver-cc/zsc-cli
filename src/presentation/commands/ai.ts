@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, InvalidArgumentError } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
 import Table from 'cli-table3';
@@ -55,6 +55,18 @@ function modelLabel(service: ManagedInferenceService): string {
   return service.model?.name ?? service.modelId;
 }
 
+// DNS-safe because the name becomes part of the public hostname (backend rule).
+const DNS_SAFE_NAME = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+
+function parseServiceName(value: string): string {
+  if (!DNS_SAFE_NAME.test(value)) {
+    throw new InvalidArgumentError(
+      'must be DNS-safe: lowercase letters, digits and dashes, starting and ending with a letter or digit'
+    );
+  }
+  return value;
+}
+
 /** The name becomes part of the public hostname, so it must be DNS-safe. */
 function defaultServiceName(modelId: string): string {
   const base = modelId
@@ -68,6 +80,21 @@ function defaultServiceName(modelId: string): string {
 
 function isAllowlistError(err: unknown): boolean {
   return err instanceof GraphQLError && /allowlist|closed beta/i.test(err.message);
+}
+
+/**
+ * Without a TTY the readline confirmation promise never resolves on an empty
+ * stdin, and the process can exit 0 having done nothing. Fail fast instead.
+ */
+function assertInteractiveConfirmation(yes?: boolean): void {
+  if (yes) return;
+  if (!process.stdin.isTTY) {
+    console.error(
+      chalk.red('Error:'),
+      'This command asks for a confirmation, but stdin is not interactive. Pass -y (--yes) to run non-interactively.'
+    );
+    process.exit(1);
+  }
 }
 
 function printTokenOnceWarning(): void {
@@ -94,13 +121,33 @@ function printTokensTable(service: ManagedInferenceService): void {
   console.log(table.toString());
 }
 
+function printServicesTable(services: ManagedInferenceService[]): void {
+  if (services.length === 0) {
+    console.log(
+      chalk.yellow('No inference services. Create one with "zs ai create --model <id>".')
+    );
+    return;
+  }
+  const table = new Table({ head: ['Name', 'Model', 'Status', 'Endpoint', 'Node'] });
+  for (const service of services) {
+    table.push([
+      service.name,
+      modelLabel(service),
+      statusLabel(service.status),
+      service.endpoint ?? '-',
+      nodeLabel(service)
+    ]);
+  }
+  console.log(table.toString());
+}
+
 export function registerAiCommands(program: Command): void {
   const ai = program
     .command('ai')
     .description('Manage platform-managed LLM inference services (AIaaS, closed beta)');
 
-  ai.command('list')
-    .alias('ls')
+  ai.command('models')
+    .alias('catalog')
     .description('List the public catalog of servable AI models')
     .action(async () => {
       requireRole(['developer', 'admin']);
@@ -136,10 +183,30 @@ export function registerAiCommands(program: Command): void {
       }
     });
 
+  ai.command('list')
+    .alias('ls')
+    .description('List your inference services')
+    .action(async () => {
+      requireRole(['developer', 'admin']);
+      const spinner = ora('Fetching inference services…').start();
+      try {
+        const services = await listInferenceServicesUseCase();
+        spinner.stop();
+        printServicesTable(services);
+      } catch (err) {
+        spinner.fail('Failed to fetch inference services.');
+        handleError(err);
+      }
+    });
+
   ai.command('create')
     .description('Create a managed inference service from a catalog model')
-    .requiredOption('--model <id>', 'Catalog model id (see "zs ai list")')
-    .option('--name <name>', 'Service name (DNS-safe; part of the public hostname)')
+    .requiredOption('--model <id>', 'Catalog model id (see "zs ai models")')
+    .option(
+      '--name <name>',
+      'Service name (DNS-safe; part of the public hostname)',
+      parseServiceName
+    )
     .action(async (opts: { model: string; name?: string }) => {
       requireRole(['developer', 'admin']);
       const name = opts.name ?? defaultServiceName(opts.model);
@@ -171,13 +238,14 @@ export function registerAiCommands(program: Command): void {
                 'Request beta access in the community Discord or at zeroserver.cc.'
             )
           );
+        } else {
+          handleError(err);
         }
-        handleError(err);
       }
     });
 
   ai.command('status [name]')
-    .description('List your inference services, or detail one (including its tokens)')
+    .description('Detail an inference service (including its tokens); without a name, lists yours')
     .action(async (target?: string) => {
       requireRole(['developer', 'admin']);
       const spinner = ora('Fetching inference services…').start();
@@ -185,23 +253,7 @@ export function registerAiCommands(program: Command): void {
         if (!target) {
           const services = await listInferenceServicesUseCase();
           spinner.stop();
-          if (services.length === 0) {
-            console.log(
-              chalk.yellow('No inference services. Create one with "zs ai create --model <id>".')
-            );
-            return;
-          }
-          const table = new Table({ head: ['Name', 'Model', 'Status', 'Endpoint', 'Node'] });
-          for (const service of services) {
-            table.push([
-              service.name,
-              modelLabel(service),
-              statusLabel(service.status),
-              service.endpoint ?? '-',
-              nodeLabel(service)
-            ]);
-          }
-          console.log(table.toString());
+          printServicesTable(services);
           return;
         }
         const service = await resolveInferenceServiceUseCase(target);
@@ -274,6 +326,7 @@ export function registerAiCommands(program: Command): void {
       requireRole(['developer', 'admin']);
       let spinner: ReturnType<typeof ora> | undefined;
       try {
+        assertInteractiveConfirmation(opts.yes);
         if (!opts.yes) {
           const answer = await prompt(
             `Revoke token ${tokenId} of service ${target}? Clients using it lose access immediately. [y/N] `
@@ -313,6 +366,7 @@ export function registerAiCommands(program: Command): void {
       requireRole(['developer', 'admin']);
       let spinner: ReturnType<typeof ora> | undefined;
       try {
+        assertInteractiveConfirmation(opts.yes);
         if (!opts.yes) {
           const answer = await prompt(
             `Delete inference service ${target}? The container is torn down and all its tokens stop working. [y/N] `

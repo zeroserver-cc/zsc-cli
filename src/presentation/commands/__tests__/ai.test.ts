@@ -85,6 +85,7 @@ describe('zs ai', () => {
   let logSpy: jest.SpyInstance;
   let errorSpy: jest.SpyInstance;
   let exitSpy: jest.SpyInstance;
+  const originalIsTTY = process.stdin.isTTY;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -92,6 +93,9 @@ describe('zs ai', () => {
       key === 'accessToken' ? 'session-token' : undefined
     );
     mockedGetConfigArray.mockImplementation((key) => (key === 'roles' ? ['developer'] : []));
+    // The confirmation guard fails fast without a TTY; tests that exercise the
+    // prompt path simulate an interactive terminal.
+    Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
@@ -100,6 +104,7 @@ describe('zs ai', () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(process.stdin, 'isTTY', { value: originalIsTTY, configurable: true });
     logSpy.mockRestore();
     errorSpy.mockRestore();
     exitSpy.mockRestore();
@@ -117,11 +122,11 @@ describe('zs ai', () => {
     return errorSpy.mock.calls.map((call) => call.join(' ')).join('\n');
   }
 
-  describe('list', () => {
+  describe('models', () => {
     it('prints the model catalog as a table', async () => {
       mockedListModels.mockResolvedValueOnce([model]);
 
-      await run('ai', 'list');
+      await run('ai', 'models');
 
       const output = printedOutput();
       expect(output).toContain('qwen2.5-7b-q4');
@@ -133,12 +138,42 @@ describe('zs ai', () => {
       expect(output).toContain('apache-2.0');
     });
 
+    it('works via the catalog alias', async () => {
+      mockedListModels.mockResolvedValueOnce([model]);
+
+      await run('ai', 'catalog');
+
+      expect(printedOutput()).toContain('qwen2.5-7b-q4');
+    });
+
     it('warns when the catalog is empty', async () => {
       mockedListModels.mockResolvedValueOnce([]);
 
-      await run('ai', 'list');
+      await run('ai', 'models');
 
       expect(printedOutput()).toContain('No models in the catalog');
+    });
+  });
+
+  describe('list', () => {
+    it('lists the owner services as a table', async () => {
+      mockedListServices.mockResolvedValueOnce([service]);
+
+      await run('ai', 'list');
+
+      const output = printedOutput();
+      expect(output).toContain('my-llm');
+      expect(output).toContain('Qwen 2.5 7B (Q4_K_M)');
+      expect(output).toContain('RUNNING');
+      expect(output).toContain('https://my-llm.ai.zeroserver.cc');
+    });
+
+    it('warns when there are no services', async () => {
+      mockedListServices.mockResolvedValueOnce([]);
+
+      await run('ai', 'list');
+
+      expect(printedOutput()).toContain('No inference services');
     });
   });
 
@@ -164,6 +199,14 @@ describe('zs ai', () => {
       expect(generatedName).toMatch(/^qwen2-5-7b-q4-[0-9a-f]{6}$/);
     });
 
+    it('rejects a non-DNS-safe --name before calling the backend', async () => {
+      await expect(run('ai', 'create', '--model', model.id, '--name', 'Bad_Name')).rejects.toThrow(
+        /DNS-safe/
+      );
+
+      expect(mockedCreate).not.toHaveBeenCalled();
+    });
+
     it('explains the closed-beta allowlist denial', async () => {
       mockedCreate.mockRejectedValueOnce(
         new GraphQLError(
@@ -178,6 +221,17 @@ describe('zs ai', () => {
       expect(printedErrors()).toContain('closed beta');
       expect(printedErrors()).toContain('allowlist');
     });
+
+    it('propagates other backend errors untouched', async () => {
+      mockedCreate.mockRejectedValueOnce(new GraphQLError('No eligible node for inference'));
+
+      await expect(run('ai', 'create', '--model', model.id, '--name', 'my-llm')).rejects.toThrow(
+        'process.exit(1)'
+      );
+
+      expect(printedErrors()).toContain('No eligible node for inference');
+      expect(printedErrors()).not.toContain('Request beta access');
+    });
   });
 
   describe('status', () => {
@@ -188,9 +242,7 @@ describe('zs ai', () => {
 
       const output = printedOutput();
       expect(output).toContain('my-llm');
-      expect(output).toContain('Qwen 2.5 7B (Q4_K_M)');
       expect(output).toContain('RUNNING');
-      expect(output).toContain('https://my-llm.ai.zeroserver.cc');
     });
 
     it('details a service including token metadata, never token values', async () => {
@@ -207,7 +259,7 @@ describe('zs ai', () => {
 
     it('fails with a clear error for an unknown service', async () => {
       mockedResolve.mockRejectedValueOnce(
-        new Error('Unknown inference service "nope". Run "zs ai status" to see your services.')
+        new Error('Unknown inference service "nope". Run "zs ai list" to see your services.')
       );
 
       await expect(run('ai', 'status', 'nope')).rejects.toThrow('process.exit(1)');
@@ -274,6 +326,18 @@ describe('zs ai', () => {
       expect(mockedRevokeToken).toHaveBeenCalledWith('my-llm', 'tok-aaaa');
       expect(printedOutput()).toContain('restarts briefly');
     });
+
+    it('fails fast without a TTY when -y is not passed', async () => {
+      Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
+
+      await expect(run('ai', 'token', 'revoke', 'my-llm', 'tok-aaaa')).rejects.toThrow(
+        'process.exit(1)'
+      );
+
+      expect(printedErrors()).toContain('not interactive');
+      expect(mockedPrompt).not.toHaveBeenCalled();
+      expect(mockedRevokeToken).not.toHaveBeenCalled();
+    });
   });
 
   describe('delete', () => {
@@ -292,6 +356,16 @@ describe('zs ai', () => {
       await run('ai', 'delete', 'my-llm', '-y');
 
       expect(mockedDelete).toHaveBeenCalledWith('my-llm');
+    });
+
+    it('fails fast without a TTY when -y is not passed', async () => {
+      Object.defineProperty(process.stdin, 'isTTY', { value: undefined, configurable: true });
+
+      await expect(run('ai', 'delete', 'my-llm')).rejects.toThrow('process.exit(1)');
+
+      expect(printedErrors()).toContain('not interactive');
+      expect(mockedPrompt).not.toHaveBeenCalled();
+      expect(mockedDelete).not.toHaveBeenCalled();
     });
   });
 });

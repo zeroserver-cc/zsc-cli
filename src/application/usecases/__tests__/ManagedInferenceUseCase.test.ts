@@ -119,7 +119,7 @@ describe('resolveInferenceServiceUseCase', () => {
     mockGql.mockResolvedValue({ myInferenceServices: [svc({})] } as any);
 
     await expect(resolveInferenceServiceUseCase('nope')).rejects.toThrow(
-      'Unknown inference service "nope". Run "zs ai status" to see your services.'
+      'Unknown inference service "nope". Run "zs ai list" to see your services.'
     );
   });
 });
