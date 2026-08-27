@@ -7,6 +7,20 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+- Catálogo híbrido de modelos AIaaS (ZSC-210): `zs ai models --search <termo>` busca repos GGUF direto no Hugging Face (tabela com repo, downloads, likes e licença, com hint do próximo passo), e o novo subcomando `zs ai files <owner/repo>` lista os arquivos GGUF na raiz do repo (nome, tamanho em GB e marca `*` no quant recomendado pela plataforma), com hint de uso no `--model`.
+- `zs ai create --model` passa a aceitar, além do id do catálogo curado, um spec Hugging Face `owner/repo[:arquivo.gguf]` (ex.: `bartowski/Qwen2.5-7B-Instruct-GGUF:Qwen2.5-7B-Instruct-Q4_K_M.gguf`); omitindo `:arquivo` a plataforma escolhe o quant recomendado. O CLI faz apenas uma validação leve de formato (quando o valor contém `/`), pois o backend é a autoridade de validação (gated, split, oversize) e suas mensagens sobem sem alteração. O nome default do serviço continua DNS-safe a partir do spec.
+
+### Alterado
+- O tipo `AiModel` e a query `aiModels` passam a incluir o campo `curated` (sincronia com o schema do backend, ZSC-210). Requer backend com `searchHfModels`/`hfModelFiles` (PR #126).
+
+### Corrigido
+- Erros de validação de schema do GraphQL (campo inexistente no backend, ex.: CLI novo contra backend antigo sem o catálogo híbrido) agora são traduzidos em mensagem clara orientando que a versão do CLI requer um backend mais novo, em vez do erro cru `Cannot query field ...`.
+- Dados remotos exibidos em tabelas (resultados do Hugging Face, catálogo, serviços e tokens) passam por sanitização de caracteres de controle (inclui sequências ANSI e quebras de linha), evitando injeção de escape no terminal ou quebra de layout a partir de payload malicioso ou corrompido.
+
+### Seguranca
+- Mensagens de erro vindas do backend são truncadas em 500 caracteres (com `...`) antes de impressão, como defesa contra payloads longos demais.
+
 ## [0.13.0] - 2026-08-21
 
 ### Adicionado

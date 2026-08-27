@@ -316,7 +316,23 @@ const INFERENCE_SERVICE_FIELDS = `
 export const AI_MODELS_QUERY = `
   query AiModels {
     aiModels {
-      id name hfRepo hfFile sizeBytes minVramMb contextTokens license supportedBackends
+      id name hfRepo hfFile sizeBytes minVramMb contextTokens license supportedBackends curated
+    }
+  }
+`;
+
+export const SEARCH_HF_MODELS_QUERY = `
+  query SearchHfModels($search: String!) {
+    searchHfModels(search: $search) {
+      repoId downloads likes license
+    }
+  }
+`;
+
+export const HF_MODEL_FILES_QUERY = `
+  query HfModelFiles($repoId: String!) {
+    hfModelFiles(repoId: $repoId) {
+      file sizeBytes recommended
     }
   }
 `;

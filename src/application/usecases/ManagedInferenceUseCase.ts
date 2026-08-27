@@ -2,6 +2,8 @@ import {
   AddInferenceServiceTokenPayload,
   AiModel,
   CreateInferenceServicePayload,
+  HfModelFile,
+  HfModelSummary,
   InferenceServiceToken,
   ManagedInferenceService
 } from '../../domain/entities/types';
@@ -11,8 +13,10 @@ import {
   AI_MODELS_QUERY,
   CREATE_INFERENCE_SERVICE_MUTATION,
   DELETE_INFERENCE_SERVICE_MUTATION,
+  HF_MODEL_FILES_QUERY,
   MY_INFERENCE_SERVICES_QUERY,
-  REVOKE_INFERENCE_SERVICE_TOKEN_MUTATION
+  REVOKE_INFERENCE_SERVICE_TOKEN_MUTATION,
+  SEARCH_HF_MODELS_QUERY
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
@@ -26,6 +30,28 @@ export async function listAiModelsUseCase(): Promise<AiModel[]> {
   const token = requireToken();
   const data = await gqlRequest<{ aiModels: AiModel[] }>(AI_MODELS_QUERY, {}, token);
   return data.aiModels;
+}
+
+/** Search Hugging Face GGUF repos; the backend proxies the HF API (ZSC-210). */
+export async function searchHfModelsUseCase(search: string): Promise<HfModelSummary[]> {
+  const token = requireToken();
+  const data = await gqlRequest<{ searchHfModels: HfModelSummary[] }>(
+    SEARCH_HF_MODELS_QUERY,
+    { search },
+    token
+  );
+  return data.searchHfModels;
+}
+
+/** List the root-level GGUF files of a Hugging Face repo, with the recommended pick flagged. */
+export async function listHfModelFilesUseCase(repoId: string): Promise<HfModelFile[]> {
+  const token = requireToken();
+  const data = await gqlRequest<{ hfModelFiles: HfModelFile[] }>(
+    HF_MODEL_FILES_QUERY,
+    { repoId },
+    token
+  );
+  return data.hfModelFiles;
 }
 
 export async function listInferenceServicesUseCase(): Promise<ManagedInferenceService[]> {

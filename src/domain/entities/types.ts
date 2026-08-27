@@ -267,6 +267,23 @@ export interface AiModel {
   license: string;
   /** Subset of cuda|rocm|cpu the model can be served on. */
   supportedBackends: string[];
+  /** Admin-vetted models are the public showcase; false for HF specs auto-registered on demand (ZSC-210). */
+  curated: boolean;
+}
+
+/** Hugging Face GGUF repo summary (discovery, ZSC-210). */
+export interface HfModelSummary {
+  repoId: string;
+  downloads: number;
+  likes: number;
+  license?: string | null;
+}
+
+/** Root-level GGUF file of a Hugging Face repo; `recommended` marks the platform default pick (ZSC-210). */
+export interface HfModelFile {
+  file: string;
+  sizeBytes: number;
+  recommended: boolean;
 }
 
 /** Write-only API token metadata: the token value never appears on this type. */

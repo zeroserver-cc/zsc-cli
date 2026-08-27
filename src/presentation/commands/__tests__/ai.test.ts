@@ -5,9 +5,11 @@ import {
   createInferenceServiceUseCase,
   deleteInferenceServiceUseCase,
   listAiModelsUseCase,
+  listHfModelFilesUseCase,
   listInferenceServicesUseCase,
   resolveInferenceServiceUseCase,
-  revokeInferenceServiceTokenUseCase
+  revokeInferenceServiceTokenUseCase,
+  searchHfModelsUseCase
 } from '../../../application/usecases/ManagedInferenceUseCase';
 import { GraphQLError } from '../../../infrastructure/graphql/client';
 import { getConfigArray, getConfigValue } from '../../../infrastructure/config/store';
@@ -43,6 +45,10 @@ const mockedAddToken = addInferenceServiceTokenUseCase as jest.MockedFunction<
 const mockedRevokeToken = revokeInferenceServiceTokenUseCase as jest.MockedFunction<
   typeof revokeInferenceServiceTokenUseCase
 >;
+const mockedSearchHf = searchHfModelsUseCase as jest.MockedFunction<typeof searchHfModelsUseCase>;
+const mockedHfFiles = listHfModelFilesUseCase as jest.MockedFunction<
+  typeof listHfModelFilesUseCase
+>;
 const mockedGetConfigValue = getConfigValue as jest.MockedFunction<typeof getConfigValue>;
 const mockedGetConfigArray = getConfigArray as jest.MockedFunction<typeof getConfigArray>;
 const mockedPrompt = prompt as jest.MockedFunction<typeof prompt>;
@@ -56,8 +62,21 @@ const model = {
   minVramMb: 6144,
   contextTokens: 32768,
   license: 'apache-2.0',
-  supportedBackends: ['cuda', 'rocm', 'cpu']
+  supportedBackends: ['cuda', 'rocm', 'cpu'],
+  curated: true
 };
+
+const hfSummary = {
+  repoId: 'bartowski/Qwen2.5-7B-Instruct-GGUF',
+  downloads: 1_234_567,
+  likes: 890,
+  license: 'apache-2.0'
+};
+
+const hfFiles = [
+  { file: 'Qwen2.5-7B-Instruct-Q4_K_M.gguf', sizeBytes: 4_680_000_000, recommended: true },
+  { file: 'Qwen2.5-7B-Instruct-Q8_0.gguf', sizeBytes: 8_100_000_000, recommended: false }
+];
 
 const service = {
   id: 'svc-1111',
@@ -153,6 +172,100 @@ describe('zs ai', () => {
 
       expect(printedOutput()).toContain('No models in the catalog');
     });
+
+    it('searches Hugging Face with --search and prints the next-step hint', async () => {
+      mockedSearchHf.mockResolvedValueOnce([hfSummary]);
+
+      await run('ai', 'models', '--search', 'qwen 7b');
+
+      expect(mockedSearchHf).toHaveBeenCalledWith('qwen 7b');
+      expect(mockedListModels).not.toHaveBeenCalled();
+      const output = printedOutput();
+      expect(output).toContain('bartowski/Qwen2.5-7B-Instruct-GGUF');
+      expect(output).toContain('1,234,567');
+      expect(output).toContain('890');
+      expect(output).toContain('apache-2.0');
+      expect(output).toContain('zs ai files <owner/repo>');
+      expect(output).toContain('zs ai create --model <owner/repo>:<file.gguf>');
+    });
+
+    it('warns when the Hugging Face search finds nothing', async () => {
+      mockedSearchHf.mockResolvedValueOnce([]);
+
+      await run('ai', 'models', '--search', 'nope-model');
+
+      expect(printedOutput()).toContain('No Hugging Face GGUF repos found for "nope-model"');
+    });
+
+    it('rejects an empty or whitespace-only --search before any backend call', async () => {
+      await expect(run('ai', 'models', '--search', '')).rejects.toThrow(/at least 2 characters/);
+      await expect(run('ai', 'models', '--search', '   ')).rejects.toThrow(/at least 2 characters/);
+
+      expect(mockedSearchHf).not.toHaveBeenCalled();
+      expect(mockedListModels).not.toHaveBeenCalled();
+    });
+
+    it('strips control chars and ANSI sequences from remote search results', async () => {
+      mockedSearchHf.mockResolvedValueOnce([
+        { repoId: 'evil\n\u001b[31mowner/repo', downloads: 1, likes: 2, license: 'mit' }
+      ]);
+
+      await run('ai', 'models', '--search', 'qwen');
+
+      const output = printedOutput();
+      expect(output).toContain('evil[31mowner/repo');
+      expect(output).not.toContain('evil\n');
+    });
+
+    it('translates a schema mismatch (older backend) into a backend-upgrade message', async () => {
+      mockedSearchHf.mockRejectedValueOnce(
+        new GraphQLError('Cannot query field "searchHfModels" on type "Query".')
+      );
+
+      await expect(run('ai', 'models', '--search', 'qwen')).rejects.toThrow('process.exit(1)');
+
+      expect(printedErrors()).toContain('requires a newer ZeroServer backend');
+      expect(printedErrors()).not.toContain('Cannot query field');
+    });
+  });
+
+  describe('files', () => {
+    it('rejects a repo id without owner/ before calling the backend', async () => {
+      await expect(run('ai', 'files', 'foo')).rejects.toThrow(/owner\/repo/);
+
+      expect(mockedHfFiles).not.toHaveBeenCalled();
+    });
+    it('lists the repo GGUF files flagging the recommended pick', async () => {
+      mockedHfFiles.mockResolvedValueOnce(hfFiles);
+
+      await run('ai', 'files', 'bartowski/Qwen2.5-7B-Instruct-GGUF');
+
+      expect(mockedHfFiles).toHaveBeenCalledWith('bartowski/Qwen2.5-7B-Instruct-GGUF');
+      const output = printedOutput();
+      expect(output).toContain('Qwen2.5-7B-Instruct-Q4_K_M.gguf');
+      expect(output).toContain('4.7');
+      expect(output).toContain('Qwen2.5-7B-Instruct-Q8_0.gguf');
+      expect(output).toContain('* = recommended');
+      expect(output).toContain(
+        'zs ai create --model bartowski/Qwen2.5-7B-Instruct-GGUF:<file.gguf>'
+      );
+    });
+
+    it('warns when the repo has no root-level GGUF files', async () => {
+      mockedHfFiles.mockResolvedValueOnce([]);
+
+      await run('ai', 'files', 'some/repo');
+
+      expect(printedOutput()).toContain('No root-level GGUF files found in "some/repo"');
+    });
+
+    it('propagates backend errors untouched', async () => {
+      mockedHfFiles.mockRejectedValueOnce(new GraphQLError('Hugging Face API unavailable'));
+
+      await expect(run('ai', 'files', 'some/repo')).rejects.toThrow('process.exit(1)');
+
+      expect(printedErrors()).toContain('Hugging Face API unavailable');
+    });
   });
 
   describe('list', () => {
@@ -197,6 +310,63 @@ describe('zs ai', () => {
 
       const [generatedName] = mockedCreate.mock.calls[0];
       expect(generatedName).toMatch(/^qwen2-5-7b-q4-[0-9a-f]{6}$/);
+    });
+
+    it('sends a Hugging Face spec as --model to the backend', async () => {
+      const spec = 'bartowski/Qwen2.5-7B-Instruct-GGUF:Qwen2.5-7B-Instruct-Q4_K_M.gguf';
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', spec, '--name', 'my-llm');
+
+      expect(mockedCreate).toHaveBeenCalledWith('my-llm', spec);
+    });
+
+    it('derives a DNS-safe name from a Hugging Face spec', async () => {
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', 'bartowski/Qwen2.5-7B-Instruct-GGUF');
+
+      const [generatedName] = mockedCreate.mock.calls[0];
+      expect(generatedName).toMatch(/^bartowski-qwen2-5-7b-instruct-gguf-[0-9a-f]{6}$/);
+    });
+
+    it('falls back to llm-<suffix> when the model id has no DNS-safe chars', async () => {
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', '!!!...');
+
+      const [generatedName] = mockedCreate.mock.calls[0];
+      expect(generatedName).toMatch(/^llm-[0-9a-f]{6}$/);
+    });
+
+    it('derives a safe slug from unicode model ids', async () => {
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', 'Café Môdel 2');
+
+      const [generatedName] = mockedCreate.mock.calls[0];
+      expect(generatedName).toMatch(/^caf-m-del-2-[0-9a-f]{6}$/);
+    });
+
+    it('rejects a malformed Hugging Face spec before calling the backend', async () => {
+      await expect(run('ai', 'create', '--model', 'owner/repo/file.gguf')).rejects.toThrow(
+        /invalid Hugging Face model spec/
+      );
+
+      expect(mockedCreate).not.toHaveBeenCalled();
+    });
+
+    it('propagates backend spec validation errors (gated, split, oversize) untouched', async () => {
+      mockedCreate.mockRejectedValueOnce(
+        new GraphQLError('Hugging Face repo owner/repo is gated; request access on huggingface.co')
+      );
+
+      await expect(
+        run('ai', 'create', '--model', 'owner/repo:file.gguf', '--name', 'my-llm')
+      ).rejects.toThrow('process.exit(1)');
+
+      expect(printedErrors()).toContain('gated');
+      expect(printedErrors()).not.toContain('Request beta access');
     });
 
     it('rejects a non-DNS-safe --name before calling the backend', async () => {
