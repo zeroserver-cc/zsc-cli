@@ -3,9 +3,11 @@ import {
   createInferenceServiceUseCase,
   deleteInferenceServiceUseCase,
   listAiModelsUseCase,
+  listHfModelFilesUseCase,
   listInferenceServicesUseCase,
   resolveInferenceServiceUseCase,
-  revokeInferenceServiceTokenUseCase
+  revokeInferenceServiceTokenUseCase,
+  searchHfModelsUseCase
 } from '../ManagedInferenceUseCase';
 import { gqlRequest } from '../../../infrastructure/graphql/client';
 import { getConfigValue } from '../../../infrastructure/config/store';
@@ -14,8 +16,10 @@ import {
   AI_MODELS_QUERY,
   CREATE_INFERENCE_SERVICE_MUTATION,
   DELETE_INFERENCE_SERVICE_MUTATION,
+  HF_MODEL_FILES_QUERY,
   MY_INFERENCE_SERVICES_QUERY,
-  REVOKE_INFERENCE_SERVICE_TOKEN_MUTATION
+  REVOKE_INFERENCE_SERVICE_TOKEN_MUTATION,
+  SEARCH_HF_MODELS_QUERY
 } from '../../../infrastructure/graphql/queries';
 import { ManagedInferenceService } from '../../../domain/entities/types';
 
@@ -60,6 +64,47 @@ describe('listAiModelsUseCase', () => {
 
     await expect(listAiModelsUseCase()).rejects.toThrow('Not logged in. Run "zs login" first.');
     expect(mockGql).not.toHaveBeenCalled();
+  });
+});
+
+describe('searchHfModelsUseCase', () => {
+  it('returns the repos from searchHfModels', async () => {
+    mockGql.mockResolvedValue({
+      searchHfModels: [{ repoId: 'bartowski/Qwen2.5-7B-Instruct-GGUF', downloads: 100, likes: 5 }]
+    } as any);
+
+    const result = await searchHfModelsUseCase('qwen 7b');
+
+    expect(mockGql).toHaveBeenCalledWith(SEARCH_HF_MODELS_QUERY, { search: 'qwen 7b' }, 'a-token');
+    expect(result[0].repoId).toBe('bartowski/Qwen2.5-7B-Instruct-GGUF');
+  });
+
+  it('fails early when there is no session token', async () => {
+    (getConfigValue as jest.Mock).mockReturnValue(undefined);
+
+    await expect(searchHfModelsUseCase('qwen')).rejects.toThrow(
+      'Not logged in. Run "zs login" first.'
+    );
+    expect(mockGql).not.toHaveBeenCalled();
+  });
+});
+
+describe('listHfModelFilesUseCase', () => {
+  it('returns the files from hfModelFiles', async () => {
+    mockGql.mockResolvedValue({
+      hfModelFiles: [
+        { file: 'Qwen2.5-7B-Instruct-Q4_K_M.gguf', sizeBytes: 4_680_000_000, recommended: true }
+      ]
+    } as any);
+
+    const result = await listHfModelFilesUseCase('bartowski/Qwen2.5-7B-Instruct-GGUF');
+
+    expect(mockGql).toHaveBeenCalledWith(
+      HF_MODEL_FILES_QUERY,
+      { repoId: 'bartowski/Qwen2.5-7B-Instruct-GGUF' },
+      'a-token'
+    );
+    expect(result[0].recommended).toBe(true);
   });
 });
 
@@ -139,6 +184,21 @@ describe('createInferenceServiceUseCase', () => {
     );
     expect(result.initialToken).toBe('zsai-x');
     expect(result.service.status).toBe('PROVISIONING');
+  });
+
+  it('passes a Hugging Face spec through as modelId (backend is the validation authority)', async () => {
+    const spec = 'bartowski/Qwen2.5-7B-Instruct-GGUF:Qwen2.5-7B-Instruct-Q4_K_M.gguf';
+    mockGql.mockResolvedValue({
+      createInferenceService: { service: svc({ modelId: spec }), initialToken: 'zsai-x' }
+    } as any);
+
+    await createInferenceServiceUseCase('my-llm', spec);
+
+    expect(mockGql).toHaveBeenCalledWith(
+      CREATE_INFERENCE_SERVICE_MUTATION,
+      { input: { name: 'my-llm', modelId: spec } },
+      'a-token'
+    );
   });
 });
 

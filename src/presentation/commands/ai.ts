@@ -8,12 +8,16 @@ import {
   createInferenceServiceUseCase,
   deleteInferenceServiceUseCase,
   listAiModelsUseCase,
+  listHfModelFilesUseCase,
   listInferenceServicesUseCase,
   resolveInferenceServiceUseCase,
-  revokeInferenceServiceTokenUseCase
+  revokeInferenceServiceTokenUseCase,
+  searchHfModelsUseCase
 } from '../../application/usecases/ManagedInferenceUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
 import {
+  HfModelFile,
+  HfModelSummary,
   ManagedInferenceService,
   ManagedInferenceServiceStatus
 } from '../../domain/entities/types';
@@ -37,6 +41,24 @@ function statusLabel(status: ManagedInferenceServiceStatus): string {
 
 function formatSizeGb(sizeBytes: number): string {
   return (sizeBytes / 1e9).toFixed(1);
+}
+
+function formatCount(value: number): string {
+  return value.toLocaleString('en-US');
+}
+
+// Hugging Face model spec: owner/repo[:file.gguf]. The backend is the
+// validation authority (gated, split, oversize); this only catches typos early.
+const HF_MODEL_SPEC = /^[\w.-]+\/[\w.-]+(:[\w.-]+\.gguf)?$/i;
+
+function parseModelSpec(value: string): string {
+  if (value.includes('/') && !HF_MODEL_SPEC.test(value)) {
+    throw new InvalidArgumentError(
+      'invalid Hugging Face model spec; use owner/repo[:file.gguf], ' +
+        'e.g. bartowski/Qwen2.5-7B-Instruct-GGUF:Qwen2.5-7B-Instruct-Q4_K_M.gguf'
+    );
+  }
+  return value;
 }
 
 function formatVram(minVramMb: number): string {
@@ -141,6 +163,48 @@ function printServicesTable(services: ManagedInferenceService[]): void {
   console.log(table.toString());
 }
 
+function printHfSearchTable(models: HfModelSummary[], search: string): void {
+  if (models.length === 0) {
+    console.log(
+      chalk.yellow(`No Hugging Face GGUF repos found for "${search}". Try a broader term.`)
+    );
+    return;
+  }
+  const table = new Table({ head: ['Repo', 'Downloads', 'Likes', 'License'] });
+  for (const model of models) {
+    table.push([
+      model.repoId,
+      formatCount(model.downloads),
+      formatCount(model.likes),
+      model.license ?? '-'
+    ]);
+  }
+  console.log(table.toString());
+  console.log(
+    chalk.gray(
+      'Pick a file with "zs ai files <owner/repo>", then create with "zs ai create --model <owner/repo>:<file.gguf>".'
+    )
+  );
+}
+
+function printHfFilesTable(repoId: string, files: HfModelFile[]): void {
+  if (files.length === 0) {
+    console.log(chalk.yellow(`No root-level GGUF files found in "${repoId}".`));
+    return;
+  }
+  const table = new Table({ head: ['File', 'Size (GB)', 'Recommended'] });
+  for (const file of files) {
+    table.push([file.file, formatSizeGb(file.sizeBytes), file.recommended ? '*' : '']);
+  }
+  console.log(table.toString());
+  console.log(
+    chalk.gray(
+      `* = recommended quant. Create with "zs ai create --model ${repoId}:<file.gguf>" ` +
+        `(omit :<file> to use the recommended one).`
+    )
+  );
+}
+
 export function registerAiCommands(program: Command): void {
   const ai = program
     .command('ai')
@@ -149,8 +213,21 @@ export function registerAiCommands(program: Command): void {
   ai.command('models')
     .alias('catalog')
     .description('List the public catalog of servable AI models')
-    .action(async () => {
+    .option('--search <term>', 'Search Hugging Face GGUF repos instead of listing the catalog')
+    .action(async (opts: { search?: string }) => {
       requireRole(['developer', 'admin']);
+      if (opts.search) {
+        const spinner = ora(`Searching Hugging Face for "${opts.search}"…`).start();
+        try {
+          const models = await searchHfModelsUseCase(opts.search);
+          spinner.stop();
+          printHfSearchTable(models, opts.search);
+        } catch (err) {
+          spinner.fail('Failed to search Hugging Face models.');
+          handleError(err);
+        }
+        return;
+      }
       const spinner = ora('Fetching model catalog…').start();
       try {
         const models = await listAiModelsUseCase();
@@ -183,6 +260,21 @@ export function registerAiCommands(program: Command): void {
       }
     });
 
+  ai.command('files <repo>')
+    .description('List the GGUF files of a Hugging Face repo, with the recommended pick flagged')
+    .action(async (repoId: string) => {
+      requireRole(['developer', 'admin']);
+      const spinner = ora(`Fetching GGUF files of ${chalk.cyan(repoId)}…`).start();
+      try {
+        const files = await listHfModelFilesUseCase(repoId);
+        spinner.stop();
+        printHfFilesTable(repoId, files);
+      } catch (err) {
+        spinner.fail('Failed to fetch the repo files.');
+        handleError(err);
+      }
+    });
+
   ai.command('list')
     .alias('ls')
     .description('List your inference services')
@@ -200,8 +292,16 @@ export function registerAiCommands(program: Command): void {
     });
 
   ai.command('create')
-    .description('Create a managed inference service from a catalog model')
-    .requiredOption('--model <id>', 'Catalog model id (see "zs ai models")')
+    .description(
+      'Create a managed inference service from a catalog model or a Hugging Face GGUF spec'
+    )
+    .requiredOption(
+      '--model <id|spec>',
+      'Catalog model id (see "zs ai models") or Hugging Face spec owner/repo[:file.gguf], ' +
+        'e.g. bartowski/Qwen2.5-7B-Instruct-GGUF:Qwen2.5-7B-Instruct-Q4_K_M.gguf ' +
+        '(omit :file to use the recommended quant)',
+      parseModelSpec
+    )
     .option(
       '--name <name>',
       'Service name (DNS-safe; part of the public hostname)',
