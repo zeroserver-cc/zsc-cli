@@ -196,9 +196,45 @@ describe('zs ai', () => {
 
       expect(printedOutput()).toContain('No Hugging Face GGUF repos found for "nope-model"');
     });
+
+    it('rejects an empty or whitespace-only --search before any backend call', async () => {
+      await expect(run('ai', 'models', '--search', '')).rejects.toThrow(/at least 2 characters/);
+      await expect(run('ai', 'models', '--search', '   ')).rejects.toThrow(/at least 2 characters/);
+
+      expect(mockedSearchHf).not.toHaveBeenCalled();
+      expect(mockedListModels).not.toHaveBeenCalled();
+    });
+
+    it('strips control chars and ANSI sequences from remote search results', async () => {
+      mockedSearchHf.mockResolvedValueOnce([
+        { repoId: 'evil\n\u001b[31mowner/repo', downloads: 1, likes: 2, license: 'mit' }
+      ]);
+
+      await run('ai', 'models', '--search', 'qwen');
+
+      const output = printedOutput();
+      expect(output).toContain('evil[31mowner/repo');
+      expect(output).not.toContain('evil\n');
+    });
+
+    it('translates a schema mismatch (older backend) into a backend-upgrade message', async () => {
+      mockedSearchHf.mockRejectedValueOnce(
+        new GraphQLError('Cannot query field "searchHfModels" on type "Query".')
+      );
+
+      await expect(run('ai', 'models', '--search', 'qwen')).rejects.toThrow('process.exit(1)');
+
+      expect(printedErrors()).toContain('requires a newer ZeroServer backend');
+      expect(printedErrors()).not.toContain('Cannot query field');
+    });
   });
 
   describe('files', () => {
+    it('rejects a repo id without owner/ before calling the backend', async () => {
+      await expect(run('ai', 'files', 'foo')).rejects.toThrow(/owner\/repo/);
+
+      expect(mockedHfFiles).not.toHaveBeenCalled();
+    });
     it('lists the repo GGUF files flagging the recommended pick', async () => {
       mockedHfFiles.mockResolvedValueOnce(hfFiles);
 
@@ -292,6 +328,24 @@ describe('zs ai', () => {
 
       const [generatedName] = mockedCreate.mock.calls[0];
       expect(generatedName).toMatch(/^bartowski-qwen2-5-7b-instruct-gguf-[0-9a-f]{6}$/);
+    });
+
+    it('falls back to llm-<suffix> when the model id has no DNS-safe chars', async () => {
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', '!!!...');
+
+      const [generatedName] = mockedCreate.mock.calls[0];
+      expect(generatedName).toMatch(/^llm-[0-9a-f]{6}$/);
+    });
+
+    it('derives a safe slug from unicode model ids', async () => {
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', 'Café Môdel 2');
+
+      const [generatedName] = mockedCreate.mock.calls[0];
+      expect(generatedName).toMatch(/^caf-m-del-2-[0-9a-f]{6}$/);
     });
 
     it('rejects a malformed Hugging Face spec before calling the backend', async () => {

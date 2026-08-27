@@ -47,9 +47,30 @@ function formatCount(value: number): string {
   return value.toLocaleString('en-US');
 }
 
-// Hugging Face model spec: owner/repo[:file.gguf]. The backend is the
-// validation authority (gated, split, oversize); this only catches typos early.
+/**
+ * Strip control chars (including ANSI escapes and newlines) from remote data
+ * before printing it in a table cell, so a malicious or broken payload cannot
+ * inject terminal sequences or break the table layout.
+ */
+function sanitizeCell(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '');
+}
+
+// Hugging Face repo id (owner/repo) and model spec (owner/repo[:file.gguf]).
+// The backend is the validation authority (gated, split, oversize); these only
+// catch typos early.
+const HF_REPO_ID = /^[\w.-]+\/[\w.-]+$/;
 const HF_MODEL_SPEC = /^[\w.-]+\/[\w.-]+(:[\w.-]+\.gguf)?$/i;
+
+function parseRepoId(value: string): string {
+  if (!HF_REPO_ID.test(value)) {
+    throw new InvalidArgumentError(
+      'must be a Hugging Face repo id (owner/repo), e.g. bartowski/Qwen2.5-7B-Instruct-GGUF'
+    );
+  }
+  return value;
+}
 
 function parseModelSpec(value: string): string {
   if (value.includes('/') && !HF_MODEL_SPEC.test(value)) {
@@ -138,7 +159,12 @@ function printTokensTable(service: ManagedInferenceService): void {
   }
   const table = new Table({ head: ['ID', 'Label', 'Hint', 'Created'] });
   for (const token of service.tokens) {
-    table.push([token.id, token.label, token.hint, new Date(token.createdAt).toLocaleString()]);
+    table.push([
+      sanitizeCell(token.id),
+      sanitizeCell(token.label),
+      sanitizeCell(token.hint),
+      new Date(token.createdAt).toLocaleString()
+    ]);
   }
   console.log(table.toString());
 }
@@ -153,11 +179,11 @@ function printServicesTable(services: ManagedInferenceService[]): void {
   const table = new Table({ head: ['Name', 'Model', 'Status', 'Endpoint', 'Node'] });
   for (const service of services) {
     table.push([
-      service.name,
-      modelLabel(service),
+      sanitizeCell(service.name),
+      sanitizeCell(modelLabel(service)),
       statusLabel(service.status),
-      service.endpoint ?? '-',
-      nodeLabel(service)
+      sanitizeCell(service.endpoint ?? '-'),
+      sanitizeCell(nodeLabel(service))
     ]);
   }
   console.log(table.toString());
@@ -173,10 +199,10 @@ function printHfSearchTable(models: HfModelSummary[], search: string): void {
   const table = new Table({ head: ['Repo', 'Downloads', 'Likes', 'License'] });
   for (const model of models) {
     table.push([
-      model.repoId,
+      sanitizeCell(model.repoId),
       formatCount(model.downloads),
       formatCount(model.likes),
-      model.license ?? '-'
+      sanitizeCell(model.license ?? '-')
     ]);
   }
   console.log(table.toString());
@@ -194,7 +220,11 @@ function printHfFilesTable(repoId: string, files: HfModelFile[]): void {
   }
   const table = new Table({ head: ['File', 'Size (GB)', 'Recommended'] });
   for (const file of files) {
-    table.push([file.file, formatSizeGb(file.sizeBytes), file.recommended ? '*' : '']);
+    table.push([
+      sanitizeCell(file.file),
+      formatSizeGb(file.sizeBytes),
+      file.recommended ? '*' : ''
+    ]);
   }
   console.log(table.toString());
   console.log(
@@ -216,12 +246,16 @@ export function registerAiCommands(program: Command): void {
     .option('--search <term>', 'Search Hugging Face GGUF repos instead of listing the catalog')
     .action(async (opts: { search?: string }) => {
       requireRole(['developer', 'admin']);
-      if (opts.search) {
-        const spinner = ora(`Searching Hugging Face for "${opts.search}"…`).start();
+      if (opts.search !== undefined) {
+        const term = opts.search.trim();
+        if (term.length < 2) {
+          throw new InvalidArgumentError('--search requires at least 2 characters.');
+        }
+        const spinner = ora(`Searching Hugging Face for "${term}"…`).start();
         try {
-          const models = await searchHfModelsUseCase(opts.search);
+          const models = await searchHfModelsUseCase(term);
           spinner.stop();
-          printHfSearchTable(models, opts.search);
+          printHfSearchTable(models, term);
         } catch (err) {
           spinner.fail('Failed to search Hugging Face models.');
           handleError(err);
@@ -241,13 +275,13 @@ export function registerAiCommands(program: Command): void {
         });
         for (const model of models) {
           table.push([
-            model.id,
-            model.name,
+            sanitizeCell(model.id),
+            sanitizeCell(model.name),
             formatSizeGb(model.sizeBytes),
             formatVram(model.minVramMb),
             formatContext(model.contextTokens),
-            model.supportedBackends.join('/'),
-            model.license
+            model.supportedBackends.map(sanitizeCell).join('/'),
+            sanitizeCell(model.license)
           ]);
         }
         console.log(table.toString());
@@ -260,7 +294,8 @@ export function registerAiCommands(program: Command): void {
       }
     });
 
-  ai.command('files <repo>')
+  ai.command('files')
+    .argument('<repo>', 'Hugging Face repo id (owner/repo)', parseRepoId)
     .description('List the GGUF files of a Hugging Face repo, with the recommended pick flagged')
     .action(async (repoId: string) => {
       requireRole(['developer', 'admin']);

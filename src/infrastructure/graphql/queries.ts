@@ -322,8 +322,8 @@ export const AI_MODELS_QUERY = `
 `;
 
 export const SEARCH_HF_MODELS_QUERY = `
-  query SearchHfModels($search: String!, $limit: Int) {
-    searchHfModels(search: $search, limit: $limit) {
+  query SearchHfModels($search: String!) {
+    searchHfModels(search: $search) {
       repoId downloads likes license
     }
   }

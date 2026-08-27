@@ -14,6 +14,13 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Alterado
 - O tipo `AiModel` e a query `aiModels` passam a incluir o campo `curated` (sincronia com o schema do backend, ZSC-210). Requer backend com `searchHfModels`/`hfModelFiles` (PR #126).
 
+### Corrigido
+- Erros de validação de schema do GraphQL (campo inexistente no backend, ex.: CLI novo contra backend antigo sem o catálogo híbrido) agora são traduzidos em mensagem clara orientando que a versão do CLI requer um backend mais novo, em vez do erro cru `Cannot query field ...`.
+- Dados remotos exibidos em tabelas (resultados do Hugging Face, catálogo, serviços e tokens) passam por sanitização de caracteres de controle (inclui sequências ANSI e quebras de linha), evitando injeção de escape no terminal ou quebra de layout a partir de payload malicioso ou corrompido.
+
+### Seguranca
+- Mensagens de erro vindas do backend são truncadas em 500 caracteres (com `...`) antes de impressão, como defesa contra payloads longos demais.
+
 ## [0.13.0] - 2026-08-21
 
 ### Adicionado
