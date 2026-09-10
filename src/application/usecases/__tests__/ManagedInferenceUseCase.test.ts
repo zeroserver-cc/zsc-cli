@@ -200,6 +200,34 @@ describe('createInferenceServiceUseCase', () => {
       'a-token'
     );
   });
+
+  it('includes vramBudgetMb in the input only when a budget is given', async () => {
+    mockGql.mockResolvedValue({
+      createInferenceService: {
+        service: svc({ vramBudgetMb: 4096, gpuLayers: 28 }),
+        initialToken: 'zsai-x'
+      }
+    } as any);
+
+    await createInferenceServiceUseCase('my-llm', 'qwen2.5-7b-q4', 4096);
+
+    expect(mockGql).toHaveBeenCalledWith(
+      CREATE_INFERENCE_SERVICE_MUTATION,
+      { input: { name: 'my-llm', modelId: 'qwen2.5-7b-q4', vramBudgetMb: 4096 } },
+      'a-token'
+    );
+  });
+
+  it('omits vramBudgetMb from the input when no budget is given (full offload)', async () => {
+    mockGql.mockResolvedValue({
+      createInferenceService: { service: svc({}), initialToken: 'zsai-x' }
+    } as any);
+
+    await createInferenceServiceUseCase('my-llm', 'qwen2.5-7b-q4');
+
+    const [, variables] = mockGql.mock.calls[0];
+    expect(variables).toEqual({ input: { name: 'my-llm', modelId: 'qwen2.5-7b-q4' } });
+  });
 });
 
 describe('deleteInferenceServiceUseCase', () => {

@@ -8,6 +8,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ## [Unreleased]
 
 ### Adicionado
+- `zs ai create --vram-mb <mb>`: flag opcional que limita quanta VRAM de GPU o serviço de inferência reserva (offload parcial; mais lento, mas permite que vários serviços dividam um node com GPU). O valor precisa ser um inteiro positivo e só é enviado como `vramBudgetMb` na mutation quando informado; omitindo a flag, o serviço pede offload total (comportamento anterior). Requer backend com o campo `vramBudgetMb` no `CreateInferenceServiceInput` (branch `feat/inference-vram-budget`).
+- `zs ai list` e `zs ai status <nome>` exibem o orçamento de VRAM e as camadas de GPU derivadas pelo backend (`vramBudgetMb`/`gpuLayers`) quando presentes: nova coluna `VRAM` na tabela (`<budget> MB (<layers> layers)`, ou `-` em offload total) e linha `VRAM:` no detalhe do serviço.
 - Catálogo híbrido de modelos AIaaS (ZSC-210): `zs ai models --search <termo>` busca repos GGUF direto no Hugging Face (tabela com repo, downloads, likes e licença, com hint do próximo passo), e o novo subcomando `zs ai files <owner/repo>` lista os arquivos GGUF na raiz do repo (nome, tamanho em GB e marca `*` no quant recomendado pela plataforma), com hint de uso no `--model`.
 - `zs ai create --model` passa a aceitar, além do id do catálogo curado, um spec Hugging Face `owner/repo[:arquivo.gguf]` (ex.: `bartowski/Qwen2.5-7B-Instruct-GGUF:Qwen2.5-7B-Instruct-Q4_K_M.gguf`); omitindo `:arquivo` a plataforma escolhe o quant recomendado. O CLI faz apenas uma validação leve de formato (quando o valor contém `/`), pois o backend é a autoridade de validação (gated, split, oversize) e suas mensagens sobem sem alteração. O nome default do serviço continua DNS-safe a partir do spec.
 
