@@ -306,6 +306,10 @@ export interface ManagedInferenceService {
   /** Stable public endpoint (https). Null until the service is RUNNING. */
   endpoint?: string | null;
   errorMessage?: string | null;
+  /** VRAM the service may reserve (MB). Null means full GPU offload. */
+  vramBudgetMb?: number | null;
+  /** GPU layers derived from the budget by the backend (--n-gpu-layers). */
+  gpuLayers?: number | null;
   tokens: InferenceServiceToken[];
   createdAt: string;
   updatedAt: string;

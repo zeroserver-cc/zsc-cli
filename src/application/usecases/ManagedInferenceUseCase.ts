@@ -96,12 +96,16 @@ export async function resolveInferenceServiceUseCase(
 
 export async function createInferenceServiceUseCase(
   name: string,
-  modelId: string
+  modelId: string,
+  vramBudgetMb?: number
 ): Promise<CreateInferenceServicePayload> {
   const token = requireToken();
+  const input: { name: string; modelId: string; vramBudgetMb?: number } = { name, modelId };
+  // Omitted on purpose when undefined: no budget means full GPU offload.
+  if (vramBudgetMb !== undefined) input.vramBudgetMb = vramBudgetMb;
   const data = await gqlRequest<{ createInferenceService: CreateInferenceServicePayload }>(
     CREATE_INFERENCE_SERVICE_MUTATION,
-    { input: { name, modelId } },
+    { input },
     token
   );
   return data.createInferenceService;

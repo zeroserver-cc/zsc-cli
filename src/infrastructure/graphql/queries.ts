@@ -307,7 +307,9 @@ export const RESTORE_MANAGED_DATABASE_MUTATION = `
 `;
 
 const INFERENCE_SERVICE_FIELDS = `
-  id name modelId status machineId endpoint errorMessage createdAt updatedAt
+  id name modelId status machineId endpoint errorMessage
+  vramBudgetMb gpuLayers
+  createdAt updatedAt
   model { id name }
   machine { id name }
   tokens { id label hint createdAt }

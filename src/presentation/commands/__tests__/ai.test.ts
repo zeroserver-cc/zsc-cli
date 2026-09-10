@@ -281,6 +281,24 @@ describe('zs ai', () => {
       expect(output).toContain('https://my-llm.ai.zeroserver.cc');
     });
 
+    it('shows the VRAM budget and layer count when the service has partial offload', async () => {
+      mockedListServices.mockResolvedValueOnce([{ ...service, vramBudgetMb: 4096, gpuLayers: 28 }]);
+
+      await run('ai', 'list');
+
+      const output = printedOutput();
+      expect(output).toContain('VRAM');
+      expect(output).toContain('4096 MB (28 layers)');
+    });
+
+    it('shows a dash in the VRAM column when the service has full offload', async () => {
+      mockedListServices.mockResolvedValueOnce([service]);
+
+      await run('ai', 'list');
+
+      expect(printedOutput()).not.toContain('MB (');
+    });
+
     it('warns when there are no services', async () => {
       mockedListServices.mockResolvedValueOnce([]);
 
@@ -296,7 +314,7 @@ describe('zs ai', () => {
 
       await run('ai', 'create', '--model', model.id, '--name', 'my-llm');
 
-      expect(mockedCreate).toHaveBeenCalledWith('my-llm', model.id);
+      expect(mockedCreate).toHaveBeenCalledWith('my-llm', model.id, undefined);
       const output = printedOutput();
       expect(output).toContain('https://my-llm.ai.zeroserver.cc');
       expect(output).toContain('zsai-secret-value');
@@ -318,7 +336,7 @@ describe('zs ai', () => {
 
       await run('ai', 'create', '--model', spec, '--name', 'my-llm');
 
-      expect(mockedCreate).toHaveBeenCalledWith('my-llm', spec);
+      expect(mockedCreate).toHaveBeenCalledWith('my-llm', spec, undefined);
     });
 
     it('derives a DNS-safe name from a Hugging Face spec', async () => {
@@ -377,6 +395,33 @@ describe('zs ai', () => {
       expect(mockedCreate).not.toHaveBeenCalled();
     });
 
+    it('passes --vram-mb through as the VRAM budget', async () => {
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', model.id, '--name', 'my-llm', '--vram-mb', '4096');
+
+      expect(mockedCreate).toHaveBeenCalledWith('my-llm', model.id, 4096);
+    });
+
+    it('creates without a VRAM budget when --vram-mb is omitted (full offload)', async () => {
+      mockedCreate.mockResolvedValueOnce({ service, initialToken: 'tok' });
+
+      await run('ai', 'create', '--model', model.id, '--name', 'my-llm');
+
+      expect(mockedCreate).toHaveBeenCalledWith('my-llm', model.id, undefined);
+    });
+
+    it.each(['abc', '0', '-1', '1.5', '4096x'])(
+      'rejects an invalid --vram-mb value "%s" before calling the backend',
+      async (value) => {
+        await expect(
+          run('ai', 'create', '--model', model.id, '--name', 'my-llm', '--vram-mb', value)
+        ).rejects.toThrow(/positive integer/);
+
+        expect(mockedCreate).not.toHaveBeenCalled();
+      }
+    );
+
     it('explains the closed-beta allowlist denial', async () => {
       mockedCreate.mockRejectedValueOnce(
         new GraphQLError(
@@ -425,6 +470,22 @@ describe('zs ai', () => {
       expect(output).toContain('tok-aaaa');
       expect(output).toContain('web-app');
       expect(output).toContain('…x7f2');
+    });
+
+    it('shows the VRAM budget line only when the service has partial offload', async () => {
+      mockedResolve.mockResolvedValueOnce({ ...service, vramBudgetMb: 4096, gpuLayers: 28 });
+
+      await run('ai', 'status', 'my-llm');
+
+      expect(printedOutput()).toContain('VRAM:     4096 MB (28 layers)');
+    });
+
+    it('omits the VRAM budget line for full-offload services', async () => {
+      mockedResolve.mockResolvedValueOnce(service);
+
+      await run('ai', 'status', 'my-llm');
+
+      expect(printedOutput()).not.toContain('VRAM:');
     });
 
     it('fails with a clear error for an unknown service', async () => {

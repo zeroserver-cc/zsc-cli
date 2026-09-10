@@ -98,6 +98,20 @@ function modelLabel(service: ManagedInferenceService): string {
   return service.model?.name ?? service.modelId;
 }
 
+/** Budget and derived layer count, when the service runs with partial offload. */
+function vramLabel(service: ManagedInferenceService): string {
+  if (service.vramBudgetMb == null) return '-';
+  const layers = service.gpuLayers != null ? ` (${service.gpuLayers} layers)` : '';
+  return `${service.vramBudgetMb} MB${layers}`;
+}
+
+function parseVramMb(value: string): number {
+  if (!/^\d+$/.test(value) || Number(value) <= 0) {
+    throw new InvalidArgumentError('must be a positive integer (VRAM budget in MB)');
+  }
+  return Number(value);
+}
+
 // DNS-safe because the name becomes part of the public hostname (backend rule).
 const DNS_SAFE_NAME = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
 
@@ -176,13 +190,14 @@ function printServicesTable(services: ManagedInferenceService[]): void {
     );
     return;
   }
-  const table = new Table({ head: ['Name', 'Model', 'Status', 'Endpoint', 'Node'] });
+  const table = new Table({ head: ['Name', 'Model', 'Status', 'Endpoint', 'VRAM', 'Node'] });
   for (const service of services) {
     table.push([
       sanitizeCell(service.name),
       sanitizeCell(modelLabel(service)),
       statusLabel(service.status),
       sanitizeCell(service.endpoint ?? '-'),
+      vramLabel(service),
       sanitizeCell(nodeLabel(service))
     ]);
   }
@@ -342,14 +357,24 @@ export function registerAiCommands(program: Command): void {
       'Service name (DNS-safe; part of the public hostname)',
       parseServiceName
     )
-    .action(async (opts: { model: string; name?: string }) => {
+    .option(
+      '--vram-mb <mb>',
+      'Cap how much GPU VRAM the service reserves, in MB (partial offload: slower, but lets ' +
+        'several services share a GPU node). Omit it to request full GPU offload.',
+      parseVramMb
+    )
+    .action(async (opts: { model: string; name?: string; vramMb?: number }) => {
       requireRole(['developer', 'admin']);
       const name = opts.name ?? defaultServiceName(opts.model);
       const spinner = ora(
         `Creating inference service ${chalk.cyan(name)} (model ${opts.model})…`
       ).start();
       try {
-        const { service, initialToken } = await createInferenceServiceUseCase(name, opts.model);
+        const { service, initialToken } = await createInferenceServiceUseCase(
+          name,
+          opts.model,
+          opts.vramMb
+        );
         spinner.succeed(
           `Inference service ${chalk.bold(service.name)} created (status ${statusLabel(service.status)}).`
         );
@@ -399,6 +424,9 @@ export function registerAiCommands(program: Command): void {
         console.log(`Status:   ${statusLabel(service.status)}`);
         console.log(`Endpoint: ${service.endpoint ?? '-'}`);
         console.log(`Node:     ${nodeLabel(service)}`);
+        if (service.vramBudgetMb != null) {
+          console.log(`VRAM:     ${vramLabel(service)}`);
+        }
         console.log(`Created:  ${new Date(service.createdAt).toLocaleString()}`);
         if (service.errorMessage) {
           console.log(`Error:    ${chalk.red(service.errorMessage)}`);
