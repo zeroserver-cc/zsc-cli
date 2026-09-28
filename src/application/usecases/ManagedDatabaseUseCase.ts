@@ -5,7 +5,8 @@ import {
   DELETE_MANAGED_DATABASE_MUTATION,
   MANAGED_DATABASE_CONNECTION_STRING_QUERY,
   MY_DATABASES_QUERY,
-  RESTORE_MANAGED_DATABASE_MUTATION
+  RESTORE_MANAGED_DATABASE_MUTATION,
+  SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
@@ -71,7 +72,7 @@ export async function createDatabaseUseCase(
 
 export async function getConnectionStringUseCase(
   nameOrId: string
-): Promise<{ database: ManagedDatabase; url: string }> {
+): Promise<{ database: ManagedDatabase; url: string; publicUrl?: string }> {
   const token = requireToken();
   const database = await resolveDatabaseUseCase(nameOrId);
   const data = await gqlRequest<{ managedDatabaseConnectionString: string }>(
@@ -79,7 +80,30 @@ export async function getConnectionStringUseCase(
     { id: database.id },
     token
   );
-  return { database, url: data.managedDatabaseConnectionString };
+  let publicUrl: string | undefined;
+  if (database.publicAccess) {
+    const publicData = await gqlRequest<{ managedDatabaseConnectionString: string }>(
+      MANAGED_DATABASE_CONNECTION_STRING_QUERY,
+      { id: database.id, public: true },
+      token
+    );
+    publicUrl = publicData.managedDatabaseConnectionString;
+  }
+  return { database, url: data.managedDatabaseConnectionString, publicUrl };
+}
+
+export async function setDatabasePublicAccessUseCase(
+  nameOrId: string,
+  enabled: boolean
+): Promise<ManagedDatabase> {
+  const token = requireToken();
+  const database = await resolveDatabaseUseCase(nameOrId);
+  const data = await gqlRequest<{ setManagedDatabasePublicAccess: ManagedDatabase }>(
+    SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION,
+    { id: database.id, enabled },
+    token
+  );
+  return data.setManagedDatabasePublicAccess;
 }
 
 export async function deleteDatabaseUseCase(

@@ -7,11 +7,13 @@ import {
   deleteDatabaseUseCase,
   getConnectionStringUseCase,
   listDatabasesUseCase,
-  restoreDatabaseUseCase
+  restoreDatabaseUseCase,
+  setDatabasePublicAccessUseCase
 } from '../../application/usecases/ManagedDatabaseUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
 import { ManagedDatabaseEngine, ManagedDatabaseStatus } from '../../domain/entities/types';
 import { handleError } from '../formatting/errors';
+import { publicEndpointSummary } from '../formatting/publicEndpoint';
 import { replicaSummary } from '../formatting/replicas';
 import { prompt } from '../io/prompt';
 
@@ -101,7 +103,7 @@ export function registerDatabaseCommands(program: Command): void {
           return;
         }
         const table = new Table({
-          head: ['Name', 'Engine', 'Status', 'Replicas', 'Node', 'Last Dump']
+          head: ['Name', 'Engine', 'Status', 'Replicas', 'Node', 'Public', 'Last Dump']
         });
         for (const database of databases) {
           table.push([
@@ -110,6 +112,7 @@ export function registerDatabaseCommands(program: Command): void {
             statusLabel(database.status),
             replicaSummary(database.replicas),
             database.machineId ?? '-',
+            publicEndpointSummary(database),
             database.lastDumpAt ? new Date(database.lastDumpAt).toLocaleString() : '-'
           ]);
         }
@@ -126,9 +129,14 @@ export function registerDatabaseCommands(program: Command): void {
       requireRole(['developer', 'admin']);
       const spinner = ora('Fetching connection string…').start();
       try {
-        const { database, url } = await getConnectionStringUseCase(target);
+        const { database, url, publicUrl } = await getConnectionStringUseCase(target);
         spinner.stop();
-        console.log(url);
+        if (publicUrl) {
+          console.log(`${chalk.bold('Internal:')} ${url}`);
+          console.log(`${chalk.bold('Public:  ')} ${publicUrl}`);
+        } else {
+          console.log(url);
+        }
         console.log(
           chalk.yellow(
             'This URL contains credentials. Treat it as a secret: do not commit it or share it.'
@@ -153,6 +161,52 @@ export function registerDatabaseCommands(program: Command): void {
         }
       } catch (err) {
         spinner.fail('Failed to fetch the connection string.');
+        handleError(err);
+      }
+    });
+
+  db.command('expose <name-or-id>')
+    .description(
+      'Expose the database on a public gateway TCP port (opt-in; reachable from the internet)'
+    )
+    .action(async (target: string) => {
+      requireRole(['developer', 'admin']);
+      const spinner = ora(`Exposing database ${chalk.cyan(target)}…`).start();
+      try {
+        const database = await setDatabasePublicAccessUseCase(target, true);
+        const endpoint =
+          database.publicHost && database.publicPort
+            ? ` at ${chalk.bold(`${database.publicHost}:${database.publicPort}`)}`
+            : '';
+        spinner.succeed(`Database ${chalk.bold(database.name)} is now public${endpoint}.`);
+        console.log(
+          chalk.yellow(
+            'Anyone on the internet can attempt to log in: the database password is the only barrier.'
+          )
+        );
+        console.log(
+          chalk.gray(
+            `Get the public connection string with "zs db connection ${database.name}". Close it with "zs db unexpose ${database.name}".`
+          )
+        );
+      } catch (err) {
+        spinner.fail('Failed to expose the database.');
+        handleError(err);
+      }
+    });
+
+  db.command('unexpose <name-or-id>')
+    .description('Close the public gateway endpoint of a database')
+    .action(async (target: string) => {
+      requireRole(['developer', 'admin']);
+      const spinner = ora(`Closing the public endpoint of ${chalk.cyan(target)}…`).start();
+      try {
+        const database = await setDatabasePublicAccessUseCase(target, false);
+        spinner.succeed(
+          `Database ${chalk.bold(database.name)} is no longer public; the gateway port is closed.`
+        );
+      } catch (err) {
+        spinner.fail('Failed to close the public endpoint.');
         handleError(err);
       }
     });
