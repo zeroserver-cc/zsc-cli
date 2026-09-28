@@ -36,15 +36,24 @@ describe('replicaSummary', () => {
     ).toBe('2 streaming');
   });
 
-  it('surfaces a failed replica over the other statuses', () => {
-    expect(replicaSummary([replica('STREAMING'), replica('FAILED')])).toBe('2 failed');
+  it('does not count a superseded failed copy as a live replica', () => {
+    expect(replicaSummary([replica('STREAMING'), replica('FAILED')])).toBe(
+      '1 streaming (+1 pending cleanup)'
+    );
+  });
+
+  it('lists every superseded copy in the cleanup suffix', () => {
+    expect(replicaSummary([replica('STREAMING'), replica('STALE'), replica('FAILED')])).toBe(
+      '1 streaming (+2 pending cleanup)'
+    );
   });
 
   it('shows the pending status while a replica is not streaming yet', () => {
     expect(replicaSummary([replica('STREAMING'), replica('SYNCING')])).toBe('2 syncing');
   });
 
-  it('shows a stale replica', () => {
-    expect(replicaSummary([replica('STALE')])).toBe('1 stale');
+  it('keeps the failure loud when no live replica remains', () => {
+    expect(replicaSummary([replica('FAILED')])).toBe('0 (failed, replacing)');
+    expect(replicaSummary([replica('STALE')])).toBe('0 (failed, replacing)');
   });
 });

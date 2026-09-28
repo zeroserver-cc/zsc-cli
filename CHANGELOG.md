@@ -19,6 +19,7 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 ### Corrigido
 - Erros de validação de schema do GraphQL (campo inexistente no backend, ex.: CLI novo contra backend antigo sem o catálogo híbrido) agora são traduzidos em mensagem clara orientando que a versão do CLI requer um backend mais novo, em vez do erro cru `Cannot query field ...`.
 - Dados remotos exibidos em tabelas (resultados do Hugging Face, catálogo, serviços e tokens) passam por sanitização de caracteres de controle (inclui sequências ANSI e quebras de linha), evitando injeção de escape no terminal ou quebra de layout a partir de payload malicioso ou corrompido.
+- `zs db list` não conta mais cópias de réplica substituídas (`stale`/`failed`, aguardando a limpeza do reconcile do backend) como réplicas ativas: a coluna `Replicas` mostra só a topologia viva (ex.: `1 streaming`), com as cópias antigas num sufixo discreto (`+N pending cleanup`). Antes, um banco criado com 1 réplica podia exibir "3 failed" ao acumular tentativas de provisionamento já substituídas. Quando não resta nenhuma cópia viva o resumo fica vermelho (`0 (failed, replacing)`), mantendo o sinal de HA degradado enquanto o backend comissiona a substituta.
 
 ### Seguranca
 - Mensagens de erro vindas do backend são truncadas em 500 caracteres (com `...`) antes de impressão, como defesa contra payloads longos demais.
