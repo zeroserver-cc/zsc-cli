@@ -170,6 +170,10 @@ export interface ManagedDatabase {
   machineId?: string | null;
   lastDumpAt?: string | null;
   replicas: ManagedDatabaseReplica[];
+  /** Opt-in public TCP endpoint on the gateway; host/port set only while exposed. */
+  publicAccess: boolean;
+  publicPort?: number | null;
+  publicHost?: string | null;
   createdAt: string;
   updatedAt: string;
 }
