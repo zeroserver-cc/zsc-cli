@@ -96,12 +96,13 @@ async function runSingleImage(image: string, opts: DeployOptions): Promise<void>
         spinner.text = `Status: ${chalk.yellow(status)}…`;
       }
     );
-    reportResult(
+    const succeeded = reportResult(
       spinner,
       result,
       name,
       normalizePlacement({ country: opts.country, region: opts.region })
     );
+    if (!succeeded) process.exitCode = 1;
   } catch (err) {
     spinner.fail('Deploy failed.');
     handleError(err);
@@ -126,7 +127,8 @@ async function runManifest(opts: DeployOptions): Promise<void> {
       },
       { placement: { country: opts.country, region: opts.region } }
     );
-    reportResult(spinner, result, result.manifest.app, result.placement);
+    const succeeded = reportResult(spinner, result, result.manifest.app, result.placement);
+    if (!succeeded) process.exitCode = 1;
     // Warnings (e.g. missing envFile) also flashed on the spinner during the
     // run; print them persistently once the spinner is done.
     for (const warning of result.warnings) {
@@ -138,12 +140,17 @@ async function runManifest(opts: DeployOptions): Promise<void> {
   }
 }
 
+/**
+ * Prints the deploy outcome and returns whether it succeeded, so callers can
+ * set a non-zero exit code: CI pipelines rely on it to stop on a failed or
+ * rolled-back deploy.
+ */
 export function reportResult(
   spinner: Ora,
   { instance, deployment, deployments, timedOut }: DeployResult,
   appName?: string,
   placement?: ManifestPlacement
-): void {
+): boolean {
   if (timedOut) {
     spinner.warn(chalk.yellow('Deploy timed out waiting for a terminal status.'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
@@ -151,7 +158,7 @@ export function reportResult(
     console.log(
       chalk.gray(`Check "zs deployments ${appName ?? '<app-name>'}" and "zs list" for updates.`)
     );
-    return;
+    return false;
   }
 
   // The deployment record is the source of truth for this deploy: on redeploy
@@ -167,7 +174,7 @@ export function reportResult(
         `Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`
       )
     );
-    return;
+    return false;
   }
 
   if (deployment?.status === 'ROLLED_BACK') {
@@ -189,7 +196,7 @@ export function reportResult(
         `Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`
       )
     );
-    return;
+    return false;
   }
 
   if (deployment?.status === 'SUCCESS' || instance.status === 'RUNNING') {
@@ -205,11 +212,13 @@ export function reportResult(
         `Placement:   ${chalk.cyan(formatPlacement(placement))} ${chalk.gray('(preferred)')}`
       );
     }
-  } else {
-    spinner.fail(chalk.red(`Deploy ended with status: ${instance.status}`));
-    console.log(`Instance ID: ${chalk.bold(instance.id)}`);
-    console.log(chalk.gray('Run "zs logs <instance-id>" for details.'));
+    return true;
   }
+
+  spinner.fail(chalk.red(`Deploy ended with status: ${instance.status}`));
+  console.log(`Instance ID: ${chalk.bold(instance.id)}`);
+  console.log(chalk.gray('Run "zs logs <instance-id>" for details.'));
+  return false;
 }
 
 function formatPlacement(placement: ManifestPlacement): string {

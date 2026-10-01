@@ -80,6 +80,83 @@ it('includes the app name in the failure hints', async () => {
   expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('zs deployments site'));
 });
 
+describe('reportResult outcome (drives the process exit code)', () => {
+  it('reports success when the deployment succeeded', () => {
+    const outcome = reportResult(
+      spinner(),
+      {
+        instance: instance('RUNNING'),
+        deployment: deployment('SUCCESS'),
+        deployments: [],
+        timedOut: false
+      },
+      'site'
+    );
+
+    expect(outcome).toBe(true);
+  });
+
+  it('reports failure when the deployment FAILED, even though the stable instance keeps RUNNING', () => {
+    const outcome = reportResult(
+      spinner(),
+      {
+        instance: instance('RUNNING'),
+        deployment: deployment('FAILED', { error: 'boom' }),
+        deployments: [],
+        timedOut: false
+      },
+      'site'
+    );
+
+    expect(outcome).toBe(false);
+  });
+
+  it('reports failure when the deployment was ROLLED_BACK', () => {
+    const outcome = reportResult(
+      spinner(),
+      {
+        instance: instance('RUNNING'),
+        deployment: deployment('ROLLED_BACK', { rollbackOf: 'dep-failed' }),
+        deployments: [],
+        timedOut: false
+      },
+      'site'
+    );
+
+    expect(outcome).toBe(false);
+  });
+
+  it('reports failure when waiting for a terminal status timed out', () => {
+    const outcome = reportResult(
+      spinner(),
+      {
+        instance: instance('DEPLOYING'),
+        deployment: undefined,
+        deployments: [],
+        timedOut: true
+      },
+      'site'
+    );
+
+    expect(outcome).toBe(false);
+  });
+
+  it('reports failure when the instance ended in a non-running status', () => {
+    const outcome = reportResult(
+      spinner(),
+      {
+        instance: instance('ERROR'),
+        deployment: undefined,
+        deployments: [],
+        timedOut: false
+      },
+      'site'
+    );
+
+    expect(outcome).toBe(false);
+  });
+});
+
 it('derives the app name from the image when no name is given', () => {
   expect(deriveAppName('ghcr.io/x/site:abc')).toBe('site');
   expect(deriveAppName('redis:7')).toBe('redis');
