@@ -23,6 +23,7 @@ Clean Architecture adaptada para CLI (skill `clean-architecture-node`): `domain`
 - `zs login` / `zs logout`: autenticacao (usuario/senha ou token), com `--profile` para gravar/encerrar a sessao de um perfil especifico.
 - `zs session list` / `zs session use <perfil>`: multiplas contas logadas (perfis de sessao em `~/.config/zsc/sessions/<perfil>.json`); precedencia do perfil ativo: `--profile` > `ZS_PROFILE` > `session` do `zs.toml` (ao lado do `zs.yaml`) > default global > `default`.
 - `zs deploy`: sobe uma aplicacao (imagem de container) na malha; aceita preferencia geografica de node via `--country`/`--region` ou secao `placement:` no `zs.yaml` (preferencia suave, com fallback para qualquer node elegivel).
+- `zs scale <app> <n>`: define quantas replicas a aplicacao roda atras da mesma URL (aceita ate o teto da plataforma; apps com volume ou banco gerenciado ficam com 1 e recebem aviso). `zs deploy --replicas <n>` e o campo `replicas` do `zs.yaml` fazem o mesmo no deploy; so sao enviados quando pedidos e falham com mensagem clara em backend sem suporte.
 - `zs list`: lista aplicacoes (uma linha por app, modelo de instancia estavel).
 - `zs deployments <app>`: historico de deploys de uma aplicacao (status, imagem, duracao, erro).
 - `zs logs`: logs de uma instancia.

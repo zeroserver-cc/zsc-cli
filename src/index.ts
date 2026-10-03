@@ -9,6 +9,7 @@ import { registerDeploymentsCommand } from './presentation/commands/deployments'
 import { registerLogsCommand } from './presentation/commands/logs';
 import { registerStopCommand } from './presentation/commands/stop';
 import { registerRestartCommand } from './presentation/commands/restart';
+import { registerScaleCommand } from './presentation/commands/scale';
 import { registerRemoveCommand } from './presentation/commands/remove';
 import { registerNodeCommands } from './presentation/commands/nodes';
 import { registerRegistryCommands } from './presentation/commands/registry';
@@ -58,6 +59,7 @@ registerDeploymentsCommand(program);
 registerLogsCommand(program);
 registerStopCommand(program);
 registerRestartCommand(program);
+registerScaleCommand(program);
 registerRemoveCommand(program);
 registerNodeCommands(program);
 registerRegistryCommands(program);

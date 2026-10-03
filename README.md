@@ -14,6 +14,7 @@ Cliente de linha de comando da **ZeroServer Community Cloud** para Developers. P
 - [ ] `zs logs`
 - [ ] `zs stop`
 - [ ] `zs restart`
+- [ ] `zs scale` (replicas: `zs scale <app> <n>`, `zs deploy --replicas <n>`, `replicas:` in `zs.yaml`)
 - [ ] `zs db` (managed databases: `create`, `list`, `connection`, `delete`, `restore`)
 - [ ] `zs ai` (managed inference, AIaaS closed beta: `models`/`catalog`, `list`, `create`, `status`, `token add/list/revoke`, `delete`)
 
@@ -161,6 +162,41 @@ keep it out of git.
 
 Secrets take precedence over `env` entries in `zs.yaml` on deploy. Do not keep
 passwords in the manifest: move them to `zs secrets`.
+
+## Replicas (high availability)
+
+Run an app on more than one node behind its single URL, so losing a node does
+not take it offline. Ask for replicas in any of three ways:
+
+```sh
+zs deploy --replicas 3        # overrides the zs.yaml value
+zs scale my-api 3             # changes the count without a deploy
+```
+
+```yaml
+# zs.yaml
+app: my-api
+replicas: 3                   # whole number, 1 or more
+services:
+  - name: api
+    image: ghcr.io/you/my-api:1.0
+    exposed: true
+```
+
+- The value is stored with the app: a later `zs deploy` without `--replicas`
+  keeps it, and `zs deploy` only sends `replicas` when you ask for it.
+- Each replica is its own instance on a different node, billed as one instance
+  per hour (3 replicas cost 3 x). The platform caps the count and says so in a
+  warning when it does.
+- Requests are balanced round-robin with no sticky sessions, so the app must be
+  stateless: keep sessions in a signed cookie or an external database.
+- Apps with volumes or an attached managed database keep one replica; the
+  warning explains why. Apps deployed before replicas existed need one
+  `zs deploy` before they can scale.
+- `zs scale` and `zs deploy` print the requested, effective and running counts,
+  plus any warning. Against a backend that predates replicas they fail with
+  "This backend does not support replicas yet" and every other command keeps
+  working.
 
 ## Stack alvo
 

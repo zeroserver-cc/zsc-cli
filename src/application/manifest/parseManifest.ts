@@ -5,6 +5,7 @@ import {
   ManifestPlacement,
   ManifestService
 } from '../../domain/entities/types';
+import { isValidReplicaCount } from '../../domain/replicas';
 
 export class ManifestError extends Error {
   constructor(message: string) {
@@ -55,8 +56,18 @@ export function parseManifest(content: string): AppManifest {
   const ai = raw.ai !== undefined ? validateAIRequirements(raw.ai) : undefined;
   const placement = raw.placement !== undefined ? validatePlacement(raw.placement) : undefined;
   const database = raw.database !== undefined ? validateDatabase(raw.database) : undefined;
+  const replicas = raw.replicas !== undefined ? validateReplicas(raw.replicas) : undefined;
 
-  return { app, ai, placement, database, services };
+  return { app, ai, placement, database, replicas, services };
+}
+
+function validateReplicas(raw: unknown): number {
+  if (!isValidReplicaCount(raw)) {
+    throw new ManifestError(
+      'zs.yaml: "replicas" must be a whole number of at least 1 (e.g. replicas: 3).'
+    );
+  }
+  return raw;
 }
 
 function validateDatabase(raw: unknown): string {

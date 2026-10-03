@@ -11,7 +11,10 @@ import { requireRole } from '../../application/usecases/requireRole';
 import { loadManifestFile } from '../../application/manifest/loadManifestFile';
 import { normalizePlacement } from '../../application/placement';
 import { ManifestPlacement } from '../../domain/entities/types';
+import { ReplicaOutcome } from '../../application/usecases/ReplicasUseCase';
 import { handleError } from '../formatting/errors';
+import { deployReplicaLines } from '../formatting/replicaReport';
+import { parseReplicas } from './parseReplicas';
 
 interface DeployOptions {
   name?: string;
@@ -20,6 +23,7 @@ interface DeployOptions {
   env: string[];
   country?: string;
   region?: string;
+  replicas?: number;
 }
 
 export function registerDeployCommand(program: Command): void {
@@ -46,6 +50,11 @@ export function registerDeployCommand(program: Command): void {
       'Preferred node region/state code (e.g. RS); overrides zs.yaml placement.region',
       parseRegion
     )
+    .option(
+      '--replicas <n>',
+      'Replicas to run behind the app URL, 1 or more; overrides zs.yaml replicas',
+      parseReplicas
+    )
     .addHelpText(
       'after',
       `
@@ -54,9 +63,16 @@ Placement (soft preference):
   the backend falls back to any eligible node. In zs.yaml mode the preference is
   read from the top-level "placement:" section and the flags override it.
 
+Replicas:
+  Each replica is a separate, separately billed instance on a different node,
+  balanced round-robin with no sticky sessions: the app must be stateless. The
+  value is kept across deploys; "zs scale" changes it without a deploy. Apps
+  with volumes or a managed database keep one replica and get a warning.
+
 Examples:
   $ zs deploy ghcr.io/me/api:1.0 --country BR --region RS
   $ zs deploy --country BR
+  $ zs deploy --replicas 3
   $ cat zs.yaml
     app: my-app
     placement:
@@ -90,7 +106,8 @@ async function runSingleImage(image: string, opts: DeployOptions): Promise<void>
         port: opts.port,
         env: opts.env,
         country: opts.country,
-        region: opts.region
+        region: opts.region,
+        replicas: opts.replicas
       },
       (status) => {
         spinner.text = `Status: ${chalk.yellow(status)}…`;
@@ -102,7 +119,8 @@ async function runSingleImage(image: string, opts: DeployOptions): Promise<void>
       name,
       normalizePlacement({ country: opts.country, region: opts.region })
     );
-    if (!succeeded) process.exitCode = 1;
+    if (succeeded) printReplicas(result.replicas);
+    else process.exitCode = 1;
   } catch (err) {
     spinner.fail('Deploy failed.');
     handleError(err);
@@ -125,10 +143,11 @@ async function runManifest(opts: DeployOptions): Promise<void> {
       (status) => {
         spinner.text = `Status: ${chalk.yellow(status)}…`;
       },
-      { placement: { country: opts.country, region: opts.region } }
+      { placement: { country: opts.country, region: opts.region }, replicas: opts.replicas }
     );
     const succeeded = reportResult(spinner, result, result.manifest.app, result.placement);
-    if (!succeeded) process.exitCode = 1;
+    if (succeeded) printReplicas(result.replicas);
+    else process.exitCode = 1;
     // Warnings (e.g. missing envFile) also flashed on the spinner during the
     // run; print them persistently once the spinner is done.
     for (const warning of result.warnings) {
@@ -219,6 +238,11 @@ export function reportResult(
   console.log(`Instance ID: ${chalk.bold(instance.id)}`);
   console.log(chalk.gray('Run "zs logs <instance-id>" for details.'));
   return false;
+}
+
+function printReplicas(outcome?: ReplicaOutcome): void {
+  if (!outcome) return;
+  deployReplicaLines(outcome).forEach((line) => console.log(line));
 }
 
 function formatPlacement(placement: ManifestPlacement): string {

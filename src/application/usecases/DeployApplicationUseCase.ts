@@ -7,9 +7,14 @@ import {
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { toDeployPlacementInput } from '../placement';
+import { toDeployReplicasInput, withReplicasSupport } from '../replicas';
+import { readReplicaOutcome, ReplicaOutcome } from './ReplicasUseCase';
 import { waitForInstance, WaitResult } from './waitForInstance';
 
-export type DeployResult = WaitResult;
+export interface DeployResult extends WaitResult {
+  /** Set only when the deploy asked for replicas. */
+  replicas?: ReplicaOutcome;
+}
 
 export async function deployApplicationUseCase(
   input: DeployInput,
@@ -52,25 +57,35 @@ export async function deployApplicationUseCase(
   // scalar). Expose the container port on the same host port.
   const ports = input.port ? { [input.port]: input.port } : undefined;
 
-  const deployData = await gqlRequest<{ deployApplication: ApplicationInstance }>(
-    DEPLOY_APPLICATION_MUTATION,
-    {
-      input: {
-        applicationId,
-        image: input.image,
-        // Stable name (not timestamped) so redeploys target the same container.
-        containerName: appName,
-        env: input.env ?? [],
-        ...(ports && { ports }),
-        // Soft geographic preference (ZSC-194): the backend falls back to any
-        // eligible node when nothing matches the requested country/region.
-        ...toDeployPlacementInput({ country: input.country, region: input.region })
-      }
-    },
-    token
+  const deployData = await withReplicasSupport(() =>
+    gqlRequest<{ deployApplication: ApplicationInstance }>(
+      DEPLOY_APPLICATION_MUTATION,
+      {
+        input: {
+          applicationId,
+          image: input.image,
+          // Stable name (not timestamped) so redeploys target the same container.
+          containerName: appName,
+          env: input.env ?? [],
+          ...(ports && { ports }),
+          // Soft geographic preference (ZSC-194): the backend falls back to any
+          // eligible node when nothing matches the requested country/region.
+          ...toDeployPlacementInput({ country: input.country, region: input.region }),
+          ...toDeployReplicasInput(input.replicas)
+        }
+      },
+      token
+    )
   );
 
-  return waitForInstance(deployData.deployApplication, applicationId, token, onProgress);
+  const result = await waitForInstance(
+    deployData.deployApplication,
+    applicationId,
+    token,
+    onProgress
+  );
+  if (input.replicas === undefined) return result;
+  return { ...result, replicas: await readReplicaOutcome(input.replicas, applicationId, token) };
 }
 
 export function deriveAppName(image: string): string {

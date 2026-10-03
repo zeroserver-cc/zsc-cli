@@ -62,6 +62,28 @@ export const DEPLOY_APPLICATION_MUTATION = `
   }
 `;
 
+// Selected only by flows where the developer asked for replicas (deploy with
+// replicas, zs scale), so a backend that predates ADR 0011 is never asked for them.
+const REPLICA_STATUS_FIELDS = `
+  id name desiredReplicas effectiveReplicas runningReplicas replicaWarnings
+`;
+
+export const APPLICATION_REPLICA_STATUS_QUERY = `
+  query ApplicationReplicaStatus($id: ID!) {
+    application(id: $id) {
+      ${REPLICA_STATUS_FIELDS}
+    }
+  }
+`;
+
+export const SCALE_APPLICATION_MUTATION = `
+  mutation ScaleApplication($applicationId: ID!, $replicas: Int!) {
+    scaleApplication(applicationId: $applicationId, replicas: $replicas) {
+      ${REPLICA_STATUS_FIELDS}
+    }
+  }
+`;
+
 export const APPLICATION_INSTANCE_QUERY = `
   query ApplicationInstance($id: ID!) {
     applicationInstance(id: $id) {

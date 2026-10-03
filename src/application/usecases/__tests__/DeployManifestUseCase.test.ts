@@ -6,6 +6,7 @@ import { gqlRequest } from '../../../infrastructure/graphql/client';
 import { getConfigValue } from '../../../infrastructure/config/store';
 import { waitForInstance } from '../waitForInstance';
 import {
+  APPLICATION_REPLICA_STATUS_QUERY,
   CREATE_APPLICATION_MUTATION,
   DEPLOY_APPLICATION_MUTATION,
   MY_APPLICATIONS_QUERY,
@@ -384,4 +385,116 @@ services:
   )![1] as any;
   expect(deployVars.input).not.toHaveProperty('databaseId');
   expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(MY_DATABASES_QUERY);
+});
+
+describe('replicas', () => {
+  const manifestWith = (replicasLine: string) => `
+app: demo-app
+${replicasLine}
+services:
+  - name: web
+    image: nginx
+    exposed: true
+`;
+
+  const existingApp = async (query: string) => {
+    if (query === MY_APPLICATIONS_QUERY)
+      return { myApplications: [{ id: 'app-42', name: 'demo-app' }] } as any;
+    if (query === UPDATE_APPLICATION_MUTATION)
+      return { updateApplication: { id: 'app-42', name: 'demo-app' } } as any;
+    if (query === DEPLOY_APPLICATION_MUTATION) return deployOk as any;
+    if (query === APPLICATION_REPLICA_STATUS_QUERY) {
+      return {
+        application: {
+          id: 'app-42',
+          name: 'demo-app',
+          desiredReplicas: 3,
+          effectiveReplicas: 1,
+          runningReplicas: 1,
+          replicaWarnings: ['Apps with volumes keep a single replica.']
+        }
+      } as any;
+    }
+    throw new Error(`unexpected query: ${query}`);
+  };
+
+  const deployVars = () =>
+    mockGql.mock.calls.find((c) => c[0] === DEPLOY_APPLICATION_MUTATION)![1] as any;
+
+  it('sends the zs.yaml replicas on the deploy input and returns the platform status', async () => {
+    writeManifest(manifestWith('replicas: 3'));
+    mockGql.mockImplementation(existingApp);
+
+    const result = await deployManifestUseCase(tmpDir);
+
+    expect(deployVars().input.replicas).toBe(3);
+    expect(result.replicas).toMatchObject({
+      requested: 3,
+      status: {
+        effectiveReplicas: 1,
+        replicaWarnings: ['Apps with volumes keep a single replica.']
+      }
+    });
+  });
+
+  it('lets the --replicas flag win over the zs.yaml value', async () => {
+    writeManifest(manifestWith('replicas: 3'));
+    mockGql.mockImplementation(existingApp);
+
+    const result = await deployManifestUseCase(tmpDir, undefined, { replicas: 2 });
+
+    expect(deployVars().input.replicas).toBe(2);
+    expect(result.replicas?.requested).toBe(2);
+  });
+
+  it('sends the flag even when the manifest declares no replicas', async () => {
+    writeManifest(manifestWith(''));
+    mockGql.mockImplementation(existingApp);
+
+    await deployManifestUseCase(tmpDir, undefined, { replicas: 4 });
+
+    expect(deployVars().input.replicas).toBe(4);
+  });
+
+  it('omits replicas and never selects the replica fields when none was requested', async () => {
+    writeManifest(manifestWith(''));
+    mockGql.mockImplementation(existingApp);
+
+    const result = await deployManifestUseCase(tmpDir);
+
+    expect(deployVars().input).not.toHaveProperty('replicas');
+    expect(mockGql.mock.calls.map((c) => c[0])).not.toContain(APPLICATION_REPLICA_STATUS_QUERY);
+    expect(result.replicas).toBeUndefined();
+  });
+
+  it('fails with a clear message when the backend does not know replicas', async () => {
+    writeManifest(manifestWith('replicas: 3'));
+    mockGql.mockImplementation(async (query: string) => {
+      if (query === DEPLOY_APPLICATION_MUTATION) {
+        throw new Error(
+          'Variable "$input" got invalid value 3 at "input.replicas"; Field "replicas" is not defined by type "DeployApplicationInput".'
+        );
+      }
+      return existingApp(query);
+    });
+
+    await expect(deployManifestUseCase(tmpDir)).rejects.toThrow(
+      'This backend does not support replicas yet'
+    );
+  });
+
+  it('keeps the deploy result when the replica status cannot be read', async () => {
+    writeManifest(manifestWith('replicas: 3'));
+    mockGql.mockImplementation(async (query: string) => {
+      if (query === APPLICATION_REPLICA_STATUS_QUERY) {
+        throw new Error('Cannot query field "desiredReplicas" on type "Application".');
+      }
+      return existingApp(query);
+    });
+
+    const result = await deployManifestUseCase(tmpDir);
+
+    expect(result.instance.status).toBe('RUNNING');
+    expect(result.replicas).toEqual({ requested: 3 });
+  });
 });

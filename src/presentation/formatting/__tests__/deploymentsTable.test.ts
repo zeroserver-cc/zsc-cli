@@ -51,6 +51,14 @@ describe('printDeploymentsTable', () => {
     expect(text).toContain('image not found');
   });
 
+  it('renders a QUEUED deployment (a replica waiting its turn in a rolling redeploy)', () => {
+    printDeploymentsTable([deployment({ status: 'QUEUED', finishedAt: null })]);
+
+    const text = output();
+    expect(text).toContain('QUEUED');
+    expect(text).toContain('—');
+  });
+
   it('shows a dash for pending deployments without finishedAt', () => {
     printDeploymentsTable([deployment({ status: 'PENDING', finishedAt: null })]);
 

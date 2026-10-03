@@ -425,3 +425,41 @@ services:
     ).toThrow(/"database" must be a non-empty string/);
   });
 });
+
+describe('parseManifest replicas', () => {
+  const withReplicas = (value: string) => `
+app: x
+replicas: ${value}
+services:
+  - name: api
+    image: nginx
+`;
+
+  it('parses a whole number of replicas', () => {
+    expect(parseManifest(withReplicas('3')).replicas).toBe(3);
+  });
+
+  it('accepts a single replica', () => {
+    expect(parseManifest(withReplicas('1')).replicas).toBe(1);
+  });
+
+  it('leaves replicas undefined when the manifest omits it', () => {
+    const m = parseManifest(`
+app: x
+services:
+  - name: api
+    image: nginx
+`);
+    expect(m.replicas).toBeUndefined();
+  });
+
+  it.each(['0', '-2', '2.5', '"3"', 'true', 'null', '[3]'])(
+    'rejects replicas: %s with the manifest error',
+    (value) => {
+      expect(() => parseManifest(withReplicas(value))).toThrow(ManifestError);
+      expect(() => parseManifest(withReplicas(value))).toThrow(
+        /"replicas" must be a whole number of at least 1/
+      );
+    }
+  );
+});
