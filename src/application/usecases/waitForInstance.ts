@@ -9,10 +9,17 @@ const TERMINAL_STATUSES = new Set(['RUNNING', 'ERROR', 'FAILED', 'STOPPED']);
 const INSTANCE_FAILURE_STATUSES = new Set(['ERROR', 'FAILED', 'STOPPED']);
 const POLL_INTERVAL_MS = 3_000;
 const MAX_POLLS = 60; // 3 minutes
+// Must cover this deploy's record plus the QUEUED records of the other replicas
+// of a rolling redeploy (up to the platform's replica cap), and the rollback.
+const HISTORY_LIMIT = 20;
 
 export interface WaitResult {
   instance: ApplicationInstance;
-  /** Newest deployment of the application: the source of truth for this deploy. */
+  /**
+   * Newest deployment of the instance this deploy started: the source of truth
+   * for this deploy. In a rolling redeploy it is the first replica's; the other
+   * replicas wait in QUEUED records, visible in `deployments`.
+   */
   deployment?: Deployment;
   /** Recent deployment history (last fetched page), so the presentation layer
    * can resolve related records (e.g. the FAILED cause of a ROLLED_BACK). */
@@ -26,7 +33,10 @@ export interface WaitResult {
  *
  * The instance status alone is not enough: on redeploy the stable instance
  * stays RUNNING while the new deployment is still PENDING, so the newest
- * deployment record is the source of truth for the outcome of this deploy.
+ * deployment record of that instance is the source of truth for the outcome of
+ * this deploy. It never waits for the QUEUED replicas of a rolling redeploy:
+ * they update one at a time in the background, and a long rollout would
+ * otherwise outlast the wait.
  * When the deployment history cannot be read (missing deploys:read scope,
  * older backend, transient failure), the wait degrades to the legacy
  * instance-only behavior instead of aborting the deploy.
@@ -52,11 +62,11 @@ export async function waitForInstance(
   };
 
   // The backend creates the PENDING deployment synchronously inside the deploy
-  // mutation, so the newest record is always the deploy just triggered. Fetch
-  // it before evaluating the initial instance: on redeploy the instance is
-  // already RUNNING and must not short-circuit the wait.
+  // mutation, so the newest record of the instance is always the deploy just
+  // triggered. Fetch it before evaluating the initial instance: on redeploy the
+  // instance is already RUNNING and must not short-circuit the wait.
   let history = await fetchHistory();
-  let deployment = newestDeployment(history);
+  let deployment = newestDeploymentOf(initial.id, history);
   let polls = 0;
 
   while (!isDone(instance, deployment) && polls < MAX_POLLS) {
@@ -73,7 +83,7 @@ export async function waitForInstance(
     instance = pollData.applicationInstance ?? instance;
     if (latest) {
       history = latest;
-      deployment = newestDeployment(latest) ?? deployment;
+      deployment = newestDeploymentOf(initial.id, latest) ?? deployment;
     }
     polls++;
   }
@@ -110,17 +120,25 @@ function progressLabel(instance: ApplicationInstance, deployment?: Deployment): 
 async function fetchDeploymentHistory(applicationId: string, token: string): Promise<Deployment[]> {
   const data = await gqlRequest<{ deployments: Deployment[] }>(
     DEPLOYMENTS_QUERY,
-    { applicationId, limit: 5 },
+    { applicationId, limit: HISTORY_LIMIT },
     token
   );
   return data.deployments;
 }
 
 // The backend returns history newest-first, but sort client-side by createdAt
-// to not depend on that ordering.
-function newestDeployment(deployments?: Deployment[]): Deployment | undefined {
+// to not depend on that ordering. A rolling redeploy queues records for the
+// other replicas right after this instance's own, so the newest record of the
+// app is not necessarily ours: only this instance's records count (the
+// auto-rollback shares it). Rows without an instance are legacy and kept.
+function newestDeploymentOf(
+  instanceId: string,
+  deployments?: Deployment[]
+): Deployment | undefined {
   if (!deployments) return undefined;
-  return [...deployments].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+  return deployments
+    .filter((deployment) => !deployment.instanceId || deployment.instanceId === instanceId)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
 }
 
 function sleep(ms: number): Promise<void> {

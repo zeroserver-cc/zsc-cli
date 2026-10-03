@@ -99,6 +99,69 @@ describe('deploy command exit code', () => {
     });
   });
 
+  describe('rolling redeploy (QUEUED replicas)', () => {
+    const printed = () => logSpy.mock.calls.map((call) => call.join(' ')).join('\n');
+    const queued = (id: string) => ({
+      id,
+      image: 'multi-service',
+      status: 'QUEUED',
+      createdAt: '2026-07-31T00:00:02Z'
+    });
+
+    beforeEach(() => {
+      mockedDeployManifest.mockClear();
+      mockedDeployApplication.mockClear();
+    });
+
+    it('exits 0 and prints the rolling note when the root succeeded and replicas are queued', async () => {
+      const base = manifestOutcome('SUCCESS');
+      mockedDeployManifest.mockResolvedValue({
+        ...base,
+        deployments: [queued('q1'), queued('q2'), base.deployment]
+      });
+
+      await program.parseAsync(['node', 'zs', 'deploy']);
+
+      expect(process.exitCode).toBeUndefined();
+      expect(printed()).toContain('Rolling update in progress: 2 more replicas will update');
+    });
+
+    it('exits 0 without a rolling note when nothing is queued', async () => {
+      mockedDeployManifest.mockResolvedValue(manifestOutcome('SUCCESS'));
+
+      await program.parseAsync(['node', 'zs', 'deploy']);
+
+      expect(process.exitCode).toBeUndefined();
+      expect(printed()).not.toContain('Rolling update');
+    });
+
+    it('exits 1 and says the queued replicas will not be updated when the root FAILED', async () => {
+      const base = manifestOutcome('FAILED');
+      mockedDeployManifest.mockResolvedValue({
+        ...base,
+        deployments: [queued('q1'), base.deployment]
+      });
+
+      await program.parseAsync(['node', 'zs', 'deploy']);
+
+      expect(process.exitCode).toBe(1);
+      expect(printed()).toContain('The remaining 1 replica will not be updated');
+    });
+
+    it('applies the same rules to the single-image deploy', async () => {
+      const base = outcome('SUCCESS');
+      mockedDeployApplication.mockResolvedValue({
+        ...base,
+        deployments: [queued('q1'), base.deployment]
+      });
+
+      await program.parseAsync(['node', 'zs', 'deploy', 'ghcr.io/x/app:1', '--name', 'site']);
+
+      expect(process.exitCode).toBeUndefined();
+      expect(printed()).toContain('Rolling update in progress: 1 more replica will update');
+    });
+  });
+
   describe('replicas', () => {
     beforeEach(() => {
       mockedDeployApplication.mockClear();

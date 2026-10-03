@@ -68,6 +68,8 @@ export type DeploymentStatus = 'PENDING' | 'QUEUED' | 'SUCCESS' | 'FAILED' | 'RO
 /** One entry of an application's deployment history (stable-instance model). */
 export interface Deployment {
   id: string;
+  /** Instance (replica) this deploy attempt belongs to; null on legacy rows. */
+  instanceId?: string | null;
   image: string;
   status: string;
   error?: string | null;

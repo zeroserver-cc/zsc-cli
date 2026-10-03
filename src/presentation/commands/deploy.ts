@@ -10,6 +10,7 @@ import { deployManifestUseCase } from '../../application/usecases/DeployManifest
 import { requireRole } from '../../application/usecases/requireRole';
 import { loadManifestFile } from '../../application/manifest/loadManifestFile';
 import { normalizePlacement } from '../../application/placement';
+import { queuedReplicaCount } from '../../application/rollout';
 import { ManifestPlacement } from '../../domain/entities/types';
 import { ReplicaOutcome } from '../../application/usecases/ReplicasUseCase';
 import { handleError } from '../formatting/errors';
@@ -180,6 +181,10 @@ export function reportResult(
     return false;
   }
 
+  // Replicas of a rolling redeploy still waiting their turn (always 0 on a
+  // backend that predates QUEUED).
+  const queued = queuedReplicaCount(deployments);
+
   // The deployment record is the source of truth for this deploy: on redeploy
   // the stable instance keeps RUNNING even when the new deployment failed.
   if (deployment?.status === 'FAILED') {
@@ -193,6 +198,7 @@ export function reportResult(
         `Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`
       )
     );
+    printCanceledRolloutNote(queued);
     return false;
   }
 
@@ -215,6 +221,7 @@ export function reportResult(
         `Run "zs deployments ${appName ?? '<app-name>'}" and "zs logs ${instance.id}" for details.`
       )
     );
+    printCanceledRolloutNote(queued);
     return false;
   }
 
@@ -231,6 +238,16 @@ export function reportResult(
         `Placement:   ${chalk.cyan(formatPlacement(placement))} ${chalk.gray('(preferred)')}`
       );
     }
+    if (queued > 0) {
+      // Informational, not a failure: the first replica is already serving the
+      // new version and the others follow one at a time in the background.
+      console.log(
+        chalk.yellow(
+          `Rolling update in progress: ${queued} more ${replicaNoun(queued)} will update one at a time in the background. ` +
+            `Run "zs deployments ${appName ?? '<app-name>'}" to follow it.`
+        )
+      );
+    }
     return true;
   }
 
@@ -238,6 +255,21 @@ export function reportResult(
   console.log(`Instance ID: ${chalk.bold(instance.id)}`);
   console.log(chalk.gray('Run "zs logs <instance-id>" for details.'));
   return false;
+}
+
+function replicaNoun(count: number): string {
+  return count === 1 ? 'replica' : 'replicas';
+}
+
+// The backend cancels the queue when a replica of the rollout fails, so the
+// replicas that had not started keep the previous version.
+function printCanceledRolloutNote(queued: number): void {
+  if (queued === 0) return;
+  console.log(
+    chalk.gray(
+      `The remaining ${queued} ${replicaNoun(queued)} will not be updated: the rolling update is canceled and they keep the previous version.`
+    )
+  );
 }
 
 function printReplicas(outcome?: ReplicaOutcome): void {

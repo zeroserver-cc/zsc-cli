@@ -161,3 +161,79 @@ it('derives the app name from the image when no name is given', () => {
   expect(deriveAppName('ghcr.io/x/site:abc')).toBe('site');
   expect(deriveAppName('redis:7')).toBe('redis');
 });
+
+describe('rolling redeploy notes', () => {
+  const queued = (id: string) => deployment('QUEUED', { id, instanceId: `inst-${id}` });
+  const printed = () => logSpy.mock.calls.map((call) => call.join(' ')).join('\n');
+
+  const result = (root: any, others: any[]) => ({
+    instance: instance('RUNNING'),
+    deployment: root,
+    deployments: [...others, root],
+    timedOut: false
+  });
+
+  it('succeeds with an informational note when replicas are still queued', () => {
+    const s = spinner();
+
+    const outcome = reportResult(
+      s,
+      result(deployment('SUCCESS'), [queued('r2'), queued('r3')]),
+      'site'
+    );
+
+    expect(outcome).toBe(true);
+    expect(s.succeed).toHaveBeenCalled();
+    expect(s.fail).not.toHaveBeenCalled();
+    expect(printed()).toContain(
+      'Rolling update in progress: 2 more replicas will update one at a time in the background.'
+    );
+    expect(printed()).toContain('zs deployments site');
+  });
+
+  it('uses the singular for a single queued replica', () => {
+    reportResult(spinner(), result(deployment('SUCCESS'), [queued('r2')]), 'site');
+
+    expect(printed()).toContain('1 more replica will update');
+  });
+
+  it('prints no rolling note when nothing is queued', () => {
+    const outcome = reportResult(spinner(), result(deployment('SUCCESS'), []), 'site');
+
+    expect(outcome).toBe(true);
+    expect(printed()).not.toContain('Rolling update');
+  });
+
+  it('keeps failing and says the queued replicas will not be updated when the root FAILED', () => {
+    const s = spinner();
+
+    const outcome = reportResult(
+      s,
+      result(deployment('FAILED', { error: 'boom' }), [queued('r2'), queued('r3')]),
+      'site'
+    );
+
+    expect(outcome).toBe(false);
+    expect(s.fail).toHaveBeenCalled();
+    expect(printed()).toContain('The remaining 2 replicas will not be updated');
+    expect(printed()).toContain('keep the previous version');
+    expect(printed()).not.toContain('Rolling update in progress');
+  });
+
+  it('keeps failing and says the queued replicas will not be updated when the root was ROLLED_BACK', () => {
+    const outcome = reportResult(
+      spinner(),
+      result(deployment('ROLLED_BACK', { rollbackOf: 'dep-failed' }), [queued('r2')]),
+      'site'
+    );
+
+    expect(outcome).toBe(false);
+    expect(printed()).toContain('The remaining 1 replica will not be updated');
+  });
+
+  it('adds no cancellation note to a failure without a queue', () => {
+    reportResult(spinner(), result(deployment('FAILED', { error: 'boom' }), []), 'site');
+
+    expect(printed()).not.toContain('will not be updated');
+  });
+});
