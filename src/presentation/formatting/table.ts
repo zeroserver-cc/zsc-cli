@@ -154,7 +154,8 @@ const DEPLOYMENT_STATUS_COLORS: Record<string, (s: string) => string> = {
   SUCCESS: chalk.green,
   FAILED: chalk.red,
   ROLLED_BACK: chalk.yellow,
-  PENDING: chalk.gray
+  PENDING: chalk.gray,
+  QUEUED: chalk.cyan
 };
 
 function colorDeploymentStatus(status: string): string {

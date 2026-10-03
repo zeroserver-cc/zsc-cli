@@ -178,3 +178,99 @@ it('falls back to the instance status when no deployment history exists', async 
   expect(result.deployment).toBeUndefined();
   expect(result.instance.status).toBe('RUNNING');
 });
+
+describe('rolling redeploy (QUEUED replicas)', () => {
+  const root = (status: string, overrides: Record<string, unknown> = {}) =>
+    deployment(status, { id: 'dep-root', instanceId: 'inst-1', ...overrides });
+  const queuedReplica = (status: string, id: string) =>
+    deployment(status, { id, instanceId: `inst-${id}`, createdAt: '2026-07-31T00:00:02Z' });
+
+  it('waits only for the deployment of its own instance, not for the QUEUED replicas', async () => {
+    // The QUEUED records are newer than the root's own, so the newest record of
+    // the app is not the deploy that was started.
+    mockBackend('RUNNING', [
+      [root('PENDING'), queuedReplica('QUEUED', 'r2'), queuedReplica('QUEUED', 'r3')],
+      [
+        root('SUCCESS', { finishedAt: '2026-07-31T00:01:00Z' }),
+        queuedReplica('QUEUED', 'r2'),
+        queuedReplica('QUEUED', 'r3')
+      ]
+    ]);
+
+    const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result.timedOut).toBe(false);
+    expect(result.deployment?.id).toBe('dep-root');
+    expect(result.deployment?.status).toBe('SUCCESS');
+    // The history page is carried through so the presentation layer can count
+    // the replicas still waiting.
+    expect(result.deployments?.filter((d) => d.status === 'QUEUED')).toHaveLength(2);
+    expect(deploymentQueryCalls()).toBe(2);
+  });
+
+  it('does not follow the next replica once it starts swapping after the root finished', async () => {
+    // Second poll: the root is done and replica 2 already flipped to PENDING;
+    // that newer PENDING record must not keep the wait going.
+    mockBackend('RUNNING', [
+      [root('PENDING'), queuedReplica('QUEUED', 'r2')],
+      [root('SUCCESS'), queuedReplica('PENDING', 'r2')]
+    ]);
+
+    const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result.timedOut).toBe(false);
+    expect(result.deployment?.id).toBe('dep-root');
+    expect(deploymentQueryCalls()).toBe(2);
+  });
+
+  it('reports the root as FAILED while the queue is still pending cancellation', async () => {
+    mockBackend('RUNNING', [
+      [root('PENDING'), queuedReplica('QUEUED', 'r2')],
+      [root('FAILED', { error: 'container failed to start' }), queuedReplica('QUEUED', 'r2')]
+    ]);
+
+    const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result.deployment?.status).toBe('FAILED');
+    expect(result.deployments?.some((d) => d.status === 'QUEUED')).toBe(true);
+  });
+
+  it('follows the auto-rollback record of its own instance', async () => {
+    mockBackend('RUNNING', [
+      [root('PENDING'), queuedReplica('QUEUED', 'r2')],
+      [
+        deployment('ROLLED_BACK', {
+          id: 'dep-rb',
+          instanceId: 'inst-1',
+          rollbackOf: 'dep-root',
+          createdAt: '2026-07-31T00:00:30Z'
+        }),
+        root('FAILED', { error: 'boom' }),
+        queuedReplica('QUEUED', 'r2')
+      ]
+    ]);
+
+    const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result.deployment?.status).toBe('ROLLED_BACK');
+  });
+
+  it('asks for a history page large enough to hold the root and the queued replicas', async () => {
+    mockBackend('RUNNING', [[root('SUCCESS')]]);
+
+    const resultPromise = waitForInstance(instance('RUNNING'), 'app-1', 'a-token');
+    await jest.runAllTimersAsync();
+    await resultPromise;
+
+    const vars = mockGql.mock.calls.find((c) => c[0] === DEPLOYMENTS_QUERY)![1] as any;
+    expect(vars.limit).toBeGreaterThanOrEqual(10);
+  });
+});

@@ -15,7 +15,9 @@ import { getConfigValue } from '../../infrastructure/config/store';
 import { loadManifestFile } from '../manifest/loadManifestFile';
 import { manifestToCreateInput } from '../manifest/toCreateInput';
 import { normalizePlacement, toDeployPlacementInput } from '../placement';
+import { toDeployReplicasInput, withReplicasSupport } from '../replicas';
 import { resolveDatabaseUseCase } from './ManagedDatabaseUseCase';
+import { readReplicaOutcome, ReplicaOutcome } from './ReplicasUseCase';
 import { waitForInstance, WaitResult } from './waitForInstance';
 
 export interface ManifestDeployResult extends WaitResult {
@@ -24,11 +26,15 @@ export interface ManifestDeployResult extends WaitResult {
   placement?: ManifestPlacement;
   /** Non-fatal problems found while loading the manifest (e.g. missing envFile). */
   warnings: string[];
+  /** Set only when the deploy asked for replicas (flag or zs.yaml). */
+  replicas?: ReplicaOutcome;
 }
 
 export interface ManifestDeployOptions {
   /** CLI flag overrides; each set flag wins over the corresponding zs.yaml placement field. */
   placement?: ManifestPlacement;
+  /** `--replicas` flag; wins over the zs.yaml `replicas` field. */
+  replicas?: number;
 }
 
 /**
@@ -104,17 +110,23 @@ export async function deployManifestUseCase(
   const databaseId = manifest.database
     ? (await resolveDatabaseUseCase(manifest.database)).id
     : undefined;
-  const deployData = await gqlRequest<{ deployApplication: ApplicationInstance }>(
-    DEPLOY_APPLICATION_MUTATION,
-    {
-      input: {
-        applicationId,
-        ...aiRequirements,
-        ...toDeployPlacementInput(placement),
-        ...(databaseId && { databaseId })
-      }
-    },
-    token
+  // Replicas are persisted by the backend: only send them when the developer
+  // asked (flag or zs.yaml), so a plain redeploy keeps the stored value.
+  const replicas = options.replicas ?? manifest.replicas;
+  const deployData = await withReplicasSupport(() =>
+    gqlRequest<{ deployApplication: ApplicationInstance }>(
+      DEPLOY_APPLICATION_MUTATION,
+      {
+        input: {
+          applicationId,
+          ...aiRequirements,
+          ...toDeployPlacementInput(placement),
+          ...(databaseId && { databaseId }),
+          ...toDeployReplicasInput(replicas)
+        }
+      },
+      token
+    )
   );
 
   const result = await waitForInstance(
@@ -123,5 +135,13 @@ export async function deployManifestUseCase(
     token,
     onProgress
   );
-  return { ...result, manifest, warnings, ...(placement && { placement }) };
+  return {
+    ...result,
+    manifest,
+    warnings,
+    ...(placement && { placement }),
+    ...(replicas !== undefined && {
+      replicas: await readReplicaOutcome(replicas, applicationId, token)
+    })
+  };
 }

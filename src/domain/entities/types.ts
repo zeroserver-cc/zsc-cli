@@ -38,6 +38,21 @@ export type ApplicationInstanceStatus =
   | 'ERROR'
   | 'FAILED';
 
+/**
+ * Replica state of an application (ADR 0011). Only selected by flows where the
+ * developer asked for replicas, so older backends never see these fields.
+ */
+export interface ReplicaStatus {
+  /** What the developer asked for; persisted across deploys. */
+  desiredReplicas: number;
+  /** What the platform runs: capped, and held at 1 for apps with volumes or a managed database. */
+  effectiveReplicas: number;
+  /** Instances RUNNING right now. */
+  runningReplicas: number;
+  /** Why effectiveReplicas is lower than desiredReplicas, when it is. */
+  replicaWarnings: string[];
+}
+
 export interface Application {
   id: string;
   name: string;
@@ -47,11 +62,14 @@ export interface Application {
   createdAt: string;
 }
 
-export type DeploymentStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'ROLLED_BACK';
+// QUEUED: a replica waiting its turn in a rolling redeploy (one replica at a time).
+export type DeploymentStatus = 'PENDING' | 'QUEUED' | 'SUCCESS' | 'FAILED' | 'ROLLED_BACK';
 
 /** One entry of an application's deployment history (stable-instance model). */
 export interface Deployment {
   id: string;
+  /** Instance (replica) this deploy attempt belongs to; null on legacy rows. */
+  instanceId?: string | null;
   image: string;
   status: string;
   error?: string | null;
@@ -82,6 +100,8 @@ export interface DeployInput {
   env?: string[];
   country?: string;
   region?: string;
+  /** Replicas to run behind the app's URL; omitted keeps the stored value. */
+  replicas?: number;
 }
 
 /** AI/ML resources declared by the application. */
@@ -132,6 +152,8 @@ export interface AppManifest {
   placement?: ManifestPlacement;
   /** Name of a managed database owned by the account; the deploy attaches to it. */
   database?: string;
+  /** Replicas to run behind the app's URL (whole number >= 1); `zs deploy --replicas` wins over it. */
+  replicas?: number;
   services: ManifestService[];
 }
 
