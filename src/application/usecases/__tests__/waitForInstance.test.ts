@@ -286,7 +286,9 @@ describe('while the backend retries the start on other nodes', () => {
         return {
           applicationInstance:
             instancePolls < 3
-              ? rescheduling('Attempt 2/5 failed on a node: no space left on device. Retrying on another node.')
+              ? rescheduling(
+                  'Attempt 2/5 failed on a node: no space left on device. Retrying on another node.'
+                )
               : instance('RUNNING')
         } as any;
       }
@@ -309,22 +311,30 @@ describe('while the backend retries the start on other nodes', () => {
 
   it('keeps waiting well past the usual 3 minutes, then times out at 30', async () => {
     mockGql.mockImplementation(async (query: string) => {
-      if (query === APPLICATION_INSTANCE_QUERY) return { applicationInstance: rescheduling('Attempt 1/5 failed on a node: boom.') } as any;
+      if (query === APPLICATION_INSTANCE_QUERY)
+        return { applicationInstance: rescheduling('Attempt 1/5 failed on a node: boom.') } as any;
       return { deployments: [deployment('PENDING')] } as any;
     });
 
-    const resultPromise = waitForInstance(rescheduling('Attempt 1/5 failed on a node: boom.'), 'app-1', 'a-token');
+    const resultPromise = waitForInstance(
+      rescheduling('Attempt 1/5 failed on a node: boom.'),
+      'app-1',
+      'a-token'
+    );
     await jest.runAllTimersAsync();
     const result = await resultPromise;
 
-    const instancePolls = mockGql.mock.calls.filter((c) => c[0] === APPLICATION_INSTANCE_QUERY).length;
+    const instancePolls = mockGql.mock.calls.filter(
+      (c) => c[0] === APPLICATION_INSTANCE_QUERY
+    ).length;
     expect(instancePolls).toBe(600);
     expect(result.timedOut).toBe(true);
   });
 
   it('still times out after 3 minutes when the instance is not rescheduling', async () => {
     mockGql.mockImplementation(async (query: string) => {
-      if (query === APPLICATION_INSTANCE_QUERY) return { applicationInstance: instance('STARTING') } as any;
+      if (query === APPLICATION_INSTANCE_QUERY)
+        return { applicationInstance: instance('STARTING') } as any;
       return { deployments: [deployment('PENDING')] } as any;
     });
 

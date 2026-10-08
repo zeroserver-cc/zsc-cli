@@ -246,7 +246,10 @@ describe('platform details from instance.logs', () => {
     reportResult(
       spinner(),
       {
-        instance: withLogs('ERROR', 'Failed to start on 5 different nodes, giving up. Last error: container exited immediately'),
+        instance: withLogs(
+          'ERROR',
+          'Failed to start on 5 different nodes, giving up. Last error: container exited immediately'
+        ),
         deployment: deployment('FAILED', { error: null }),
         timedOut: false
       },
@@ -275,7 +278,10 @@ describe('platform details from instance.logs', () => {
     reportResult(
       spinner(),
       {
-        instance: withLogs('RESCHEDULING', 'Attempt 3/5 failed on a node: no space left on device. Retrying on another node.'),
+        instance: withLogs(
+          'RESCHEDULING',
+          'Attempt 3/5 failed on a node: no space left on device. Retrying on another node.'
+        ),
         timedOut: true
       },
       'my-app'
@@ -288,7 +294,13 @@ describe('platform details from instance.logs', () => {
     const s = spinner();
     const succeeded = reportResult(
       s,
-      { instance: withLogs('ERROR', 'Failed to start and no other eligible node is available. Last error: boom'), timedOut: false },
+      {
+        instance: withLogs(
+          'ERROR',
+          'Failed to start and no other eligible node is available. Last error: boom'
+        ),
+        timedOut: false
+      },
       'my-app'
     );
 
