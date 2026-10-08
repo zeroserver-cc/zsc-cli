@@ -344,4 +344,33 @@ describe('while the backend retries the start on other nodes', () => {
     expect((await resultPromise).timedOut).toBe(true);
     expect(mockGql.mock.calls.filter((c) => c[0] === APPLICATION_INSTANCE_QUERY).length).toBe(60);
   });
+
+  it('keeps the long wait when the instance briefly leaves RESCHEDULING between attempts', async () => {
+    let instancePolls = 0;
+    mockGql.mockImplementation(async (query: string) => {
+      if (query === APPLICATION_INSTANCE_QUERY) {
+        instancePolls++;
+        // 100 polls (5 min) in RESCHEDULING, then a pending moment, then done.
+        if (instancePolls <= 100)
+          return {
+            applicationInstance: rescheduling('Attempt 1/5 failed on a node: boom.')
+          } as any;
+        return {
+          applicationInstance: instance(instancePolls < 105 ? 'STARTING' : 'RUNNING')
+        } as any;
+      }
+      return { deployments: [deployment(instancePolls < 105 ? 'PENDING' : 'SUCCESS')] } as any;
+    });
+
+    const resultPromise = waitForInstance(
+      rescheduling('Attempt 1/5 failed on a node: boom.'),
+      'app-1',
+      'a-token'
+    );
+    await jest.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result.timedOut).toBe(false);
+    expect(result.deployment?.status).toBe('SUCCESS');
+  });
 });

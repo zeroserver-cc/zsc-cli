@@ -18,6 +18,9 @@ import { deployReplicaLines } from '../formatting/replicaReport';
 import { parseReplicas } from './parseReplicas';
 
 const MAX_DETAIL_LINES = 5;
+// Only here is instance.logs the platform's account of a problem; on a RUNNING
+// or STOPPED instance it is just the container's own output tail.
+const DETAIL_STATUSES = new Set(['ERROR', 'FAILED', 'RESCHEDULING']);
 
 interface DeployOptions {
   name?: string;
@@ -286,8 +289,8 @@ function printReplicas(outcome?: ReplicaOutcome): void {
 // instance.logs carries the platform's own account of what happened (e.g. the
 // "Attempt 2/5 failed ..." trail of the retry on other nodes), which is the only
 // explanation when the deployment record has no error.
-function printInstanceDetails(instance: { logs?: string }): void {
-  if (!instance.logs) return;
+function printInstanceDetails(instance: { status: string; logs?: string }): void {
+  if (!instance.logs || !DETAIL_STATUSES.has(instance.status)) return;
   const lines = instance.logs.trim().split('\n').slice(-MAX_DETAIL_LINES);
   console.log(`Details:     ${chalk.red(lines.join('\n             '))}`);
 }

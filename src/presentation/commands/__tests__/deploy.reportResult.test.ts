@@ -307,4 +307,18 @@ describe('platform details from instance.logs', () => {
     expect(succeeded).toBe(false);
     expect(printed()).toContain('no other eligible node is available');
   });
+
+  it('does not present the output of a healthy container as the failure reason', () => {
+    reportResult(
+      spinner(),
+      {
+        instance: withLogs('RUNNING', 'GET /health 200'),
+        deployment: deployment('FAILED', { error: null }),
+        timedOut: false
+      },
+      'my-app'
+    );
+
+    expect(printed()).not.toContain('GET /health 200');
+  });
 });

@@ -73,8 +73,9 @@ export async function waitForInstance(
   let history = await fetchHistory();
   let deployment = newestDeploymentOf(initial.id, history);
   let polls = 0;
+  let pollBudget = budgetFor(instance);
 
-  while (!isDone(instance, deployment) && polls < pollBudget(instance)) {
+  while (!isDone(instance, deployment) && polls < pollBudget) {
     onProgress?.(progressLabel(instance, deployment));
     await sleep(POLL_INTERVAL_MS);
     const [pollData, latest] = await Promise.all([
@@ -86,6 +87,9 @@ export async function waitForInstance(
       fetchHistory()
     ]);
     instance = pollData.applicationInstance ?? instance;
+    // Sticky: once the cascade started, a brief non-RESCHEDULING moment between
+    // attempts must not shrink the wait back to 3 minutes.
+    pollBudget = Math.max(pollBudget, budgetFor(instance));
     if (latest) {
       history = latest;
       deployment = newestDeploymentOf(initial.id, latest) ?? deployment;
@@ -97,7 +101,7 @@ export async function waitForInstance(
     instance,
     deployment,
     deployments: history,
-    timedOut: polls >= pollBudget(instance) && !isDone(instance, deployment)
+    timedOut: polls >= pollBudget && !isDone(instance, deployment)
   };
 }
 
@@ -115,7 +119,7 @@ function isDone(instance: ApplicationInstance, deployment?: Deployment): boolean
   return TERMINAL_STATUSES.has(instance.status);
 }
 
-function pollBudget(instance: ApplicationInstance): number {
+function budgetFor(instance: ApplicationInstance): number {
   return instance.status === 'RESCHEDULING' ? MAX_RESCHEDULING_POLLS : MAX_POLLS;
 }
 
