@@ -11,6 +11,8 @@ const STATUS_COLORS: Record<string, (s: string) => string> = {
   RUNNING: chalk.green,
   STARTING: chalk.yellow,
   PENDING: chalk.yellow,
+  RESCHEDULING: chalk.yellow,
+  RESTORING: chalk.yellow,
   STOPPED: chalk.gray,
   STOPPING: chalk.gray,
   ERROR: chalk.red,

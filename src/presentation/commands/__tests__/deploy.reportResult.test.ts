@@ -237,3 +237,62 @@ describe('rolling redeploy notes', () => {
     expect(printed()).not.toContain('will not be updated');
   });
 });
+
+describe('platform details from instance.logs', () => {
+  const withLogs = (status: string, logs: string) => ({ ...instance(status), logs });
+  const printed = () => logSpy.mock.calls.map((c) => String(c[0])).join('\n');
+
+  it('prints why the deploy failed when the deployment record has no error', () => {
+    reportResult(
+      spinner(),
+      {
+        instance: withLogs('ERROR', 'Failed to start on 5 different nodes, giving up. Last error: container exited immediately'),
+        deployment: deployment('FAILED', { error: null }),
+        timedOut: false
+      },
+      'my-app'
+    );
+
+    expect(printed()).toContain('Failed to start on 5 different nodes');
+  });
+
+  it('does not repeat the instance logs when the deployment already has the error', () => {
+    reportResult(
+      spinner(),
+      {
+        instance: withLogs('ERROR', 'stale instance log'),
+        deployment: deployment('FAILED', { error: 'manifest unknown' }),
+        timedOut: false
+      },
+      'my-app'
+    );
+
+    expect(printed()).toContain('manifest unknown');
+    expect(printed()).not.toContain('stale instance log');
+  });
+
+  it('prints the retry trail when the wait times out', () => {
+    reportResult(
+      spinner(),
+      {
+        instance: withLogs('RESCHEDULING', 'Attempt 3/5 failed on a node: no space left on device. Retrying on another node.'),
+        timedOut: true
+      },
+      'my-app'
+    );
+
+    expect(printed()).toContain('Attempt 3/5 failed');
+  });
+
+  it('prints the details when the deploy ends in an unexpected status', () => {
+    const s = spinner();
+    const succeeded = reportResult(
+      s,
+      { instance: withLogs('ERROR', 'Failed to start and no other eligible node is available. Last error: boom'), timedOut: false },
+      'my-app'
+    );
+
+    expect(succeeded).toBe(false);
+    expect(printed()).toContain('no other eligible node is available');
+  });
+});

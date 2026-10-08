@@ -17,6 +17,8 @@ import { handleError } from '../formatting/errors';
 import { deployReplicaLines } from '../formatting/replicaReport';
 import { parseReplicas } from './parseReplicas';
 
+const MAX_DETAIL_LINES = 5;
+
 interface DeployOptions {
   name?: string;
   appId?: string;
@@ -175,6 +177,7 @@ export function reportResult(
     spinner.warn(chalk.yellow('Deploy timed out waiting for a terminal status.'));
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
     console.log(`Last status: ${instance.status}`);
+    printInstanceDetails(instance);
     console.log(
       chalk.gray(`Check "zs deployments ${appName ?? '<app-name>'}" and "zs list" for updates.`)
     );
@@ -192,6 +195,8 @@ export function reportResult(
     console.log(`Instance ID: ${chalk.bold(instance.id)}`);
     if (deployment.error) {
       console.log(`Error:       ${chalk.red(deployment.error)}`);
+    } else {
+      printInstanceDetails(instance);
     }
     console.log(
       chalk.gray(
@@ -253,6 +258,7 @@ export function reportResult(
 
   spinner.fail(chalk.red(`Deploy ended with status: ${instance.status}`));
   console.log(`Instance ID: ${chalk.bold(instance.id)}`);
+  printInstanceDetails(instance);
   console.log(chalk.gray('Run "zs logs <instance-id>" for details.'));
   return false;
 }
@@ -275,6 +281,15 @@ function printCanceledRolloutNote(queued: number): void {
 function printReplicas(outcome?: ReplicaOutcome): void {
   if (!outcome) return;
   deployReplicaLines(outcome).forEach((line) => console.log(line));
+}
+
+// instance.logs carries the platform's own account of what happened (e.g. the
+// "Attempt 2/5 failed ..." trail of the retry on other nodes), which is the only
+// explanation when the deployment record has no error.
+function printInstanceDetails(instance: { logs?: string }): void {
+  if (!instance.logs) return;
+  const lines = instance.logs.trim().split('\n').slice(-MAX_DETAIL_LINES);
+  console.log(`Details:     ${chalk.red(lines.join('\n             '))}`);
 }
 
 function formatPlacement(placement: ManifestPlacement): string {

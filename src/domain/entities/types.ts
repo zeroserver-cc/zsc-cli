@@ -34,6 +34,8 @@ export type ApplicationInstanceStatus =
   | 'STARTING'
   | 'RUNNING'
   | 'STOPPING'
+  | 'RESCHEDULING'
+  | 'RESTORING'
   | 'STOPPED'
   | 'ERROR'
   | 'FAILED';
