@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-08
+
 ### Adicionado
 - `zs deploy` acompanha a nova tentativa em outros nodes: quando o backend reprovisiona a app depois de uma falha ao subir (até 5 nodes), a barra de progresso mostra `RESCHEDULING (Attempt N/5 failed ...)` e o tempo de espera passa de 3 para até 30 minutos só enquanto esse ciclo roda; sem ele o limite continua em 3 minutos. Requer o backend com o PR zsc-backend#156; contra um backend anterior nada muda.
 - Quando o deploy falha, estoura o tempo ou termina em estado inesperado e o deployment não traz erro, o CLI passa a imprimir `Details:` com as últimas linhas do log da instância (por exemplo "Failed to start on 5 different nodes, giving up. Last error: ..."), em vez de só mandar rodar `zs logs`. Os status `RESCHEDULING` e `RESTORING` ganham cor em `zs list`.
