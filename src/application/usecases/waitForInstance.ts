@@ -9,6 +9,11 @@ const TERMINAL_STATUSES = new Set(['RUNNING', 'ERROR', 'FAILED', 'STOPPED']);
 const INSTANCE_FAILURE_STATUSES = new Set(['ERROR', 'FAILED', 'STOPPED']);
 const POLL_INTERVAL_MS = 3_000;
 const MAX_POLLS = 60; // 3 minutes
+// The backend retries a failed start on up to 5 nodes (each attempt can take
+// the 5 minute command timeout), parking the instance in RESCHEDULING between
+// attempts. Waiting is extended only while that cascade is running.
+const MAX_RESCHEDULING_POLLS = 600; // 30 minutes
+const MAX_PROGRESS_DETAIL_CHARS = 100;
 // Must cover this deploy's record plus the QUEUED records of the other replicas
 // of a rolling redeploy (up to the platform's replica cap), and the rollback.
 const HISTORY_LIMIT = 20;
@@ -68,8 +73,9 @@ export async function waitForInstance(
   let history = await fetchHistory();
   let deployment = newestDeploymentOf(initial.id, history);
   let polls = 0;
+  let pollBudget = budgetFor(instance);
 
-  while (!isDone(instance, deployment) && polls < MAX_POLLS) {
+  while (!isDone(instance, deployment) && polls < pollBudget) {
     onProgress?.(progressLabel(instance, deployment));
     await sleep(POLL_INTERVAL_MS);
     const [pollData, latest] = await Promise.all([
@@ -81,6 +87,9 @@ export async function waitForInstance(
       fetchHistory()
     ]);
     instance = pollData.applicationInstance ?? instance;
+    // Sticky: once the cascade started, a brief non-RESCHEDULING moment between
+    // attempts must not shrink the wait back to 3 minutes.
+    pollBudget = Math.max(pollBudget, budgetFor(instance));
     if (latest) {
       history = latest;
       deployment = newestDeploymentOf(initial.id, latest) ?? deployment;
@@ -92,7 +101,7 @@ export async function waitForInstance(
     instance,
     deployment,
     deployments: history,
-    timedOut: polls >= MAX_POLLS && !isDone(instance, deployment)
+    timedOut: polls >= pollBudget && !isDone(instance, deployment)
   };
 }
 
@@ -110,7 +119,15 @@ function isDone(instance: ApplicationInstance, deployment?: Deployment): boolean
   return TERMINAL_STATUSES.has(instance.status);
 }
 
+function budgetFor(instance: ApplicationInstance): number {
+  return instance.status === 'RESCHEDULING' ? MAX_RESCHEDULING_POLLS : MAX_POLLS;
+}
+
 function progressLabel(instance: ApplicationInstance, deployment?: Deployment): string {
+  if (instance.status === 'RESCHEDULING' && instance.logs) {
+    const detail = instance.logs.trim().split('\n').pop() ?? '';
+    return `RESCHEDULING (${detail.slice(0, MAX_PROGRESS_DETAIL_CHARS)})`;
+  }
   if (deployment?.status === 'PENDING') {
     return `${instance.status} (deploy in progress)`;
   }
