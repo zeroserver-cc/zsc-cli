@@ -6,7 +6,8 @@ import {
   MANAGED_DATABASE_CONNECTION_STRING_QUERY,
   MY_DATABASES_QUERY,
   RESTORE_MANAGED_DATABASE_MUTATION,
-  SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION
+  SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION,
+  SET_MANAGED_DATABASE_REPLICAS_MUTATION
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
@@ -104,6 +105,20 @@ export async function setDatabasePublicAccessUseCase(
     token
   );
   return data.setManagedDatabasePublicAccess;
+}
+
+export async function setDatabaseReplicasUseCase(
+  nameOrId: string,
+  replicas: number
+): Promise<ManagedDatabase> {
+  const token = requireToken();
+  const database = await resolveDatabaseUseCase(nameOrId);
+  const data = await gqlRequest<{ setManagedDatabaseReplicas: ManagedDatabase }>(
+    SET_MANAGED_DATABASE_REPLICAS_MUTATION,
+    { id: database.id, replicas },
+    token
+  );
+  return data.setManagedDatabaseReplicas;
 }
 
 export async function deleteDatabaseUseCase(

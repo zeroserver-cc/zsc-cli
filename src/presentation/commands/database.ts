@@ -8,7 +8,8 @@ import {
   getConnectionStringUseCase,
   listDatabasesUseCase,
   restoreDatabaseUseCase,
-  setDatabasePublicAccessUseCase
+  setDatabasePublicAccessUseCase,
+  setDatabaseReplicasUseCase
 } from '../../application/usecases/ManagedDatabaseUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
 import { ManagedDatabaseEngine, ManagedDatabaseStatus } from '../../domain/entities/types';
@@ -207,6 +208,37 @@ export function registerDatabaseCommands(program: Command): void {
         );
       } catch (err) {
         spinner.fail('Failed to close the public endpoint.');
+        handleError(err);
+      }
+    });
+
+  db.command('replicas <name-or-id> <count>')
+    .description(
+      'Change how many read replicas a database keeps (0-2). Lowering removes the surplus copies; each running replica is billed'
+    )
+    .action(async (target: string, count: string) => {
+      requireRole(['developer', 'admin']);
+      try {
+        const replicas = parseReplicas(count);
+        const spinner = ora(`Updating replicas of ${chalk.cyan(target)}…`).start();
+        try {
+          const database = await setDatabaseReplicasUseCase(target, replicas);
+          spinner.succeed(
+            `Database ${chalk.bold(database.name)} now targets ${replicas} replica${replicas === 1 ? '' : 's'}.`
+          );
+          console.log(`Replicas: ${replicaSummary(database.replicas)}`);
+          if (replicas > 0) {
+            console.log(
+              chalk.gray(
+                'New copies are created in the background on other nodes; follow progress with "zs db list".'
+              )
+            );
+          }
+        } catch (err) {
+          spinner.fail('Failed to update the replicas.');
+          throw err;
+        }
+      } catch (err) {
         handleError(err);
       }
     });

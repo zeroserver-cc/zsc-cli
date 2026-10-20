@@ -5,7 +5,8 @@ import {
   listDatabasesUseCase,
   resolveDatabaseUseCase,
   restoreDatabaseUseCase,
-  setDatabasePublicAccessUseCase
+  setDatabasePublicAccessUseCase,
+  setDatabaseReplicasUseCase
 } from '../ManagedDatabaseUseCase';
 import { gqlRequest } from '../../../infrastructure/graphql/client';
 import { getConfigValue } from '../../../infrastructure/config/store';
@@ -15,7 +16,8 @@ import {
   MANAGED_DATABASE_CONNECTION_STRING_QUERY,
   MY_DATABASES_QUERY,
   RESTORE_MANAGED_DATABASE_MUTATION,
-  SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION
+  SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION,
+  SET_MANAGED_DATABASE_REPLICAS_MUTATION
 } from '../../../infrastructure/graphql/queries';
 import { ManagedDatabase } from '../../../domain/entities/types';
 
@@ -347,5 +349,30 @@ describe('setDatabasePublicAccessUseCase', () => {
     await expect(setDatabasePublicAccessUseCase('app-db', true)).rejects.toThrow(
       'Public access can only be enabled on a running database'
     );
+  });
+});
+
+describe('setDatabaseReplicasUseCase', () => {
+  it('resolves the database by name and sends the new replica target', async () => {
+    mockGql.mockImplementation(async (query: string) => {
+      if (query === MY_DATABASES_QUERY) return { myDatabases: [db({})] };
+      if (query === SET_MANAGED_DATABASE_REPLICAS_MUTATION) {
+        return { setManagedDatabaseReplicas: db({ replicas: [] }) };
+      }
+      throw new Error(`unexpected query: ${query}`);
+    });
+
+    const result = await setDatabaseReplicasUseCase('app-db', 2);
+
+    const call = mockGql.mock.calls.find((c) => c[0] === SET_MANAGED_DATABASE_REPLICAS_MUTATION)!;
+    expect(call[1]).toEqual({ id: 'db-1', replicas: 2 });
+    expect(call[2]).toBe('a-token');
+    expect(result.name).toBe('app-db');
+  });
+
+  it('fails without calling the mutation when the database is unknown', async () => {
+    mockGql.mockResolvedValue({ myDatabases: [] } as any);
+    await expect(setDatabaseReplicasUseCase('nope', 1)).rejects.toThrow(/Unknown database/);
+    expect(mockGql.mock.calls.some((c) => c[0] === SET_MANAGED_DATABASE_REPLICAS_MUTATION)).toBe(false);
   });
 });
