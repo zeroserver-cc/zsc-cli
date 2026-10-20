@@ -373,6 +373,8 @@ describe('setDatabaseReplicasUseCase', () => {
   it('fails without calling the mutation when the database is unknown', async () => {
     mockGql.mockResolvedValue({ myDatabases: [] } as any);
     await expect(setDatabaseReplicasUseCase('nope', 1)).rejects.toThrow(/Unknown database/);
-    expect(mockGql.mock.calls.some((c) => c[0] === SET_MANAGED_DATABASE_REPLICAS_MUTATION)).toBe(false);
+    expect(mockGql.mock.calls.some((c) => c[0] === SET_MANAGED_DATABASE_REPLICAS_MUTATION)).toBe(
+      false
+    );
   });
 });
