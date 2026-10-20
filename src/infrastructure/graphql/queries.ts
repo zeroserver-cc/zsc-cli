@@ -337,6 +337,14 @@ export const SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION = `
   }
 `;
 
+export const SET_MANAGED_DATABASE_REPLICAS_MUTATION = `
+  mutation SetManagedDatabaseReplicas($id: ID!, $replicas: Int!) {
+    setManagedDatabaseReplicas(id: $id, replicas: $replicas) {
+      ${MANAGED_DATABASE_FIELDS}
+    }
+  }
+`;
+
 const INFERENCE_SERVICE_FIELDS = `
   id name modelId status machineId endpoint errorMessage
   vramBudgetMb gpuLayers
