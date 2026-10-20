@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-20
+
 ### Adicionado
 
 - Novo subcomando `zs db replicas <nome> <0-2>` para mudar quantas réplicas de leitura um banco gerenciado mantém (mutation `setManagedDatabaseReplicas`). Subir cria as cópias em segundo plano em outros nodes; descer remove as excedentes. Cada réplica em execução é cobrada. Requer backend com a mutation publicada.
