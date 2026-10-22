@@ -5,7 +5,6 @@ import {
   listDatabasesUseCase,
   resolveDatabaseUseCase,
   restoreDatabaseUseCase,
-  setDatabasePublicAccessUseCase,
   setDatabaseReplicasUseCase
 } from '../ManagedDatabaseUseCase';
 import { gqlRequest } from '../../../infrastructure/graphql/client';
@@ -16,7 +15,6 @@ import {
   MANAGED_DATABASE_CONNECTION_STRING_QUERY,
   MY_DATABASES_QUERY,
   RESTORE_MANAGED_DATABASE_MUTATION,
-  SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION,
   SET_MANAGED_DATABASE_REPLICAS_MUTATION
 } from '../../../infrastructure/graphql/queries';
 import { ManagedDatabase } from '../../../domain/entities/types';
@@ -35,7 +33,6 @@ const db = (overrides: Partial<ManagedDatabase>): ManagedDatabase => ({
   machineId: 'machine-1',
   lastDumpAt: '2026-08-04T12:00:00.000Z',
   replicas: [],
-  publicAccess: false,
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
   ...overrides
@@ -55,18 +52,6 @@ describe('listDatabasesUseCase', () => {
     expect(mockGql).toHaveBeenCalledWith(MY_DATABASES_QUERY, {}, 'a-token');
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('app-db');
-  });
-
-  it('carries the public endpoint fields of an exposed database', async () => {
-    mockGql.mockResolvedValue({
-      myDatabases: [db({ publicAccess: true, publicHost: 'db.zeroserver.cc', publicPort: 15432 })]
-    });
-
-    const result = await listDatabasesUseCase();
-
-    expect(result[0].publicAccess).toBe(true);
-    expect(result[0].publicHost).toBe('db.zeroserver.cc');
-    expect(result[0].publicPort).toBe(15432);
   });
 
   it('fails early when there is no session token', async () => {
@@ -202,36 +187,7 @@ describe('getConnectionStringUseCase', () => {
     );
   });
 
-  it('fetches the public connection string too when the database is exposed', async () => {
-    mockGql.mockImplementation(async (query: string, variables?: Record<string, unknown>) => {
-      if (query === MY_DATABASES_QUERY) {
-        return {
-          myDatabases: [
-            db({ publicAccess: true, publicHost: 'db.zeroserver.cc', publicPort: 15432 })
-          ]
-        };
-      }
-      if (query === MANAGED_DATABASE_CONNECTION_STRING_QUERY) {
-        return {
-          managedDatabaseConnectionString: variables?.public
-            ? 'postgres://u:p@db.zeroserver.cc:15432/app'
-            : 'postgres://u:p@app-db:5432/app'
-        };
-      }
-      throw new Error(`unexpected query: ${query}`);
-    });
-
-    const result = await getConnectionStringUseCase('app-db');
-
-    const publicCall = mockGql.mock.calls.find(
-      (c) => c[0] === MANAGED_DATABASE_CONNECTION_STRING_QUERY && c[1]?.public === true
-    )!;
-    expect(publicCall[1]).toEqual({ id: 'db-1', public: true });
-    expect(result.url).toBe('postgres://u:p@app-db:5432/app');
-    expect(result.publicUrl).toBe('postgres://u:p@db.zeroserver.cc:15432/app');
-  });
-
-  it('does not fetch a public connection string when the database is not exposed', async () => {
+  it('fetches only the internal connection string', async () => {
     mockGql.mockImplementation(async (query: string) => {
       if (query === MY_DATABASES_QUERY) return { myDatabases: [db({})] };
       if (query === MANAGED_DATABASE_CONNECTION_STRING_QUERY) {
@@ -242,11 +198,9 @@ describe('getConnectionStringUseCase', () => {
 
     const result = await getConnectionStringUseCase('app-db');
 
-    const publicCalls = mockGql.mock.calls.filter(
-      (c) => c[0] === MANAGED_DATABASE_CONNECTION_STRING_QUERY && c[1]?.public === true
-    );
-    expect(publicCalls).toHaveLength(0);
-    expect(result.publicUrl).toBeUndefined();
+    const call = mockGql.mock.calls.find((c) => c[0] === MANAGED_DATABASE_CONNECTION_STRING_QUERY)!;
+    expect(call[1]).toEqual({ id: 'db-1' });
+    expect(result.url).toBe('postgres://u:p@app-db:5432/app');
   });
 });
 
@@ -281,74 +235,6 @@ describe('restoreDatabaseUseCase', () => {
     const restoreCall = mockGql.mock.calls.find((c) => c[0] === RESTORE_MANAGED_DATABASE_MUTATION)!;
     expect(restoreCall[1]).toEqual({ id: 'db-1' });
     expect(result.restored).toBe(true);
-  });
-});
-
-describe('setDatabasePublicAccessUseCase', () => {
-  it('enables public access and returns the exposed database', async () => {
-    mockGql.mockImplementation(async (query: string) => {
-      if (query === MY_DATABASES_QUERY) return { myDatabases: [db({})] };
-      if (query === SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION) {
-        return {
-          setManagedDatabasePublicAccess: db({
-            publicAccess: true,
-            publicHost: 'db.zeroserver.cc',
-            publicPort: 15432
-          })
-        };
-      }
-      throw new Error(`unexpected query: ${query}`);
-    });
-
-    const result = await setDatabasePublicAccessUseCase('app-db', true);
-
-    const call = mockGql.mock.calls.find(
-      (c) => c[0] === SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION
-    )!;
-    expect(call[1]).toEqual({ id: 'db-1', enabled: true });
-    expect(result.publicAccess).toBe(true);
-    expect(result.publicHost).toBe('db.zeroserver.cc');
-    expect(result.publicPort).toBe(15432);
-  });
-
-  it('disables public access with enabled=false', async () => {
-    mockGql.mockImplementation(async (query: string) => {
-      if (query === MY_DATABASES_QUERY) {
-        return {
-          myDatabases: [
-            db({ publicAccess: true, publicHost: 'db.zeroserver.cc', publicPort: 15432 })
-          ]
-        };
-      }
-      if (query === SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION) {
-        return { setManagedDatabasePublicAccess: db({}) };
-      }
-      throw new Error(`unexpected query: ${query}`);
-    });
-
-    const result = await setDatabasePublicAccessUseCase('app-db', false);
-
-    const call = mockGql.mock.calls.find(
-      (c) => c[0] === SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION
-    )!;
-    expect(call[1]).toEqual({ id: 'db-1', enabled: false });
-    expect(result.publicAccess).toBe(false);
-  });
-
-  it('surfaces backend errors unchanged (e.g. database not running)', async () => {
-    mockGql.mockImplementation(async (query: string) => {
-      if (query === MY_DATABASES_QUERY) {
-        return { myDatabases: [db({ status: 'PENDING' })] };
-      }
-      if (query === SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION) {
-        throw new Error('Public access can only be enabled on a running database');
-      }
-      throw new Error(`unexpected query: ${query}`);
-    });
-
-    await expect(setDatabasePublicAccessUseCase('app-db', true)).rejects.toThrow(
-      'Public access can only be enabled on a running database'
-    );
   });
 });
 

@@ -291,7 +291,6 @@ export const RESTORE_APPLICATION_VOLUMES_MUTATION = `
 
 const MANAGED_DATABASE_FIELDS = `
   id name engine version status machineId lastDumpAt createdAt updatedAt
-  publicAccess publicPort publicHost
   replicas { id role status machineId lagBytes lagSeconds }
 `;
 
@@ -304,8 +303,8 @@ export const MY_DATABASES_QUERY = `
 `;
 
 export const MANAGED_DATABASE_CONNECTION_STRING_QUERY = `
-  query ManagedDatabaseConnectionString($id: ID!, $public: Boolean) {
-    managedDatabaseConnectionString(id: $id, public: $public)
+  query ManagedDatabaseConnectionString($id: ID!) {
+    managedDatabaseConnectionString(id: $id)
   }
 `;
 
@@ -329,10 +328,10 @@ export const RESTORE_MANAGED_DATABASE_MUTATION = `
   }
 `;
 
-export const SET_MANAGED_DATABASE_PUBLIC_ACCESS_MUTATION = `
-  mutation SetManagedDatabasePublicAccess($id: ID!, $enabled: Boolean!) {
-    setManagedDatabasePublicAccess(id: $id, enabled: $enabled) {
-      ${MANAGED_DATABASE_FIELDS}
+export const OPEN_MANAGED_DATABASE_TUNNEL_MUTATION = `
+  mutation OpenManagedDatabaseTunnel($id: ID!) {
+    openManagedDatabaseTunnel(id: $id) {
+      url ticket expiresAt engine username database
     }
   }
 `;
