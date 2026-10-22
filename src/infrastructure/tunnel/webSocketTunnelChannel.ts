@@ -1,4 +1,4 @@
-import { TunnelClosedError } from '../../application/tunnel/errors';
+import { TunnelClosedError, TunnelOpenTimeoutError } from '../../application/tunnel/errors';
 import { OpenTunnelChannel, TunnelChannel, TunnelCloseInfo } from '../../application/tunnel/ports';
 
 const OPEN = 1;
@@ -68,17 +68,48 @@ class WebSocketTunnelChannel implements TunnelChannel {
   }
 }
 
+export const OPEN_TIMEOUT_MS = 15_000;
+
+/**
+ * Resolves on 'open'. A failed handshake (refused, DNS, non-101) fires 'error' and, on
+ * Node 22, never 'close'; Node 24 fires both. So the first of error/close/timeout wins and
+ * the socket is closed to avoid leaking it.
+ */
 export function createWebSocketTunnelOpener(
-  factory: WebSocketFactory = defaultFactory
+  factory: WebSocketFactory = defaultFactory,
+  openTimeoutMs: number = OPEN_TIMEOUT_MS
 ): OpenTunnelChannel {
   return ({ url, ticket }) =>
     new Promise<TunnelChannel>((resolve, reject) => {
       const socket = factory(ticketUrl(url, ticket));
       socket.binaryType = 'arraybuffer';
-      socket.addEventListener('open', () => resolve(new WebSocketTunnelChannel(socket)));
-      // Before 'open' a close (or the error preceding it) means the upgrade failed.
+      let settled = false;
+
+      const fail = (error: Error): void => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try {
+          socket.close();
+        } catch {
+          // already closed
+        }
+        reject(error);
+      };
+      const timer = setTimeout(
+        () => fail(new TunnelOpenTimeoutError(openTimeoutMs)),
+        openTimeoutMs
+      );
+
+      socket.addEventListener('open', () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(new WebSocketTunnelChannel(socket));
+      });
+      socket.addEventListener('error', () => fail(new TunnelClosedError(1006, new URL(url).host)));
       socket.addEventListener('close', (event) =>
-        reject(new TunnelClosedError(event.code ?? 1006, event.reason ?? ''))
+        fail(new TunnelClosedError(event.code ?? 1006, event.reason ?? ''))
       );
     });
 }

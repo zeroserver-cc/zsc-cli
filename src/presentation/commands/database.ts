@@ -16,7 +16,7 @@ import { startDatabaseTunnelUseCase } from '../../application/usecases/DatabaseT
 import { createWebSocketTunnelOpener } from '../../infrastructure/tunnel/webSocketTunnelChannel';
 import { listenLocal } from '../../infrastructure/tunnel/localListener';
 import { handleError } from '../formatting/errors';
-import { printTunnelHint, reportTunnelEvent, waitForInterrupt } from '../formatting/tunnel';
+import { printTunnelHint, createTunnelReporter, waitForInterrupt } from '../formatting/tunnel';
 import { replicaSummary } from '../formatting/replicas';
 import { prompt } from '../io/prompt';
 
@@ -190,7 +190,7 @@ export function registerDatabaseCommands(program: Command): void {
         const tunnel = await startDatabaseTunnelUseCase(target, opts.port, {
           listen: listenLocal,
           openChannel: createWebSocketTunnelOpener(),
-          onEvent: reportTunnelEvent
+          onEvent: createTunnelReporter()
         });
         printTunnelHint(tunnel);
         await waitForInterrupt();

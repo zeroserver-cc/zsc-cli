@@ -22,3 +22,21 @@ export class LocalPortUnavailableError extends Error {
     this.name = 'LocalPortUnavailableError';
   }
 }
+
+export class TunnelOpenTimeoutError extends Error {
+  constructor(public readonly timeoutMs: number) {
+    super(
+      `Timed out after ${Math.round(timeoutMs / 1000)}s opening the tunnel. Check your network and retry.`
+    );
+    this.name = 'TunnelOpenTimeoutError';
+  }
+}
+
+export class InsecureTunnelUrlError extends Error {
+  constructor(public readonly host: string) {
+    super(
+      `Refusing to open a tunnel over an insecure URL (host ${host}): the server must provide a wss:// address.`
+    );
+    this.name = 'InsecureTunnelUrlError';
+  }
+}

@@ -1,11 +1,9 @@
 import { ManagedDatabaseEngine } from '../../domain/entities/types';
 import { getConfigValue } from '../../infrastructure/config/store';
 import { GraphQLError, gqlRequest } from '../../infrastructure/graphql/client';
-import {
-  MANAGED_DATABASE_CONNECTION_STRING_QUERY,
-  OPEN_MANAGED_DATABASE_TUNNEL_MUTATION
-} from '../../infrastructure/graphql/queries';
+import { OPEN_MANAGED_DATABASE_TUNNEL_MUTATION } from '../../infrastructure/graphql/queries';
 import { bridgeConnection } from '../tunnel/bridgeConnection';
+import { assertSecureTunnelUrl } from '../tunnel/tunnelUrl';
 import {
   ListenLocal,
   LocalConnection,
@@ -22,8 +20,15 @@ export function defaultTunnelPort(engine: ManagedDatabaseEngine): number {
   return DEFAULT_PORTS[engine];
 }
 
+/** The per-account tunnel cap, as signalled by the server when it closes a socket. */
+export const TUNNEL_LIMIT_CLOSE_CODE = 4429;
+/** After the cap is hit, new local connections are refused locally for this long. */
+export const TUNNEL_LIMIT_COOLDOWN_MS = 5_000;
+
 export type TunnelEvent =
+  | { type: 'connection-opened'; username: string; database: string }
   | { type: 'connection-closed'; info: TunnelCloseInfo }
+  | { type: 'connection-limit' }
   | { type: 'connection-failed'; error: unknown };
 
 export interface DatabaseTunnelDeps {
@@ -36,8 +41,6 @@ export interface RunningDatabaseTunnel {
   engine: ManagedDatabaseEngine;
   name: string;
   port: number;
-  username: string;
-  database: string;
   close(): Promise<void>;
 }
 
@@ -50,6 +53,7 @@ export async function requestTunnelTicketUseCase(databaseId: string): Promise<Tu
       { id: databaseId },
       token
     );
+    assertSecureTunnelUrl(data.openManagedDatabaseTunnel.url);
     return data.openManagedDatabaseTunnel;
   } catch (err) {
     if (err instanceof GraphQLError && /Cannot query field/i.test(err.message)) {
@@ -57,23 +61,6 @@ export async function requestTunnelTicketUseCase(databaseId: string): Promise<Tu
     }
     throw err;
   }
-}
-
-/** Username and database name for the connection hint; the password is never read out of the URL. */
-async function readConnectionIdentity(
-  databaseId: string
-): Promise<{ username: string; database: string }> {
-  const token = getConfigValue('accessToken');
-  const data = await gqlRequest<{ managedDatabaseConnectionString: string }>(
-    MANAGED_DATABASE_CONNECTION_STRING_QUERY,
-    { id: databaseId },
-    token
-  );
-  const url = new URL(data.managedDatabaseConnectionString);
-  return {
-    username: decodeURIComponent(url.username),
-    database: decodeURIComponent(url.pathname.replace(/^\//, ''))
-  };
 }
 
 /**
@@ -91,14 +78,31 @@ export async function startDatabaseTunnelUseCase(
       `Database ${database.name} is ${database.status}; a tunnel needs it RUNNING (see "zs db list").`
     );
   }
-  const identity = await readConnectionIdentity(database.id);
+  let limitReachedUntil = 0;
 
   const handle = async (connection: LocalConnection): Promise<void> => {
+    // A pool bigger than the cap would otherwise burn one GraphQL call per refused connection.
+    if (Date.now() < limitReachedUntil) {
+      connection.destroy();
+      return;
+    }
     try {
-      const info = await bridgeConnection(connection, async () =>
-        deps.openChannel(await requestTunnelTicketUseCase(database.id))
-      );
-      deps.onEvent?.({ type: 'connection-closed', info });
+      const info = await bridgeConnection(connection, async () => {
+        const ticket = await requestTunnelTicketUseCase(database.id);
+        const channel = await deps.openChannel(ticket);
+        deps.onEvent?.({
+          type: 'connection-opened',
+          username: ticket.username,
+          database: ticket.database
+        });
+        return channel;
+      });
+      if (info.code === TUNNEL_LIMIT_CLOSE_CODE) {
+        if (Date.now() >= limitReachedUntil) deps.onEvent?.({ type: 'connection-limit' });
+        limitReachedUntil = Date.now() + TUNNEL_LIMIT_COOLDOWN_MS;
+      } else {
+        deps.onEvent?.({ type: 'connection-closed', info });
+      }
     } catch (error) {
       deps.onEvent?.({ type: 'connection-failed', error });
     }
@@ -113,7 +117,6 @@ export async function startDatabaseTunnelUseCase(
     engine: database.engine,
     name: database.name,
     port: listener.port,
-    ...identity,
     close: () => listener.close()
   };
 }
