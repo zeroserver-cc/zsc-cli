@@ -7,6 +7,19 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+
+- Novo comando `zs db tunnel <nome> [--port <n>]` (ADR 0014): abre um listener apenas em `127.0.0.1` (porta padrão do motor, 5432 no Postgres e 3306 no MySQL; `--port` troca, e se a porta estiver ocupada o comando falha com mensagem clara, sem escolher outra por conta própria) e leva cada conexão local ao banco por WebSocket sobre TLS (`wss://db.zeroserver.cc`). Cada conexão pede um ticket novo e de uso único (mutation `openManagedDatabaseTunnel`), então clientes simultâneos são independentes. O comando mostra host, porta, banco e usuário, nunca a senha (ela continua em `zs db connection <nome>`), encerra limpo com Ctrl+C e fecha conexões ociosas após 15 minutos. Recusas do servidor (ticket expirado, não é o dono, limite de túneis, banco inalcançável) viram mensagens legíveis. Usa o `WebSocket` global do Node 22, o mesmo que o binário `pkg` embute, então não há dependência nova. Requer o backend com a mutation publicada.
+
+### Alterado
+
+- `zs db connection <nome>` mostra só a URL interna e aponta para `zs db tunnel` para conectar da sua máquina. A query deixou de enviar o argumento `public`.
+- `zs db list` perde a coluna `Public`, e as queries de bancos deixam de selecionar `publicAccess`, `publicPort` e `publicHost` (campos depreciados no backend).
+
+### Removido
+
+- Comandos `zs db expose` e `zs db unexpose` e o endpoint TCP público dos bancos gerenciados, substituídos pelo túnel. Bancos que estavam expostos passam a ser acessados por `zs db tunnel`.
+
 ## [0.15.0] - 2026-10-20
 
 ### Adicionado

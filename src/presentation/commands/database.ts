@@ -8,13 +8,15 @@ import {
   getConnectionStringUseCase,
   listDatabasesUseCase,
   restoreDatabaseUseCase,
-  setDatabasePublicAccessUseCase,
   setDatabaseReplicasUseCase
 } from '../../application/usecases/ManagedDatabaseUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
 import { ManagedDatabaseEngine, ManagedDatabaseStatus } from '../../domain/entities/types';
+import { startDatabaseTunnelUseCase } from '../../application/usecases/DatabaseTunnelUseCase';
+import { createWebSocketTunnelOpener } from '../../infrastructure/tunnel/webSocketTunnelChannel';
+import { listenLocal } from '../../infrastructure/tunnel/localListener';
 import { handleError } from '../formatting/errors';
-import { publicEndpointSummary } from '../formatting/publicEndpoint';
+import { printTunnelHint, reportTunnelEvent, waitForInterrupt } from '../formatting/tunnel';
 import { replicaSummary } from '../formatting/replicas';
 import { prompt } from '../io/prompt';
 
@@ -32,6 +34,14 @@ function parseReplicas(value: string): number {
     throw new InvalidArgumentError('must be 0, 1 or 2');
   }
   return replicas;
+}
+
+function parsePort(value: string): number {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new InvalidArgumentError('must be an integer between 1 and 65535');
+  }
+  return port;
 }
 
 function statusLabel(status: ManagedDatabaseStatus): string {
@@ -104,7 +114,7 @@ export function registerDatabaseCommands(program: Command): void {
           return;
         }
         const table = new Table({
-          head: ['Name', 'Engine', 'Status', 'Replicas', 'Node', 'Public', 'Last Dump']
+          head: ['Name', 'Engine', 'Status', 'Replicas', 'Node', 'Last Dump']
         });
         for (const database of databases) {
           table.push([
@@ -113,7 +123,6 @@ export function registerDatabaseCommands(program: Command): void {
             statusLabel(database.status),
             replicaSummary(database.replicas),
             database.machineId ?? '-',
-            publicEndpointSummary(database),
             database.lastDumpAt ? new Date(database.lastDumpAt).toLocaleString() : '-'
           ]);
         }
@@ -130,14 +139,9 @@ export function registerDatabaseCommands(program: Command): void {
       requireRole(['developer', 'admin']);
       const spinner = ora('Fetching connection string…').start();
       try {
-        const { database, url, publicUrl } = await getConnectionStringUseCase(target);
+        const { database, url } = await getConnectionStringUseCase(target);
         spinner.stop();
-        if (publicUrl) {
-          console.log(`${chalk.bold('Internal:')} ${url}`);
-          console.log(`${chalk.bold('Public:  ')} ${publicUrl}`);
-        } else {
-          console.log(url);
-        }
+        console.log(url);
         console.log(
           chalk.yellow(
             'This URL contains credentials. Treat it as a secret: do not commit it or share it.'
@@ -146,6 +150,11 @@ export function registerDatabaseCommands(program: Command): void {
         console.log(
           chalk.gray(
             `Apps attached via "database: ${database.name}" in zs.yaml receive it automatically as DATABASE_URL.`
+          )
+        );
+        console.log(
+          chalk.gray(
+            `This host is internal to the platform. To connect from your machine, run "zs db tunnel ${database.name}".`
           )
         );
         if (
@@ -166,48 +175,28 @@ export function registerDatabaseCommands(program: Command): void {
       }
     });
 
-  db.command('expose <name-or-id>')
+  db.command('tunnel <name-or-id>')
     .description(
-      'Expose the database on a public gateway TCP port (opt-in; reachable from the internet)'
+      'Open a local port (127.0.0.1) that tunnels to a managed database over TLS, for psql, mysql or GUI clients'
     )
-    .action(async (target: string) => {
+    .option(
+      '-p, --port <port>',
+      'Local port (default: 5432 for postgres, 3306 for mysql)',
+      parsePort
+    )
+    .action(async (target: string, opts: { port?: number }) => {
       requireRole(['developer', 'admin']);
-      const spinner = ora(`Exposing database ${chalk.cyan(target)}…`).start();
       try {
-        const database = await setDatabasePublicAccessUseCase(target, true);
-        const endpoint =
-          database.publicHost && database.publicPort
-            ? ` at ${chalk.bold(`${database.publicHost}:${database.publicPort}`)}`
-            : '';
-        spinner.succeed(`Database ${chalk.bold(database.name)} is now public${endpoint}.`);
-        console.log(
-          chalk.yellow(
-            'Anyone on the internet can attempt to log in: the database password is the only barrier.'
-          )
-        );
-        console.log(
-          chalk.gray(
-            `Get the public connection string with "zs db connection ${database.name}". Close it with "zs db unexpose ${database.name}".`
-          )
-        );
+        const tunnel = await startDatabaseTunnelUseCase(target, opts.port, {
+          listen: listenLocal,
+          openChannel: createWebSocketTunnelOpener(),
+          onEvent: reportTunnelEvent
+        });
+        printTunnelHint(tunnel);
+        await waitForInterrupt();
+        await tunnel.close();
+        console.log('Tunnel closed.');
       } catch (err) {
-        spinner.fail('Failed to expose the database.');
-        handleError(err);
-      }
-    });
-
-  db.command('unexpose <name-or-id>')
-    .description('Close the public gateway endpoint of a database')
-    .action(async (target: string) => {
-      requireRole(['developer', 'admin']);
-      const spinner = ora(`Closing the public endpoint of ${chalk.cyan(target)}…`).start();
-      try {
-        const database = await setDatabasePublicAccessUseCase(target, false);
-        spinner.succeed(
-          `Database ${chalk.bold(database.name)} is no longer public; the gateway port is closed.`
-        );
-      } catch (err) {
-        spinner.fail('Failed to close the public endpoint.');
         handleError(err);
       }
     });
