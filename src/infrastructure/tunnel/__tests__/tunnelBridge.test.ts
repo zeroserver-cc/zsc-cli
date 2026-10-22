@@ -96,7 +96,9 @@ describe('local TCP <-> WebSocket bridge', () => {
     const opener = createWebSocketTunnelOpener(factory);
     const outcomes: Promise<unknown>[] = [];
     const listener = await listenLocal(0, (connection) => {
-      outcomes.push(bridgeConnection(connection, () => opener(ticket), idleMs).catch((err) => err));
+      outcomes.push(
+        bridgeConnection(connection, () => opener(ticket), { idleMs }).catch((err) => err)
+      );
     });
     closers.push(() => listener.close());
     return { port: listener.port, outcomes };

@@ -138,7 +138,12 @@ describe('startDatabaseTunnelUseCase', () => {
     });
     mockGql.mockImplementation(async () => ({ openManagedDatabaseTunnel: { ticket: 't' } }) as any);
 
-    const connection = () => ({ on: jest.fn(), pause: jest.fn(), destroy: jest.fn() });
+    const connection = () => ({
+      on: jest.fn(),
+      pause: jest.fn(),
+      setTimeout: jest.fn(),
+      destroy: jest.fn()
+    });
     onConnection(connection());
     onConnection(connection());
     await new Promise((r) => setImmediate(r));
