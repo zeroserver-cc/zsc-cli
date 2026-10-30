@@ -73,7 +73,9 @@ Replicas:
   Each replica is a separate, separately billed instance on a different node,
   balanced round-robin with no sticky sessions: the app must be stateless. The
   value is kept across deploys; "zs scale" changes it without a deploy. Apps
-  with volumes or a managed database keep one replica and get a warning.
+  with volumes or a managed database keep one replica and get a warning. The
+  beta caps an app at 4 replicas: ask for more and the platform runs 4 and
+  warns. A redeploy updates replicas one at a time, draining requests first.
 
 Examples:
   $ zs deploy ghcr.io/me/api:1.0 --country BR --region RS

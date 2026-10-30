@@ -186,8 +186,11 @@ services:
 - The value is stored with the app: a later `zs deploy` without `--replicas`
   keeps it, and `zs deploy` only sends `replicas` when you ask for it.
 - Each replica is its own instance on a different node, billed as one instance
-  per hour (3 replicas cost 3 x). The platform caps the count and says so in a
-  warning when it does.
+  per hour (3 replicas cost 3 x). The beta caps an app at 4 replicas: a higher
+  value is accepted, the platform runs 4 and says so in a warning.
+- A redeploy of a replicated app is rolling: one replica at a time, each one
+  taken out of the load balancer and drained before its container is replaced,
+  so the URL keeps answering from the others.
 - Requests are balanced round-robin with no sticky sessions, so the app must be
   stateless: keep sessions in a signed cookie or an external database.
 - Apps with volumes or an attached managed database keep one replica; the

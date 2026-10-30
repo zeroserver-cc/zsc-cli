@@ -19,7 +19,9 @@ export function registerScaleCommand(program: Command): void {
 Replicas are separate instances balanced round-robin, with no sticky sessions:
 the app must be stateless (keep sessions in a signed cookie or an external
 database). Each replica is billed as its own instance. Apps with volumes or a
-managed database keep one replica; the reason is shown as a warning.
+managed database keep one replica; the reason is shown as a warning. The beta
+caps an app at 4 replicas, each on a different node: a higher value is accepted,
+the platform runs 4 and warns.
 
 Examples:
   $ zs scale my-api 3
