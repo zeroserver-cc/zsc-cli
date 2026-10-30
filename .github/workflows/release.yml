@@ -76,7 +76,7 @@ jobs:
   sign-macos:
     needs: build
     # Apple Silicon runner: has codesign and can produce a valid ad-hoc signature.
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Download binaries
         uses: actions/download-artifact@v4
