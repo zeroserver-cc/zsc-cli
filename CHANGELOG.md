@@ -7,6 +7,10 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Alterado
+
+- A ajuda de `zs deploy --replicas` e `zs scale` e o README passam a dizer o teto do beta (4 réplicas por app, cada uma em um node diferente; acima disso a plataforma roda 4 e avisa) e que o redeploy de app com réplicas é rolling com drain de requisições. Nenhuma validação nova no CLI: o teto continua sendo decisão do backend.
+
 ## [0.16.0] - 2026-10-30
 
 ### Adicionado
