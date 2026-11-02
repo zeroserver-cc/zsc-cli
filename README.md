@@ -173,7 +173,7 @@ and "upcoming" amounts are demonstrative).
 
 ```sh
 zs wallet                  # balance, payment mode, upcoming amounts and closed invoices
-zs wallet history          # transactions, newest first (-n/--limit <n>, default 20)
+zs wallet history          # transactions, newest first (-n/--limit <n>, 1-200, default 20)
 zs wallet add 50           # add R$ 50,00 by card via Stripe Checkout
 zs wallet add 50,00 --no-wait   # do not wait for the confirmation
 zs wallet add 50.00 --no-open   # print the checkout URL without opening a browser
@@ -189,10 +189,13 @@ The CLI prints the Stripe Checkout URL, tries to open it in your browser, and
 then polls your top-ups every 3 seconds for up to 5 minutes until the payment is
 confirmed (it prints the new balance), expires or is rejected. Press Ctrl+C to
 stop waiting: the credit still lands when Stripe confirms the payment, because
-it depends on the platform webhook and not on the CLI. In TEST mode use the test
+it depends on the platform webhook and not on the CLI. The exit code is 0 only
+when the payment is confirmed; it is 1 when the checkout expired, was rejected
+or the wait ended without a confirmation, and 130 after Ctrl+C. In TEST mode use the test
 card `4242 4242 4242 4242` with any future expiry and any CVC. If the gateway is
 not configured on the platform (mode `DISABLED`), the command fails with a clear
-message. Top-ups need a login session; API keys cannot move money.
+message. Top-ups need a login session; API keys cannot move money (they can
+still read the wallet with `zs wallet` and `zs wallet history`).
 
 ## Replicas (high availability)
 

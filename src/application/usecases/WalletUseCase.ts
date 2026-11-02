@@ -82,6 +82,29 @@ export function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> 
   });
 }
 
+const ABORTED = Symbol('aborted');
+
+// The poll request itself cannot be cancelled (it may take up to the HTTP
+// timeout), so an abort must win the race instead of waiting for it. The
+// listener is removed afterwards: one per poll would pile up on the signal.
+async function unlessAborted<T>(
+  work: Promise<T>,
+  signal?: AbortSignal
+): Promise<T | typeof ABORTED> {
+  if (!signal) return work;
+  let onAbort = () => {};
+  const aborted = new Promise<typeof ABORTED>((resolve) => {
+    onAbort = () => resolve(ABORTED);
+    if (signal.aborted) onAbort();
+    else signal.addEventListener('abort', onAbort, { once: true });
+  });
+  try {
+    return await Promise.race([work, aborted]);
+  } finally {
+    signal.removeEventListener('abort', onAbort);
+  }
+}
+
 /**
  * Polls the wallet until the top-up leaves PENDING, the deadline passes or the
  * caller aborts. Never decides anything about the credit: that is the webhook's
@@ -106,7 +129,8 @@ export async function waitForTopUpUseCase(
     if (signal?.aborted) return { outcome: 'CANCELLED' };
 
     try {
-      const progress = await gateway.getTopUpProgress();
+      const progress = await unlessAborted(gateway.getTopUpProgress(), signal);
+      if (progress === ABORTED) return { outcome: 'CANCELLED' };
       consecutiveFailures = 0;
       const topUp = progress.topUps.find((t) => t.id === topUpId);
       if (topUp?.status === 'COMPLETED') {

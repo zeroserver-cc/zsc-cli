@@ -21,7 +21,8 @@ const PT_BR_GROUPED = /^(\d{1,3}(?:\.\d{3})+),(\d{1,2})$/;
 const EN_US_GROUPED = /^(\d{1,3}(?:,\d{3})+)\.(\d{1,2})$/;
 
 function toCents(integerPart: string, fraction: string): number {
-  const digits = integerPart.replace(/[.,]/g, '');
+  // Leading zeros carry no magnitude, so they must not count toward the cap.
+  const digits = integerPart.replace(/[.,]/g, '').replace(/^0+(?=\d)/, '');
   if (digits.length > MAX_INTEGER_DIGITS) {
     throw new InvalidAmountError('Amount is too large.');
   }

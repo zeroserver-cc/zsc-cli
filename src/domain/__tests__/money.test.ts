@@ -62,6 +62,29 @@ describe('parseReaisToCents', () => {
     }
   );
 
+  it.each([
+    '+50',
+    '50.',
+    '50abc',
+    '1_000',
+    'Infinity',
+    'NaN',
+    '1 234,56',
+    '\u0665\u0660',
+    '\uff15\uff10'
+  ])('rejects junk, signs and non-ASCII digits in %p', (input) => {
+    expect(() => parseReaisToCents(input)).toThrow(InvalidAmountError);
+  });
+
+  it('accepts a non-breaking space after R$ and around the amount', () => {
+    expect(parseReaisToCents('R$\u00a050,00\u00a0')).toBe(5000);
+  });
+
+  it('does not count leading zeros toward the size cap', () => {
+    expect(parseReaisToCents('0000000050')).toBe(5000);
+    expect(parseReaisToCents('000000000050,00')).toBe(5000);
+  });
+
   it('rejects absurdly large amounts instead of losing precision', () => {
     expect(() => parseReaisToCents('99999999999999999999')).toThrow(/too large/);
   });

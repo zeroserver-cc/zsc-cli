@@ -152,6 +152,45 @@ describe('waitForTopUpUseCase', () => {
     expect(gateway.getTopUpProgress).toHaveBeenCalledTimes(1);
   });
 
+  it('returns CANCELLED at once when aborted while a poll is still in flight', async () => {
+    const controller = new AbortController();
+    const gateway = fakeGateway({
+      getTopUpProgress: jest.fn(() => {
+        controller.abort();
+        return new Promise<never>(() => undefined);
+      })
+    });
+
+    const result = await waitForTopUpUseCase(gateway, {
+      topUpId: 'tu-1',
+      signal: controller.signal
+    });
+
+    expect(result).toEqual({ outcome: 'CANCELLED' });
+  });
+
+  it('does not pile abort listeners on the signal across polls', async () => {
+    const { now, sleep } = clock();
+    const controller = new AbortController();
+    const added = jest.spyOn(controller.signal, 'addEventListener');
+    const removed = jest.spyOn(controller.signal, 'removeEventListener');
+    const getTopUpProgress = jest
+      .fn()
+      .mockResolvedValueOnce({ balanceCents: 0, topUps: [topUp('tu-1', 'PENDING')] })
+      .mockResolvedValueOnce({ balanceCents: 0, topUps: [topUp('tu-1', 'PENDING')] })
+      .mockResolvedValueOnce({ balanceCents: 5000, topUps: [topUp('tu-1', 'COMPLETED')] });
+
+    await waitForTopUpUseCase(fakeGateway({ getTopUpProgress }), {
+      topUpId: 'tu-1',
+      signal: controller.signal,
+      now,
+      sleep
+    });
+
+    expect(added).toHaveBeenCalledTimes(3);
+    expect(removed).toHaveBeenCalledTimes(3);
+  });
+
   it('survives isolated polling failures but gives up after three in a row', async () => {
     const { now, sleep } = clock();
     const flaky = fakeGateway({
