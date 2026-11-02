@@ -11,13 +11,17 @@ import {
   setDatabaseReplicasUseCase
 } from '../../application/usecases/ManagedDatabaseUseCase';
 import { requireRole } from '../../application/usecases/requireRole';
-import { ManagedDatabaseEngine, ManagedDatabaseStatus } from '../../domain/entities/types';
+import {
+  ManagedDatabase,
+  ManagedDatabaseEngine,
+  ManagedDatabaseStatus
+} from '../../domain/entities/types';
 import { startDatabaseTunnelUseCase } from '../../application/usecases/DatabaseTunnelUseCase';
 import { createWebSocketTunnelOpener } from '../../infrastructure/tunnel/webSocketTunnelChannel';
 import { listenLocal } from '../../infrastructure/tunnel/localListener';
 import { handleError } from '../formatting/errors';
 import { printTunnelHint, createTunnelReporter, waitForInterrupt } from '../formatting/tunnel';
-import { replicaSummary } from '../formatting/replicas';
+import { replicaPlacementNote, replicaSummary } from '../formatting/replicas';
 import { prompt } from '../io/prompt';
 
 function parseEngine(value: string): ManagedDatabaseEngine {
@@ -58,6 +62,12 @@ function statusLabel(status: ManagedDatabaseStatus): string {
   }
 }
 
+function printReplicas(database: ManagedDatabase): void {
+  console.log(`Replicas: ${replicaSummary(database.replicas, database.replicaPlacement)}`);
+  const note = replicaPlacementNote(database);
+  if (note) console.log(chalk.yellow(note));
+}
+
 export function registerDatabaseCommands(program: Command): void {
   const db = program
     .command('db')
@@ -83,7 +93,7 @@ export function registerDatabaseCommands(program: Command): void {
           `Database ${chalk.bold(database.name)} created (status ${statusLabel(database.status)}).`
         );
         console.log(`ID:      ${chalk.bold(database.id)}`);
-        console.log(`Replicas: ${replicaSummary(database.replicas)}`);
+        printReplicas(database);
         console.log(
           chalk.gray(
             `Attach an app by adding "database: ${database.name}" to its zs.yaml and redeploying, ` +
@@ -121,12 +131,16 @@ export function registerDatabaseCommands(program: Command): void {
             database.name,
             database.engine,
             statusLabel(database.status),
-            replicaSummary(database.replicas),
+            replicaSummary(database.replicas, database.replicaPlacement),
             database.machineId ?? '-',
             database.lastDumpAt ? new Date(database.lastDumpAt).toLocaleString() : '-'
           ]);
         }
         console.log(table.toString());
+        for (const database of databases) {
+          const note = replicaPlacementNote(database);
+          if (note) console.log(chalk.yellow(`${database.name}: ${note}`));
+        }
       } catch (err) {
         spinner.fail('Failed to fetch databases.');
         handleError(err);
@@ -215,7 +229,7 @@ export function registerDatabaseCommands(program: Command): void {
           spinner.succeed(
             `Database ${chalk.bold(database.name)} now targets ${replicas} replica${replicas === 1 ? '' : 's'}.`
           );
-          console.log(`Replicas: ${replicaSummary(database.replicas)}`);
+          printReplicas(database);
           if (replicas > 0) {
             console.log(
               chalk.gray(

@@ -12,11 +12,19 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 - Novo comando `zs wallet` (ADR 0009 e 0016) para a carteira da conta em reais. `zs wallet` (ou `zs wallet show`) mostra o saldo, o modo de pagamento, o parcial do mês com a projeção até o fim do mês e a quantidade de faturas fechadas; tudo isso é demonstrativo e nada é debitado da carteira. No modo TEST o comando avisa que nenhum dinheiro real é cobrado e lembra o cartão de teste `4242 4242 4242 4242`. `zs wallet history [--limit N]` lista o extrato (data, tipo, valor com sinal e nota ou referência), do mais novo para o mais antigo; `N` vai de 1 a 200, o mesmo limite do backend. Um subcomando digitado errado (`zs wallet hsitory`) falha em vez de cair no `show`.
 - Novo comando `zs wallet add <valor>` para adicionar crédito por cartão via Stripe Checkout. O valor é em reais (`50`, `50.00`, `50,00`, também `1.234,56`) e é convertido para centavos inteiros sem erro de ponto flutuante; valores ambíguos como `1.234` ou com mais de duas casas decimais são recusados, e o valor é conferido contra os limites da plataforma antes de criar o checkout. O CLI imprime a URL, tenta abrir o navegador (`--no-open` desliga) e acompanha o pagamento a cada 3 segundos por até 5 minutos, mostrando o novo saldo quando confirma ou avisando se o checkout expirou ou foi rejeitado (`--no-wait` desliga a espera). Ctrl+C encerra a espera na hora, mesmo com uma consulta em andamento, e avisa que o crédito ainda será lançado quando o pagamento for confirmado, pois depende do webhook e não do CLI. Para scripts, o código de saída é 0 só quando o pagamento é confirmado: 1 se o checkout expirou, foi rejeitado ou a espera acabou sem confirmação, e 130 com Ctrl+C. Com o gateway desligado (modo DISABLED) o comando falha com mensagem clara. Requer sessão de login: com chave de API o comando falha antes de qualquer chamada, explicando que é preciso `zs login` (a leitura com `show` e `history` continua funcionando com chave de API). Também requer o backend com a carteira publicada.
 
+## [0.17.0] - 2026-11-02
+
+### Adicionado
+
+- `zs db list` mostra as réplicas como `vivas/alvo` (ex.: `0/1`, `1/1 streaming`) e, para cada banco com réplica faltando, uma linha com o motivo dado pela plataforma (nenhum node elegível, só nodes seus, nenhum provedor terceiro liberado para hospedar bancos, primário offline, espera após falha, banco sem material de replicação). `zs db create` e `zs db replicas` mostram o mesmo. A nota só aparece com o banco em RUNNING, mostra a data da última verificação quando não é de hoje e usa um texto genérico para um motivo que esta versão ainda não conhece. Contra um backend sem o campo `replicaPlacement` (antes do deploy ou num rollback), o CLI refaz a consulta sem ele e segue com a contagem antiga, então `zs db *` e `zs deploy` com `database:` continuam funcionando.
+
 ### Corrigido
 
 - **A release dos binários voltou a publicar.** O job de assinatura do macOS rodava no runner `macos-14`, que o GitHub está desligando (falhas programadas antes da aposentadoria em 2/11/2026) e cancelava a release inteira; agora usa `macos-15`, também Apple Silicon.
 
 ### Alterado
+
+- A mensagem para campo que o backend não conhece ("requires a newer ZeroServer backend") deixou de atribuir todo caso ao catálogo de IA (ZSC-210).
 
 - A ajuda de `zs deploy --replicas` e `zs scale` e o README passam a dizer o teto do beta (4 réplicas por app, cada uma em um node diferente; acima disso a plataforma roda 4 e avisa) e que o redeploy de app com réplicas é rolling com drain de requisições. Nenhuma validação nova no CLI: o teto continua sendo decisão do backend.
 
