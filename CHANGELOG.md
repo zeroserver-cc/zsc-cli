@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-02
+
 ### Adicionado
 
 - `zs db list` mostra as réplicas como `vivas/alvo` (ex.: `0/1`, `1/1 streaming`) e, para cada banco com réplica faltando, uma linha com o motivo dado pela plataforma (nenhum node elegível, só nodes seus, nenhum provedor terceiro liberado para hospedar bancos, primário offline, espera após falha, banco sem material de replicação). `zs db create` e `zs db replicas` mostram o mesmo. Requer o backend com o campo `replicaPlacement` publicado: contra um backend antigo os comandos `zs db` que criam, listam ou resolvem um banco pelo nome (`create`, `list`, `connection`, `tunnel`, `replicas`, `delete`, `restore`) falham, então a release só deve sair depois do deploy do backend.
