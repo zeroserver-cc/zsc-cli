@@ -33,6 +33,7 @@ const db = (overrides: Partial<ManagedDatabase>): ManagedDatabase => ({
   machineId: 'machine-1',
   lastDumpAt: '2026-08-04T12:00:00.000Z',
   replicas: [],
+  replicaPlacement: { desired: 0, live: 0, pending: 0, reason: null, checkedAt: null },
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
   ...overrides

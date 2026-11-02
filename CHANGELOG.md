@@ -7,6 +7,10 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+
+- `zs db list` mostra as réplicas como `vivas/alvo` (ex.: `0/1`, `1/1 streaming`) e, para cada banco com réplica faltando, uma linha com o motivo dado pela plataforma (nenhum node elegível, só nodes seus, nenhum provedor terceiro liberado para hospedar bancos, primário offline, espera após falha, banco sem material de replicação). `zs db create` e `zs db replicas` mostram o mesmo. Requer o backend com o campo `replicaPlacement` publicado; contra um backend antigo a listagem de bancos falha.
+
 ### Corrigido
 
 - **A release dos binários voltou a publicar.** O job de assinatura do macOS rodava no runner `macos-14`, que o GitHub está desligando (falhas programadas antes da aposentadoria em 2/11/2026) e cancelava a release inteira; agora usa `macos-15`, também Apple Silicon.
