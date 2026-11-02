@@ -7,6 +7,11 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+
+- Novo comando `zs wallet` (ADR 0009 e 0016) para a carteira da conta em reais. `zs wallet` (ou `zs wallet show`) mostra o saldo, o modo de pagamento, o parcial do mês com a projeção até o fim do mês e a quantidade de faturas fechadas; tudo isso é demonstrativo e nada é debitado da carteira. No modo TEST o comando avisa que nenhum dinheiro real é cobrado e lembra o cartão de teste `4242 4242 4242 4242`. `zs wallet history [--limit N]` lista o extrato (data, tipo, valor com sinal e nota ou referência), do mais novo para o mais antigo.
+- Novo comando `zs wallet add <valor>` para adicionar crédito por cartão via Stripe Checkout. O valor é em reais (`50`, `50.00`, `50,00`, também `1.234,56`) e é convertido para centavos inteiros sem erro de ponto flutuante; valores ambíguos como `1.234` ou com mais de duas casas decimais são recusados, e o valor é conferido contra os limites da plataforma antes de criar o checkout. O CLI imprime a URL, tenta abrir o navegador (`--no-open` desliga) e acompanha o pagamento a cada 3 segundos por até 5 minutos, mostrando o novo saldo quando confirma ou avisando se o checkout expirou ou foi rejeitado (`--no-wait` desliga a espera). Ctrl+C encerra a espera e avisa que o crédito ainda será lançado quando o pagamento for confirmado, pois depende do webhook e não do CLI. Com o gateway desligado (modo DISABLED) o comando falha com mensagem clara. Requer sessão de login (chave de API não movimenta dinheiro) e o backend com a carteira publicada.
+
 ### Corrigido
 
 - **A release dos binários voltou a publicar.** O job de assinatura do macOS rodava no runner `macos-14`, que o GitHub está desligando (falhas programadas antes da aposentadoria em 2/11/2026) e cancelava a release inteira; agora usa `macos-15`, também Apple Silicon.

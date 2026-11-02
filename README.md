@@ -16,6 +16,7 @@ Cliente de linha de comando da **ZeroServer Community Cloud** para Developers. P
 - [ ] `zs restart`
 - [ ] `zs scale` (replicas: `zs scale <app> <n>`, `zs deploy --replicas <n>`, `replicas:` in `zs.yaml`)
 - [ ] `zs db` (managed databases: `create`, `list`, `connection`, `tunnel`, `replicas`, `delete`, `restore`)
+- [ ] `zs wallet` (account wallet: `show`, `history`, `add <amount>`; Stripe top-up in TEST mode)
 - [ ] `zs ai` (managed inference, AIaaS closed beta: `models`/`catalog`, `list`, `create`, `status`, `token add/list/revoke`, `delete`)
 
 ## Authentication
@@ -162,6 +163,36 @@ keep it out of git.
 
 Secrets take precedence over `env` entries in `zs.yaml` on deploy. Do not keep
 passwords in the manifest: move them to `zs secrets`.
+
+## Wallet (credit top-up, TEST mode)
+
+Each account has a wallet in BRL: an append-only ledger whose balance is the sum
+of its transactions. For now the platform runs the payment gateway in **TEST
+mode**: no real money moves, and nothing is debited from the wallet yet (invoices
+and "upcoming" amounts are demonstrative).
+
+```sh
+zs wallet                  # balance, payment mode, upcoming amounts and closed invoices
+zs wallet history          # transactions, newest first (-n/--limit <n>, default 20)
+zs wallet add 50           # add R$ 50,00 by card via Stripe Checkout
+zs wallet add 50,00 --no-wait   # do not wait for the confirmation
+zs wallet add 50.00 --no-open   # print the checkout URL without opening a browser
+```
+
+`zs wallet add` accepts reais as `50`, `50.00` or `50,00` (also `1.234,56` and
+`1,234.56`), converts them to integer cents without floating point, and checks
+the amount against the platform limits before creating the checkout. Amounts
+like `1.234` are rejected as ambiguous (write `1234` or `1234,00`), and so is
+anything with more than two decimal places.
+
+The CLI prints the Stripe Checkout URL, tries to open it in your browser, and
+then polls your top-ups every 3 seconds for up to 5 minutes until the payment is
+confirmed (it prints the new balance), expires or is rejected. Press Ctrl+C to
+stop waiting: the credit still lands when Stripe confirms the payment, because
+it depends on the platform webhook and not on the CLI. In TEST mode use the test
+card `4242 4242 4242 4242` with any future expiry and any CVC. If the gateway is
+not configured on the platform (mode `DISABLED`), the command fails with a clear
+message. Top-ups need a login session; API keys cannot move money.
 
 ## Replicas (high availability)
 

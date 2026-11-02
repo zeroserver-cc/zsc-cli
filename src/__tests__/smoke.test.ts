@@ -21,6 +21,8 @@ describe('CLI smoke test', () => {
     expect(names).toContain('nodes');
     // registry credentials (private images)
     expect(names).toContain('registry');
+    // account wallet and card top-up
+    expect(names).toContain('wallet');
   });
 
   // Asserts the CLI version (from the generated src/version.ts) matches
