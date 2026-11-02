@@ -7,11 +7,17 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+### Adicionado
+
+- `zs db list` mostra as réplicas como `vivas/alvo` (ex.: `0/1`, `1/1 streaming`) e, para cada banco com réplica faltando, uma linha com o motivo dado pela plataforma (nenhum node elegível, só nodes seus, nenhum provedor terceiro liberado para hospedar bancos, primário offline, espera após falha, banco sem material de replicação). `zs db create` e `zs db replicas` mostram o mesmo. A nota só aparece com o banco em RUNNING, mostra a data da última verificação quando não é de hoje e usa um texto genérico para um motivo que esta versão ainda não conhece. Contra um backend sem o campo `replicaPlacement` (antes do deploy ou num rollback), o CLI refaz a consulta sem ele e segue com a contagem antiga, então `zs db *` e `zs deploy` com `database:` continuam funcionando.
+
 ### Corrigido
 
 - **A release dos binários voltou a publicar.** O job de assinatura do macOS rodava no runner `macos-14`, que o GitHub está desligando (falhas programadas antes da aposentadoria em 2/11/2026) e cancelava a release inteira; agora usa `macos-15`, também Apple Silicon.
 
 ### Alterado
+
+- A mensagem para campo que o backend não conhece ("requires a newer ZeroServer backend") deixou de atribuir todo caso ao catálogo de IA (ZSC-210).
 
 - A ajuda de `zs deploy --replicas` e `zs scale` e o README passam a dizer o teto do beta (4 réplicas por app, cada uma em um node diferente; acima disso a plataforma roda 4 e avisa) e que o redeploy de app com réplicas é rolling com drain de requisições. Nenhuma validação nova no CLI: o teto continua sendo decisão do backend.
 

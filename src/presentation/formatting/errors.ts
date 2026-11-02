@@ -11,8 +11,8 @@ function truncate(message: string): string {
 }
 
 /**
- * The server rejected a field this CLI selects (e.g. a newer CLI talking to an
- * older backend, like `curated` or `searchHfModels` before ZSC-210 shipped).
+ * The server rejected a field this CLI selects: a newer CLI talking to an
+ * older backend (the AI catalog fields of ZSC-210 were the first case).
  */
 function isSchemaMismatchError(err: GraphQLError): boolean {
   return /Cannot query field/i.test(err.message);
@@ -22,8 +22,7 @@ export function handleError(err: unknown): never {
   if (err instanceof GraphQLError && isSchemaMismatchError(err)) {
     console.error(
       chalk.red('Error:'),
-      'This CLI version requires a newer ZeroServer backend (AI catalog, ZSC-210); ' +
-        'try again later or downgrade the CLI.'
+      'This CLI version requires a newer ZeroServer backend; try again later or downgrade the CLI.'
     );
   } else if (err instanceof Error) {
     console.error(chalk.red('Error:'), truncate(err.message));

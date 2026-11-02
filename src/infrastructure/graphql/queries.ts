@@ -289,18 +289,28 @@ export const RESTORE_APPLICATION_VOLUMES_MUTATION = `
   }
 `;
 
-const MANAGED_DATABASE_FIELDS = `
+const MANAGED_DATABASE_BASE_FIELDS = `
   id name engine version status machineId lastDumpAt createdAt updatedAt
   replicas { id role status machineId lagBytes lagSeconds }
 `;
 
-export const MY_DATABASES_QUERY = `
+// Backends before zsc-backend#199 reject the whole operation when it selects
+// replicaPlacement: the use cases retry with the base fields only.
+const MANAGED_DATABASE_FIELDS = `
+  ${MANAGED_DATABASE_BASE_FIELDS}
+  replicaPlacement { desired live pending reason checkedAt }
+`;
+
+const myDatabasesQuery = (fields: string) => `
   query MyDatabases {
     myDatabases {
-      ${MANAGED_DATABASE_FIELDS}
+      ${fields}
     }
   }
 `;
+
+export const MY_DATABASES_QUERY = myDatabasesQuery(MANAGED_DATABASE_FIELDS);
+export const MY_DATABASES_QUERY_WITHOUT_PLACEMENT = myDatabasesQuery(MANAGED_DATABASE_BASE_FIELDS);
 
 export const MANAGED_DATABASE_CONNECTION_STRING_QUERY = `
   query ManagedDatabaseConnectionString($id: ID!) {
@@ -308,13 +318,19 @@ export const MANAGED_DATABASE_CONNECTION_STRING_QUERY = `
   }
 `;
 
-export const CREATE_MANAGED_DATABASE_MUTATION = `
+const createManagedDatabaseMutation = (fields: string) => `
   mutation CreateManagedDatabase($input: CreateManagedDatabaseInput!) {
     createManagedDatabase(input: $input) {
-      ${MANAGED_DATABASE_FIELDS}
+      ${fields}
     }
   }
 `;
+
+export const CREATE_MANAGED_DATABASE_MUTATION =
+  createManagedDatabaseMutation(MANAGED_DATABASE_FIELDS);
+export const CREATE_MANAGED_DATABASE_MUTATION_WITHOUT_PLACEMENT = createManagedDatabaseMutation(
+  MANAGED_DATABASE_BASE_FIELDS
+);
 
 export const DELETE_MANAGED_DATABASE_MUTATION = `
   mutation DeleteManagedDatabase($id: ID!) {
@@ -336,13 +352,18 @@ export const OPEN_MANAGED_DATABASE_TUNNEL_MUTATION = `
   }
 `;
 
-export const SET_MANAGED_DATABASE_REPLICAS_MUTATION = `
+const setManagedDatabaseReplicasMutation = (fields: string) => `
   mutation SetManagedDatabaseReplicas($id: ID!, $replicas: Int!) {
     setManagedDatabaseReplicas(id: $id, replicas: $replicas) {
-      ${MANAGED_DATABASE_FIELDS}
+      ${fields}
     }
   }
 `;
+
+export const SET_MANAGED_DATABASE_REPLICAS_MUTATION =
+  setManagedDatabaseReplicasMutation(MANAGED_DATABASE_FIELDS);
+export const SET_MANAGED_DATABASE_REPLICAS_MUTATION_WITHOUT_PLACEMENT =
+  setManagedDatabaseReplicasMutation(MANAGED_DATABASE_BASE_FIELDS);
 
 const INFERENCE_SERVICE_FIELDS = `
   id name modelId status machineId endpoint errorMessage

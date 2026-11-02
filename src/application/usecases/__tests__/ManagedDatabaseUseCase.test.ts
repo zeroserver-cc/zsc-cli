@@ -11,6 +11,9 @@ import { gqlRequest } from '../../../infrastructure/graphql/client';
 import { getConfigValue } from '../../../infrastructure/config/store';
 import {
   CREATE_MANAGED_DATABASE_MUTATION,
+  CREATE_MANAGED_DATABASE_MUTATION_WITHOUT_PLACEMENT,
+  MY_DATABASES_QUERY_WITHOUT_PLACEMENT,
+  SET_MANAGED_DATABASE_REPLICAS_MUTATION_WITHOUT_PLACEMENT,
   DELETE_MANAGED_DATABASE_MUTATION,
   MANAGED_DATABASE_CONNECTION_STRING_QUERY,
   MY_DATABASES_QUERY,
@@ -33,6 +36,7 @@ const db = (overrides: Partial<ManagedDatabase>): ManagedDatabase => ({
   machineId: 'machine-1',
   lastDumpAt: '2026-08-04T12:00:00.000Z',
   replicas: [],
+  replicaPlacement: { desired: 0, live: 0, pending: 0, reason: null, checkedAt: null },
   createdAt: '2026-08-01T00:00:00.000Z',
   updatedAt: '2026-08-01T00:00:00.000Z',
   ...overrides
@@ -52,6 +56,29 @@ describe('listDatabasesUseCase', () => {
     expect(mockGql).toHaveBeenCalledWith(MY_DATABASES_QUERY, {}, 'a-token');
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('app-db');
+  });
+
+  it('retries without replicaPlacement against a backend that predates it', async () => {
+    const { replicaPlacement: _omitted, ...legacy } = db({});
+    mockGql
+      .mockRejectedValueOnce(
+        new Error('Cannot query field "replicaPlacement" on type "ManagedDatabase".')
+      )
+      .mockResolvedValueOnce({ myDatabases: [legacy] } as any);
+
+    const result = await listDatabasesUseCase();
+
+    expect(mockGql).toHaveBeenNthCalledWith(1, MY_DATABASES_QUERY, {}, 'a-token');
+    expect(mockGql).toHaveBeenNthCalledWith(2, MY_DATABASES_QUERY_WITHOUT_PLACEMENT, {}, 'a-token');
+    expect(MY_DATABASES_QUERY_WITHOUT_PLACEMENT).not.toContain('replicaPlacement');
+    expect(result[0].replicaPlacement).toBeUndefined();
+  });
+
+  it('does not retry on any other schema error', async () => {
+    mockGql.mockRejectedValueOnce(new Error('Cannot query field "somethingElse" on type "Query".'));
+
+    await expect(listDatabasesUseCase()).rejects.toThrow('somethingElse');
+    expect(mockGql).toHaveBeenCalledTimes(1);
   });
 
   it('fails early when there is no session token', async () => {
@@ -235,6 +262,41 @@ describe('restoreDatabaseUseCase', () => {
     const restoreCall = mockGql.mock.calls.find((c) => c[0] === RESTORE_MANAGED_DATABASE_MUTATION)!;
     expect(restoreCall[1]).toEqual({ id: 'db-1' });
     expect(result.restored).toBe(true);
+  });
+});
+
+describe('placement fallback on mutations', () => {
+  const unsupported = () =>
+    new Error('Cannot query field "replicaPlacement" on type "ManagedDatabase".');
+
+  it('creates with the base fields when the backend predates replicaPlacement', async () => {
+    mockGql
+      .mockRejectedValueOnce(unsupported())
+      .mockResolvedValueOnce({ createManagedDatabase: db({}) } as any);
+
+    await createDatabaseUseCase('app-db', 'POSTGRES');
+
+    expect(mockGql).toHaveBeenLastCalledWith(
+      CREATE_MANAGED_DATABASE_MUTATION_WITHOUT_PLACEMENT,
+      { input: { name: 'app-db', engine: 'POSTGRES' } },
+      'a-token'
+    );
+  });
+
+  it('changes replicas with the base fields when the backend predates replicaPlacement', async () => {
+    mockGql
+      .mockRejectedValueOnce(unsupported())
+      .mockResolvedValueOnce({ myDatabases: [db({})] } as any)
+      .mockRejectedValueOnce(unsupported())
+      .mockResolvedValueOnce({ setManagedDatabaseReplicas: db({}) } as any);
+
+    await setDatabaseReplicasUseCase('app-db', 1);
+
+    expect(mockGql).toHaveBeenLastCalledWith(
+      SET_MANAGED_DATABASE_REPLICAS_MUTATION_WITHOUT_PLACEMENT,
+      { id: 'db-1', replicas: 1 },
+      'a-token'
+    );
   });
 });
 

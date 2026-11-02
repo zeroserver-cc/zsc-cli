@@ -184,6 +184,25 @@ export interface ManagedDatabaseReplica {
   lagSeconds?: number | null;
 }
 
+/** Owner-safe category of why replicas are pending. Never names the nodes involved. */
+export type ReplicaPlacementReason =
+  | 'NO_ELIGIBLE_NODE'
+  | 'ONLY_OWNER_NODES'
+  | 'NO_ADMITTED_PROVIDER'
+  | 'PRIMARY_UNREACHABLE'
+  | 'COOLDOWN_AFTER_FAILURE'
+  | 'MISSING_REPLICATION_MATERIAL';
+
+/** Replica target versus live copies (provisioning, syncing or streaming). */
+export interface ReplicaPlacement {
+  desired: number;
+  live: number;
+  pending: number;
+  /** Null when nothing is pending or the platform has not checked yet. */
+  reason: ReplicaPlacementReason | null;
+  checkedAt: string | null;
+}
+
 /** Platform-provisioned database (Fase 2). Credentials never appear on this type. */
 export interface ManagedDatabase {
   id: string;
@@ -194,6 +213,8 @@ export interface ManagedDatabase {
   machineId?: string | null;
   lastDumpAt?: string | null;
   replicas: ManagedDatabaseReplica[];
+  /** Absent when the backend predates it (the CLI falls back to the base fields). */
+  replicaPlacement?: ReplicaPlacement;
   createdAt: string;
   updatedAt: string;
 }
