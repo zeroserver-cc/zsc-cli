@@ -436,3 +436,42 @@ export const REVOKE_INFERENCE_SERVICE_TOKEN_MUTATION = `
     revokeInferenceServiceToken(serviceId: $serviceId, tokenId: $tokenId)
   }
 `;
+
+export const WALLET_OVERVIEW_QUERY = `
+  query WalletOverview {
+    wallet {
+      balanceCents
+      paymentMode
+      topUpLimits { minCents maxCents }
+      paymentsDue { invoiceId }
+      paymentsUpcoming { periodStart periodEnd partialBrl projectedBrl }
+    }
+  }
+`;
+
+export const WALLET_TRANSACTIONS_QUERY = `
+  query WalletTransactions($limit: Int!) {
+    wallet {
+      transactions(limit: $limit) {
+        id type amountCents note externalReference createdAt
+      }
+    }
+  }
+`;
+
+export const WALLET_TOPUP_PROGRESS_QUERY = `
+  query WalletTopUpProgress {
+    wallet {
+      balanceCents
+      topUps { id amountCents status mode createdAt completedAt }
+    }
+  }
+`;
+
+export const START_WALLET_TOPUP_MUTATION = `
+  mutation StartWalletTopUp($amountCents: Int!) {
+    startWalletTopUp(amountCents: $amountCents) {
+      topUpId checkoutUrl mode
+    }
+  }
+`;
