@@ -64,7 +64,7 @@ function statusLabel(status: ManagedDatabaseStatus): string {
 
 function printReplicas(database: ManagedDatabase): void {
   console.log(`Replicas: ${replicaSummary(database.replicas, database.replicaPlacement)}`);
-  const note = replicaPlacementNote(database.replicaPlacement);
+  const note = replicaPlacementNote(database);
   if (note) console.log(chalk.yellow(note));
 }
 
@@ -138,7 +138,7 @@ export function registerDatabaseCommands(program: Command): void {
         }
         console.log(table.toString());
         for (const database of databases) {
-          const note = replicaPlacementNote(database.replicaPlacement);
+          const note = replicaPlacementNote(database);
           if (note) console.log(chalk.yellow(`${database.name}: ${note}`));
         }
       } catch (err) {

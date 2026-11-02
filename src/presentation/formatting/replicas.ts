@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import {
+  ManagedDatabase,
   ManagedDatabaseReplica,
   ReplicaPlacement,
   ReplicaPlacementReason
@@ -53,17 +54,29 @@ export function replicaSummary(
   return chalk.yellow(`${count} ${pending.status.toLowerCase()}`) + cleanupSuffix;
 }
 
+// A newer backend may report a category this CLI does not know yet.
+const UNKNOWN_REASON = 'the platform could not place it yet; retrying automatically';
+
+function checkedLabel(checkedAt: string, now: Date): string {
+  const checked = new Date(checkedAt);
+  const sameDay = checked.toDateString() === now.toDateString();
+  return sameDay ? checked.toLocaleTimeString() : checked.toLocaleString();
+}
+
 /**
- * Why replicas are missing, or null when the topology is full. Never more
- * than the platform's category: which nodes were considered stays private.
+ * Why replicas are missing, or null when there is nothing to say: topology
+ * full, database not RUNNING (placement only runs there) or a backend that
+ * predates the field. Never more than the platform's category: which nodes
+ * were considered stays private.
  */
-export function replicaPlacementNote(placement: ReplicaPlacement): string | null {
-  if (placement.pending <= 0) return null;
+export function replicaPlacementNote(
+  database: Pick<ManagedDatabase, 'status' | 'replicaPlacement'>,
+  now: Date = new Date()
+): string | null {
+  const placement = database.replicaPlacement;
+  if (!placement || placement.pending <= 0 || database.status !== 'RUNNING') return null;
   const copies = `${placement.pending} replica${placement.pending === 1 ? '' : 's'} pending`;
-  if (!placement.reason)
-    return `${copies}: waiting for the next placement check (every few minutes)`;
-  const checked = placement.checkedAt
-    ? ` (checked ${new Date(placement.checkedAt).toLocaleTimeString()})`
-    : '';
-  return `${copies}: ${PLACEMENT_REASONS[placement.reason]}${checked}`;
+  if (!placement.reason) return `${copies}: the next placement check runs within a few minutes`;
+  const checked = placement.checkedAt ? ` (checked ${checkedLabel(placement.checkedAt, now)})` : '';
+  return `${copies}: ${PLACEMENT_REASONS[placement.reason] ?? UNKNOWN_REASON}${checked}`;
 }

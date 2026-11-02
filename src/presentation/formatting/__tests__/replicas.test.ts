@@ -87,8 +87,23 @@ describe('replicaSummary with the replica target', () => {
 });
 
 describe('replicaPlacementNote', () => {
+  const running = (overrides: Partial<ReplicaPlacement> = {}) => ({
+    status: 'RUNNING' as const,
+    replicaPlacement: placement(overrides)
+  });
+
   it('says nothing when the topology is full', () => {
-    expect(replicaPlacementNote(placement({ live: 1, pending: 0 }))).toBeNull();
+    expect(replicaPlacementNote(running({ live: 1, pending: 0 }))).toBeNull();
+  });
+
+  it('says nothing against a backend without the field', () => {
+    expect(replicaPlacementNote({ status: 'RUNNING' })).toBeNull();
+  });
+
+  it('says nothing while the database is not running (placement only runs there)', () => {
+    for (const status of ['PENDING', 'ERROR', 'DELETING'] as const) {
+      expect(replicaPlacementNote({ status, replicaPlacement: placement() })).toBeNull();
+    }
   });
 
   it('explains every reason the platform can report', () => {
@@ -100,7 +115,7 @@ describe('replicaPlacementNote', () => {
       'COOLDOWN_AFTER_FAILURE',
       'MISSING_REPLICATION_MATERIAL'
     ];
-    const notes = reasons.map((reason) => replicaPlacementNote(placement({ reason })));
+    const notes = reasons.map((reason) => replicaPlacementNote(running({ reason })));
 
     for (const note of notes) {
       expect(note).toMatch(/^1 replica pending: \S/);
@@ -109,27 +124,49 @@ describe('replicaPlacementNote', () => {
     expect(new Set(notes).size).toBe(reasons.length);
   });
 
+  it('falls back to a generic text for a reason this CLI does not know', () => {
+    const note = replicaPlacementNote(
+      running({ reason: 'SOMETHING_NEW' as ReplicaPlacement['reason'] })
+    );
+    expect(note).toBe(
+      '1 replica pending: the platform could not place it yet; retrying automatically'
+    );
+  });
+
   it('points at the third-party admission without naming any node', () => {
-    expect(replicaPlacementNote(placement({ reason: 'NO_ADMITTED_PROVIDER' }))).toBe(
+    expect(replicaPlacementNote(running({ reason: 'NO_ADMITTED_PROVIDER' }))).toBe(
       '1 replica pending: no third-party node is cleared to host databases yet; retrying automatically'
     );
   });
 
-  it('pluralizes and adds the check time when known', () => {
+  it('pluralizes and shows only the time for a check made today', () => {
+    const checkedAt = new Date(2026, 10, 2, 12, 0, 0);
     const note = replicaPlacementNote(
-      placement({
+      running({
         desired: 2,
         pending: 2,
         reason: 'COOLDOWN_AFTER_FAILURE',
-        checkedAt: '2026-11-02T12:00:00.000Z'
-      })
+        checkedAt: checkedAt.toISOString()
+      }),
+      new Date(2026, 10, 2, 15, 0, 0)
     );
-    expect(note).toMatch(/^2 replicas pending: a recent replica attempt failed; .*\(checked .+\)$/);
+    expect(note).toBe(
+      `2 replicas pending: a recent replica attempt failed; retrying after a short cooldown (checked ${checkedAt.toLocaleTimeString()})`
+    );
   });
 
-  it('waits for the first placement check when no reason is recorded yet', () => {
-    expect(replicaPlacementNote(placement())).toBe(
-      '1 replica pending: waiting for the next placement check (every few minutes)'
+  it('shows the date when the check is not from today', () => {
+    const checkedAt = new Date(2026, 10, 1, 12, 0, 0);
+    const note = replicaPlacementNote(
+      running({ reason: 'NO_ELIGIBLE_NODE', checkedAt: checkedAt.toISOString() }),
+      new Date(2026, 10, 2, 15, 0, 0)
+    );
+    expect(note).toContain(`(checked ${checkedAt.toLocaleString()})`);
+  });
+
+  it('tells when the first placement check has not run yet', () => {
+    expect(replicaPlacementNote(running())).toBe(
+      '1 replica pending: the next placement check runs within a few minutes'
     );
   });
 });

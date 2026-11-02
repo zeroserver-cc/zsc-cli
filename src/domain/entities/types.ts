@@ -213,7 +213,8 @@ export interface ManagedDatabase {
   machineId?: string | null;
   lastDumpAt?: string | null;
   replicas: ManagedDatabaseReplica[];
-  replicaPlacement: ReplicaPlacement;
+  /** Absent when the backend predates it (the CLI falls back to the base fields). */
+  replicaPlacement?: ReplicaPlacement;
   createdAt: string;
   updatedAt: string;
 }

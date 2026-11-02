@@ -2,11 +2,14 @@ import { ManagedDatabase, ManagedDatabaseEngine } from '../../domain/entities/ty
 import { gqlRequest } from '../../infrastructure/graphql/client';
 import {
   CREATE_MANAGED_DATABASE_MUTATION,
+  CREATE_MANAGED_DATABASE_MUTATION_WITHOUT_PLACEMENT,
   DELETE_MANAGED_DATABASE_MUTATION,
   MANAGED_DATABASE_CONNECTION_STRING_QUERY,
   MY_DATABASES_QUERY,
+  MY_DATABASES_QUERY_WITHOUT_PLACEMENT,
   RESTORE_MANAGED_DATABASE_MUTATION,
-  SET_MANAGED_DATABASE_REPLICAS_MUTATION
+  SET_MANAGED_DATABASE_REPLICAS_MUTATION,
+  SET_MANAGED_DATABASE_REPLICAS_MUTATION_WITHOUT_PLACEMENT
 } from '../../infrastructure/graphql/queries';
 import { getConfigValue } from '../../infrastructure/config/store';
 
@@ -16,9 +19,37 @@ function requireToken(): string {
   return token;
 }
 
+const PLACEMENT_UNSUPPORTED = /Cannot query field "replicaPlacement"/i;
+
+/**
+ * Sends the operation selecting replicaPlacement and, when the backend
+ * predates the field, sends it again without it. Safe for mutations too: a
+ * selection the schema does not know fails validation, before anything runs.
+ */
+async function withPlacementFallback<T>(
+  query: string,
+  queryWithoutPlacement: string,
+  variables: Record<string, unknown>,
+  token: string
+): Promise<T> {
+  try {
+    return await gqlRequest<T>(query, variables, token);
+  } catch (err) {
+    if (err instanceof Error && PLACEMENT_UNSUPPORTED.test(err.message)) {
+      return gqlRequest<T>(queryWithoutPlacement, variables, token);
+    }
+    throw err;
+  }
+}
+
 export async function listDatabasesUseCase(): Promise<ManagedDatabase[]> {
   const token = requireToken();
-  const data = await gqlRequest<{ myDatabases: ManagedDatabase[] }>(MY_DATABASES_QUERY, {}, token);
+  const data = await withPlacementFallback<{ myDatabases: ManagedDatabase[] }>(
+    MY_DATABASES_QUERY,
+    MY_DATABASES_QUERY_WITHOUT_PLACEMENT,
+    {},
+    token
+  );
   return data.myDatabases;
 }
 
@@ -62,8 +93,9 @@ export async function createDatabaseUseCase(
     engine
   };
   if (replicas !== undefined) input.replicas = replicas;
-  const data = await gqlRequest<{ createManagedDatabase: ManagedDatabase }>(
+  const data = await withPlacementFallback<{ createManagedDatabase: ManagedDatabase }>(
     CREATE_MANAGED_DATABASE_MUTATION,
+    CREATE_MANAGED_DATABASE_MUTATION_WITHOUT_PLACEMENT,
     { input },
     token
   );
@@ -89,8 +121,9 @@ export async function setDatabaseReplicasUseCase(
 ): Promise<ManagedDatabase> {
   const token = requireToken();
   const database = await resolveDatabaseUseCase(nameOrId);
-  const data = await gqlRequest<{ setManagedDatabaseReplicas: ManagedDatabase }>(
+  const data = await withPlacementFallback<{ setManagedDatabaseReplicas: ManagedDatabase }>(
     SET_MANAGED_DATABASE_REPLICAS_MUTATION,
+    SET_MANAGED_DATABASE_REPLICAS_MUTATION_WITHOUT_PLACEMENT,
     { id: database.id, replicas },
     token
   );
