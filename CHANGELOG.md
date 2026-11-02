@@ -7,6 +7,8 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-02
+
 ### Adicionado
 
 - `zs db list` mostra as réplicas como `vivas/alvo` (ex.: `0/1`, `1/1 streaming`) e, para cada banco com réplica faltando, uma linha com o motivo dado pela plataforma (nenhum node elegível, só nodes seus, nenhum provedor terceiro liberado para hospedar bancos, primário offline, espera após falha, banco sem material de replicação). `zs db create` e `zs db replicas` mostram o mesmo. A nota só aparece com o banco em RUNNING, mostra a data da última verificação quando não é de hoje e usa um texto genérico para um motivo que esta versão ainda não conhece. Contra um backend sem o campo `replicaPlacement` (antes do deploy ou num rollback), o CLI refaz a consulta sem ele e segue com a contagem antiga, então `zs db *` e `zs deploy` com `database:` continuam funcionando.
