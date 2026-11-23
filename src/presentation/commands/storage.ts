@@ -24,6 +24,7 @@ import {
   credentialsBlock,
   egressSummary,
   envExample,
+  isOutcomeUnknownError,
   monitoringNotice,
   quotaNotice,
   replicationSummary,
@@ -33,13 +34,12 @@ import { prompt } from '../io/prompt';
 
 const NAME_PATTERN = /^[a-z0-9]([a-z0-9-]{1,38})[a-z0-9]$/;
 
-function parseName(value: string): string {
+function assertValidName(value: string): void {
   if (!NAME_PATTERN.test(value)) {
-    throw new InvalidArgumentError(
-      'must be a lowercase DNS label of 3 to 40 characters (a-z, 0-9, hyphen; not starting or ending with a hyphen)'
+    throw new Error(
+      'Invalid storage name: use a lowercase DNS label of 3 to 40 characters (a-z, 0-9, hyphen; not starting or ending with a hyphen).'
     );
   }
-  return value;
 }
 
 function parseGb(value: string): number {
@@ -76,7 +76,7 @@ function printSecretOnce(storage: ManagedStorage, key: ManagedStorageCreatedAcce
   console.log(
     chalk.yellow(
       'Save the secret access key now: it is shown only once and cannot be retrieved again. ' +
-        'If you lose it, create a new key and revoke this one.'
+        'If you lose it, create a new key and revoke this one. Do not commit it to version control.'
     )
   );
   console.log('');
@@ -86,9 +86,11 @@ function printSecretOnce(storage: ManagedStorage, key: ManagedStorageCreatedAcce
 
 async function confirm(question: string, skip?: boolean): Promise<boolean> {
   if (skip) return true;
-  const answer = await prompt(question);
-  if (answer.trim().toLowerCase() === 'y') return true;
+  const answer = (await prompt(question)).trim().toLowerCase();
+  if (answer === 'y' || answer === 'yes') return true;
   console.log('Aborted.');
+  // A declined (or unanswerable) confirmation must not look like success to scripts.
+  process.exitCode = 1;
   return false;
 }
 
@@ -146,14 +148,18 @@ function registerKeyCommands(storage: Command): void {
       requireRole(['developer', 'admin']);
       let spinner: ReturnType<typeof ora> | undefined;
       try {
-        const instance = await resolveStorageUseCase(target);
-        const key = findAccessKey(instance, keyRef);
+        const instance = await resolveStorageUseCase(target, { destructive: true });
+        const key = findAccessKey(instance, keyRef, { destructive: true });
+        if (key.status === 'REVOKED') {
+          console.log(chalk.yellow(`Key ${key.accessKeyId} is already revoked. Nothing to do.`));
+          return;
+        }
         const last = isLastActiveKey(instance, key);
         const warning = last
-          ? `This is the LAST active key of ${instance.name}: the storage will stop serving requests until you create a new key. `
+          ? `This is the LAST active key: the storage will stop serving requests until you create a new key. `
           : '';
         const proceed = await confirm(
-          `Revoke key ${key.accessKeyId} (${key.label || 'no label'})? ${warning}Clients using it lose access. [y/N] `,
+          `Revoke key ${key.accessKeyId} (${key.label || 'no label'}, id ${key.id}) of storage ${instance.name} (${instance.id})? ${warning}Clients using it lose access. [y/N] `,
           opts.yes
         );
         if (!proceed) return;
@@ -187,9 +193,10 @@ export function registerStorageCommands(program: Command): void {
     .action(async (name: string, opts: { quotaGb?: number; egressQuotaGb?: number }) => {
       requireRole(['developer', 'admin']);
       try {
-        parseName(name);
+        assertValidName(name);
       } catch (err) {
         handleError(err);
+        return;
       }
       const spinner = ora(`Creating object storage ${chalk.cyan(name)}…`).start();
       try {
@@ -202,13 +209,27 @@ export function registerStorageCommands(program: Command): void {
           `Storage ${chalk.bold(instance.name)} created (status ${statusLabel(instance.status)}).`
         );
         printSecretOnce(instance, accessKey);
+        if (instance.status !== 'RUNNING') {
+          console.log(
+            chalk.yellow(
+              `The storage is still starting (status ${instance.status}). Wait for RUNNING ("zs storage info ${instance.name}") before using the endpoint.`
+            )
+          );
+        }
         console.log(
           chalk.gray(
-            'Usage is metered; there is no charge during the beta. The provider can read stored data: encrypt sensitive data client-side.'
+            'Usage is measured, not billed yet. The provider can read stored data: encrypt sensitive data client-side.'
           )
         );
       } catch (err) {
         spinner.stop();
+        if (isOutcomeUnknownError(err)) {
+          console.error(
+            chalk.yellow(
+              `No answer from the server: the storage may have been created. Run "zs storage list" and, if ${name} exists, "zs storage keys create ${name}" to get a key.`
+            )
+          );
+        }
         handleError(err);
       }
     });
@@ -277,7 +298,7 @@ export function registerStorageCommands(program: Command): void {
 
   storage
     .command('usage <name-or-id>')
-    .description('Show the metered usage of the current month (no charge during the beta)')
+    .description('Show the metered usage of the current month (measured, not billed yet)')
     .action(async (target: string) => {
       requireRole(['developer', 'admin']);
       try {
@@ -300,7 +321,7 @@ export function registerStorageCommands(program: Command): void {
         console.log(table.toString());
         console.log(
           chalk.gray(
-            'Usage is measured, not billed: there is no charge during the beta. Hours without a report are gaps, not zeros.'
+            'Usage is measured, not billed: there is measured, not billed yet. Hours without a report are gaps, not zeros.'
           )
         );
       } catch (err) {
@@ -317,13 +338,14 @@ export function registerStorageCommands(program: Command): void {
       requireRole(['developer', 'admin']);
       let spinner: ReturnType<typeof ora> | undefined;
       try {
+        const item = await resolveStorageUseCase(target, { destructive: true });
         const proceed = await confirm(
-          `Delete storage ${target}? All buckets and objects will be permanently removed and the keys revoked. [y/N] `,
+          `Delete storage ${item.name} (${item.id})? All buckets and objects will be permanently removed and the keys revoked. [y/N] `,
           opts.yes
         );
         if (!proceed) return;
-        spinner = ora(`Deleting storage ${chalk.cyan(target)}…`).start();
-        const { storage: item, deleted } = await deleteStorageUseCase(target);
+        spinner = ora(`Deleting storage ${chalk.cyan(item.name)}…`).start();
+        const deleted = await deleteStorageUseCase(item);
         if (deleted) {
           spinner.succeed(`Storage ${chalk.bold(item.name)} is being deleted.`);
         } else {

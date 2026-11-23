@@ -47,12 +47,15 @@ export function readStdin(): Promise<string> {
 // Reads a single line with terminal echo (for non-secret input like email/host).
 export function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) =>
+  return new Promise((resolve) => {
+    // stdin closed with no answer (no TTY, nothing piped): resolve empty so the
+    // caller can abort instead of the process exiting silently with code 0.
+    rl.on('close', () => resolve(''));
     rl.question(question, (answer) => {
       rl.close();
       resolve(answer.trim());
-    })
-  );
+    });
+  });
 }
 
 // Reads a secret with echo suppressed (raw mode), so tokens/passwords never

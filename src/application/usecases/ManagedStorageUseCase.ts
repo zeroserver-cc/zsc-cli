@@ -31,14 +31,37 @@ export async function listStoragesUseCase(): Promise<ManagedStorage[]> {
   return data.managedStorages;
 }
 
-/** An exact name wins; otherwise an unambiguous id prefix is accepted. */
-export async function resolveStorageUseCase(nameOrId: string): Promise<ManagedStorage> {
+// Destructive operations never act on a short id prefix: a typo or a stale
+// prefix could hit another instance. A full name always works.
+export const MIN_DESTRUCTIVE_PREFIX = 8;
+
+interface ResolveOptions {
+  destructive?: boolean;
+}
+
+function assertPrefixAllowed(ref: string, what: string, options?: ResolveOptions): void {
+  if (options?.destructive && ref.length < MIN_DESTRUCTIVE_PREFIX) {
+    throw new Error(
+      `"${ref}" is too short for a destructive operation: use the full ${what} or at least ${MIN_DESTRUCTIVE_PREFIX} characters of its id.`
+    );
+  }
+}
+
+/** An exact name wins; otherwise a full id or an unambiguous id prefix is accepted. */
+export async function resolveStorageUseCase(
+  nameOrId: string,
+  options?: ResolveOptions
+): Promise<ManagedStorage> {
   const storages = await listStoragesUseCase();
 
   const byName = storages.filter((storage) => storage.name === nameOrId);
   if (byName.length === 1) return byName[0];
 
+  const byId = storages.filter((storage) => storage.id === nameOrId);
+  if (byId.length === 1) return byId[0];
+
   const byIdPrefix = storages.filter((storage) => storage.id.startsWith(nameOrId));
+  if (byIdPrefix.length > 0) assertPrefixAllowed(nameOrId, 'name', options);
   if (byIdPrefix.length === 1) return byIdPrefix[0];
   if (byIdPrefix.length > 1) {
     throw new Error(
@@ -68,17 +91,13 @@ export async function createStorageUseCase(
   return data.createManagedStorage;
 }
 
-export async function deleteStorageUseCase(
-  nameOrId: string
-): Promise<{ storage: ManagedStorage; deleted: boolean }> {
-  const token = requireToken();
-  const storage = await resolveStorageUseCase(nameOrId);
+export async function deleteStorageUseCase(storage: ManagedStorage): Promise<boolean> {
   const data = await gqlRequest<{ deleteManagedStorage: boolean }>(
     DELETE_MANAGED_STORAGE_MUTATION,
     { id: storage.id },
-    token
+    requireToken()
   );
-  return { storage, deleted: data.deleteManagedStorage };
+  return data.deleteManagedStorage;
 }
 
 export async function getStorageUsageUseCase(
@@ -108,12 +127,17 @@ export async function createStorageKeyUseCase(
   return { storage, accessKey: data.createManagedStorageAccessKey };
 }
 
-/** Finds a key by its id, an unambiguous id prefix or its access key id (AKIA-style). */
-export function findAccessKey(storage: ManagedStorage, keyRef: string): ManagedStorageAccessKey {
+/** Finds a key by its id, an unambiguous id prefix or its access key id. */
+export function findAccessKey(
+  storage: ManagedStorage,
+  keyRef: string,
+  options?: ResolveOptions
+): ManagedStorageAccessKey {
   const exact = storage.accessKeys.filter((key) => key.id === keyRef || key.accessKeyId === keyRef);
   if (exact.length === 1) return exact[0];
 
   const byPrefix = storage.accessKeys.filter((key) => key.id.startsWith(keyRef));
+  if (byPrefix.length > 0) assertPrefixAllowed(keyRef, 'key id', options);
   if (byPrefix.length === 1) return byPrefix[0];
   if (byPrefix.length > 1) {
     throw new Error(`Ambiguous key id prefix "${keyRef}" (${byPrefix.length} matches).`);

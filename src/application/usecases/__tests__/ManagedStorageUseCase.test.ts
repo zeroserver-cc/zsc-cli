@@ -108,17 +108,44 @@ describe('createStorageUseCase', () => {
 });
 
 describe('deleteStorageUseCase', () => {
-  it('deletes the resolved storage by id', async () => {
-    mockGql
-      .mockResolvedValueOnce({ managedStorages: [storage({})] } as any)
-      .mockResolvedValueOnce({ deleteManagedStorage: true } as any);
-    const result = await deleteStorageUseCase('media');
-    expect(mockGql).toHaveBeenLastCalledWith(
+  it('deletes the given storage by id', async () => {
+    mockGql.mockResolvedValueOnce({ deleteManagedStorage: true } as any);
+    const deleted = await deleteStorageUseCase(storage({}));
+    expect(mockGql).toHaveBeenCalledWith(
       DELETE_MANAGED_STORAGE_MUTATION,
       { id: 'aaaa1111-0000' },
       'a-token'
     );
-    expect(result.deleted).toBe(true);
+    expect(deleted).toBe(true);
+  });
+});
+
+describe('destructive resolution', () => {
+  it('rejects a short id prefix but accepts name, full id and 8+ chars', async () => {
+    const list = { managedStorages: [storage({ id: 'aaaa1111-0000-4000' })] } as any;
+    mockGql.mockResolvedValue(list);
+    await expect(resolveStorageUseCase('aaaa', { destructive: true })).rejects.toThrow(/too short/);
+    expect((await resolveStorageUseCase('media', { destructive: true })).name).toBe('media');
+    expect((await resolveStorageUseCase('aaaa1111-0000-4000', { destructive: true })).name).toBe(
+      'media'
+    );
+    expect((await resolveStorageUseCase('aaaa1111', { destructive: true })).name).toBe('media');
+  });
+
+  it('still fails on an ambiguous long prefix', async () => {
+    mockGql.mockResolvedValue({
+      managedStorages: [storage({ id: 'aaaa1111-1' }), storage({ id: 'aaaa1111-2', name: 'o' })]
+    } as any);
+    await expect(resolveStorageUseCase('aaaa1111', { destructive: true })).rejects.toThrow(
+      /Ambiguous/
+    );
+  });
+
+  it('applies the same rule to key refs', () => {
+    const s = storage({ accessKeys: [key({ id: 'key-12345678-x' })] });
+    expect(() => findAccessKey(s, 'key-', { destructive: true })).toThrow(/too short/);
+    expect(findAccessKey(s, 'key-1234', { destructive: true }).id).toBe('key-12345678-x');
+    expect(findAccessKey(s, 'ZSCAAAA', { destructive: true }).id).toBe('key-12345678-x');
   });
 });
 

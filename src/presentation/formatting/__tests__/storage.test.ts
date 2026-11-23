@@ -1,5 +1,8 @@
+import { AxiosError } from 'axios';
 import {
   credentialsBlock,
+  envExample,
+  isOutcomeUnknownError,
   egressSummary,
   monitoringNotice,
   quotaNotice,
@@ -55,15 +58,28 @@ describe('storage formatting', () => {
     expect(monitoringNotice({ monitored: true, writesBlockEnforced: true })).toBeNull();
   });
 
-  it('prints the secret only through the credentials block', () => {
-    const lines = credentialsBlock(base, {
+  it('puts the secret in the credentials block and only a placeholder in the env example', () => {
+    const key = {
       id: 'k',
       accessKeyId: 'AK',
-      secretAccessKey: 'SECRET',
+      secretAccessKey: 'S3CR3T-VALUE',
       label: '',
       createdAt: ''
-    });
-    expect(lines.join('\n')).toContain('SECRET');
-    expect(JSON.stringify(quotaNotice(base))).not.toContain('SECRET');
+    };
+    expect(credentialsBlock(base, key).join('\n')).toContain('S3CR3T-VALUE');
+    const example = envExample(base, key).join('\n');
+    expect(example).not.toContain('S3CR3T-VALUE');
+    expect(example).toContain('AWS_ENDPOINT_URL=https://media.s3.zeroserver.cc');
+    expect(example).not.toContain('s3 mb');
+  });
+
+  it('treats timeouts, network failures and 5xx as an unknown outcome', () => {
+    expect(isOutcomeUnknownError(new AxiosError('timeout', 'ECONNABORTED'))).toBe(true);
+    expect(isOutcomeUnknownError(new AxiosError('down'))).toBe(true);
+    const withResponse = (status: number) =>
+      new AxiosError('x', undefined, undefined, undefined, { status } as any);
+    expect(isOutcomeUnknownError(withResponse(502))).toBe(true);
+    expect(isOutcomeUnknownError(withResponse(400))).toBe(false);
+    expect(isOutcomeUnknownError(new Error('graphql'))).toBe(false);
   });
 });

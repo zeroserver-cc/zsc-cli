@@ -1,3 +1,4 @@
+import axios from 'axios';
 import {
   ManagedStorage,
   ManagedStorageCreatedAccessKey,
@@ -78,12 +79,21 @@ export function credentialsBlock(
   ];
 }
 
+// The secret is printed once, in credentialsBlock; here it is a placeholder.
 export function envExample(storage: ManagedStorage, key: ManagedStorageCreatedAccessKey): string[] {
   return [
     `export AWS_ACCESS_KEY_ID=${key.accessKeyId}`,
-    `export AWS_SECRET_ACCESS_KEY=${key.secretAccessKey}`,
+    'export AWS_SECRET_ACCESS_KEY=<the secret access key above>',
     `export AWS_ENDPOINT_URL=${storage.endpoint}`,
-    `export AWS_DEFAULT_REGION=${storage.region}`,
-    'aws s3 mb s3://my-bucket   # path-style addressing is required'
+    `export AWS_DEFAULT_REGION=${storage.region}`
   ];
+}
+
+const MAYBE_CREATED_CODES = ['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ERR_NETWORK'];
+
+/** The request may have reached the backend even though the CLI got no answer. */
+export function isOutcomeUnknownError(err: unknown): boolean {
+  if (!axios.isAxiosError(err)) return false;
+  if (!err.response) return true;
+  return MAYBE_CREATED_CODES.includes(err.code ?? '') || err.response.status >= 500;
 }
