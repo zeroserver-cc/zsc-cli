@@ -142,7 +142,7 @@ function registerKeyCommands(storage: Command): void {
 
   keys
     .command('revoke <name-or-id> <key-id>')
-    .description('Revoke an access key (the engine rejects it within seconds)')
+    .description('Revoke an access key (the engine stops accepting it shortly, but a node that is offline keeps honoring it until it reconnects)')
     .option('-y, --yes', 'Skip the confirmation prompt')
     .action(async (target: string, keyRef: string, opts: { yes?: boolean }) => {
       requireRole(['developer', 'admin']);
