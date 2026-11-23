@@ -475,3 +475,59 @@ export const START_WALLET_TOPUP_MUTATION = `
     }
   }
 `;
+
+const MANAGED_STORAGE_FIELDS = `
+  id name status quotaGb egressQuotaGb quotaExceeded quotaExceededReason
+  endpoint region createdAt updatedAt
+  usage { storedGb storedPercent egressGb egressPercent egressPeriodStart reportedAt monitored writesBlockEnforced }
+  accessKeys { id accessKeyId label status createdAt revokedAt }
+  replication { state rpoSeconds lastSyncedAt lagSeconds }
+`;
+
+export const MANAGED_STORAGES_QUERY = `
+  query ManagedStorages {
+    managedStorages {
+      ${MANAGED_STORAGE_FIELDS}
+    }
+  }
+`;
+
+export const MANAGED_STORAGE_USAGE_QUERY = `
+  query ManagedStorageUsage($id: ID!) {
+    managedStorageUsage(id: $id) {
+      storageId periodStart periodEnd storageGbHours measuredHours egressGb billed
+      days { day storageGbHours measuredHours avgStoredGb egressGb }
+    }
+  }
+`;
+
+export const CREATE_MANAGED_STORAGE_MUTATION = `
+  mutation CreateManagedStorage($input: CreateManagedStorageInput!) {
+    createManagedStorage(input: $input) {
+      storage {
+        ${MANAGED_STORAGE_FIELDS}
+      }
+      accessKey { id accessKeyId secretAccessKey label createdAt }
+    }
+  }
+`;
+
+export const DELETE_MANAGED_STORAGE_MUTATION = `
+  mutation DeleteManagedStorage($id: ID!) {
+    deleteManagedStorage(id: $id)
+  }
+`;
+
+export const CREATE_MANAGED_STORAGE_ACCESS_KEY_MUTATION = `
+  mutation CreateManagedStorageAccessKey($storageId: ID!, $label: String) {
+    createManagedStorageAccessKey(storageId: $storageId, label: $label) {
+      id accessKeyId secretAccessKey label createdAt
+    }
+  }
+`;
+
+export const REVOKE_MANAGED_STORAGE_ACCESS_KEY_MUTATION = `
+  mutation RevokeManagedStorageAccessKey($storageId: ID!, $keyId: ID!) {
+    revokeManagedStorageAccessKey(storageId: $storageId, keyId: $keyId)
+  }
+`;

@@ -16,6 +16,7 @@ Cliente de linha de comando da **ZeroServer Community Cloud** para Developers. P
 - [ ] `zs restart`
 - [ ] `zs scale` (replicas: `zs scale <app> <n>`, `zs deploy --replicas <n>`, `replicas:` in `zs.yaml`)
 - [ ] `zs db` (managed databases: `create`, `list`, `connection`, `tunnel`, `replicas`, `delete`, `restore`)
+- [ ] `zs storage` (S3-compatible object storage: `create`, `list`, `info`, `usage`, `delete`, `keys list|create|revoke`)
 - [ ] `zs wallet` (account wallet: `show`, `history`, `add <amount>`; Stripe top-up in TEST mode)
 - [ ] `zs ai` (managed inference, AIaaS closed beta: `models`/`catalog`, `list`, `create`, `status`, `token add/list/revoke`, `delete`)
 
@@ -196,6 +197,42 @@ card `4242 4242 4242 4242` with any future expiry and any CVC. If the gateway is
 not configured on the platform (mode `DISABLED`), the command fails with a clear
 message. Top-ups need a login session; API keys cannot move money (they can
 still read the wallet with `zs wallet` and `zs wallet history`).
+
+## Object storage (S3-compatible)
+
+Managed S3-compatible storage. Each instance gets `https://<name>.s3.zeroserver.cc` (path-style, region `zsc-br`) and works with the aws-cli, boto3, rclone and any S3 client.
+
+```sh
+zs storage create media --quota-gb 20 --egress-quota-gb 100
+zs storage list
+zs storage info media            # status, quota, usage, standby copy, keys
+zs storage usage media           # metered GB-hours and egress by day (measured, not billed yet)
+zs storage keys list media
+zs storage keys create media --label ci
+zs storage keys revoke media <key-id>
+zs storage delete media          # asks for confirmation (y or yes); -y skips it
+```
+
+`create` and `keys create` print the secret access key **once**: it cannot be retrieved later. Then configure your client:
+
+```sh
+export AWS_ACCESS_KEY_ID=...
+export AWS_SECRET_ACCESS_KEY=...
+export AWS_ENDPOINT_URL=https://media.s3.zeroserver.cc
+export AWS_DEFAULT_REGION=zsc-br
+aws s3 mb s3://my-bucket
+```
+
+Good to know:
+
+- Wait for the status `RUNNING` (`zs storage info media`) before using the endpoint.
+- Destructive commands (`delete`, `keys revoke`) show the name and full id before asking, and accept a full name, a full id or an id prefix of at least 8 characters. Declining or an unanswered prompt exits with a non-zero code.
+- Tested with aws-cli 2.35 and boto3 1.44 against the pinned engine: put, get and multipart work without checksum settings.
+
+- Writes are blocked when the storage or the monthly egress quota is reached; reads, listings and deletes keep working (in versioned buckets, delete versions by id).
+- The standby copy protects against losing a node, not against every failure: writes newer than the last sync (see `zs storage info`) may be lost. Durability is lower than AWS S3.
+- The hosting provider can read stored data. Encrypt sensitive data client-side.
+- Revoking the last active key stops the instance from serving requests until you create a new one.
 
 ## Replicas (high availability)
 
