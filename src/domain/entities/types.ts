@@ -370,3 +370,93 @@ export interface CreateInferenceServicePayload {
 export interface AddInferenceServiceTokenPayload extends InferenceServiceToken {
   token: string;
 }
+
+export type ManagedStorageStatus = 'PENDING' | 'RUNNING' | 'ERROR' | 'DELETING' | 'DELETED';
+export type ManagedStorageAccessKeyStatus = 'ACTIVE' | 'REVOKED';
+export type ManagedStorageQuotaReason = 'STORAGE' | 'EGRESS';
+export type ManagedStorageReplicationState =
+  | 'DISABLED'
+  | 'SEEDING'
+  | 'PROTECTED'
+  | 'DEGRADED'
+  | 'FAILING_OVER';
+
+/** Listing view of an access key: the secret is never part of it. */
+export interface ManagedStorageAccessKey {
+  id: string;
+  accessKeyId: string;
+  label: string;
+  status: ManagedStorageAccessKeyStatus;
+  createdAt: string;
+  revokedAt?: string | null;
+}
+
+/** The only shape that carries a secret; the backend returns it once. */
+export interface ManagedStorageCreatedAccessKey {
+  id: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  label: string;
+  createdAt: string;
+}
+
+export interface ManagedStorageReplication {
+  state: ManagedStorageReplicationState;
+  rpoSeconds: number;
+  lastSyncedAt?: string | null;
+  lagSeconds?: number | null;
+}
+
+/** Every figure is null until the hosting node reports: null means unknown, never zero. */
+export interface ManagedStorageUsage {
+  storedGb?: number | null;
+  storedPercent?: number | null;
+  egressGb?: number | null;
+  egressPercent?: number | null;
+  egressPeriodStart?: string | null;
+  reportedAt?: string | null;
+  monitored: boolean;
+  writesBlockEnforced: boolean;
+}
+
+/** Platform-provisioned S3-compatible object storage (EPIC-20). */
+export interface ManagedStorage {
+  id: string;
+  name: string;
+  status: ManagedStorageStatus;
+  quotaGb: number;
+  egressQuotaGb: number;
+  quotaExceeded: boolean;
+  quotaExceededReason?: ManagedStorageQuotaReason | null;
+  usage: ManagedStorageUsage;
+  endpoint: string;
+  region: string;
+  accessKeys: ManagedStorageAccessKey[];
+  replication: ManagedStorageReplication;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatedManagedStorage {
+  storage: ManagedStorage;
+  accessKey: ManagedStorageCreatedAccessKey;
+}
+
+export interface ManagedStorageUsageDay {
+  day: string;
+  storageGbHours: number;
+  measuredHours: number;
+  avgStoredGb?: number | null;
+  egressGb: number;
+}
+
+export interface ManagedStorageUsageSeries {
+  storageId: string;
+  periodStart: string;
+  periodEnd: string;
+  storageGbHours: number;
+  measuredHours: number;
+  egressGb: number;
+  billed: boolean;
+  days: ManagedStorageUsageDay[];
+}
